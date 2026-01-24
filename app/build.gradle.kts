@@ -3,7 +3,6 @@ import java.util.Properties
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp")
 }
@@ -72,6 +71,10 @@ android {
         buildConfig = true
     }
 
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.8"
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -117,7 +120,7 @@ dependencies {
     implementation("androidx.media:media:1.7.0")
 
     // Silero VAD (Voice Activity Detection)
-    implementation("com.github.gkonovalov.android-vad:silero:2.0.10")
+    implementation("com.github.gkonovalov.android-vad:silero:2.0.1")
 
     // Azure Speech Services (pronunciation assessment)
     implementation("com.microsoft.cognitiveservices.speech:client-sdk:1.35.0")

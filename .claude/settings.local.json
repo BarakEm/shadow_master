@@ -20,7 +20,9 @@
       "Bash(sudo apt update:*)",
       "Bash(sudo apt install:*)",
       "Bash(gh run list:*)",
-      "Bash(gh run view:*)"
+      "Bash(gh run view:*)",
+      "WebFetch(domain:mvnrepository.com)",
+      "WebFetch(domain:jitpack.io)"
     ]
   }
 }
