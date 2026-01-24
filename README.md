@@ -1,5 +1,7 @@
 # Shadow Master
 
+**[Project Website](https://barakem.github.io/shadow_master/)**
+
 Android app for language learning through audio shadowing. Captures audio from any app (podcasts, YouTube, etc.), detects speech segments, and prompts you to repeat them.
 
 ## Features
