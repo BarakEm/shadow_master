@@ -1,7 +1,5 @@
 package com.shadowmaster.data.model
 
-import kotlinx.serialization.Serializable
-
 data class ShadowingConfig(
     val language: SupportedLanguage = SupportedLanguage.ENGLISH_US,
     val segmentMode: SegmentMode = SegmentMode.SENTENCE,

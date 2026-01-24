@@ -1,9 +1,8 @@
 package com.shadowmaster.service
 
-import android.content.Intent
+import android.media.browse.MediaBrowser
 import android.os.Bundle
 import android.service.media.MediaBrowserService
-import androidx.media3.session.MediaSession
 
 /**
  * MediaBrowserService for Android Auto integration.
@@ -26,7 +25,7 @@ class ShadowingMediaBrowserService : MediaBrowserService() {
 
     override fun onLoadChildren(
         parentId: String,
-        result: Result<MutableList<MediaBrowserService.MediaItem>>
+        result: Result<MutableList<MediaBrowser.MediaItem>>
     ) {
         // No browsable content - Shadow Master is controlled via UI
         result.sendResult(mutableListOf())

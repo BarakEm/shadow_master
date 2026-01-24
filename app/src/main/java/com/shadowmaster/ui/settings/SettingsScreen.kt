@@ -60,7 +60,7 @@ fun SettingsScreen(
                 onLanguageSelected = { viewModel.updateLanguage(it) }
             )
 
-            HorizontalDivider()
+            Divider()
 
             // Playback Speed
             SliderSetting(
@@ -98,7 +98,7 @@ fun SettingsScreen(
                 onValueChange = { viewModel.updateSilenceThreshold(it) }
             )
 
-            HorizontalDivider()
+            Divider()
 
             // Assessment Toggle
             SwitchSetting(
