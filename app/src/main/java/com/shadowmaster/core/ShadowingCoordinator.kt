@@ -155,7 +155,7 @@ class ShadowingCoordinator @Inject constructor(
     private fun startUserRecording(originalSegment: AudioSegment) {
         userRecordingManager.startRecording { recordedSegment ->
             if (recordedSegment != null) {
-                stateMachine.processEvent(ShadowingEvent.RecordingComplete)
+                stateMachine.processEvent(ShadowingEvent.RecordingComplete(recordedSegment))
             } else {
                 stateMachine.processEvent(ShadowingEvent.Skip)
             }

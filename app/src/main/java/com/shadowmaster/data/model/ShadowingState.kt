@@ -28,7 +28,7 @@ sealed class ShadowingEvent {
     data object Stop : ShadowingEvent()
     data class SegmentDetected(val segment: AudioSegment) : ShadowingEvent()
     data object PlaybackComplete : ShadowingEvent()
-    data object RecordingComplete : ShadowingEvent()
+    data class RecordingComplete(val recordedSegment: AudioSegment) : ShadowingEvent()
     data class AssessmentComplete(val result: AssessmentResult) : ShadowingEvent()
     data object FeedbackComplete : ShadowingEvent()
     data object NavigationStarted : ShadowingEvent()

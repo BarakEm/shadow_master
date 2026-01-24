@@ -98,7 +98,7 @@ class ShadowingStateMachine @Inject constructor() {
                             currentSegment?.let { segment ->
                                 ShadowingState.Assessment(
                                     originalSegment = segment,
-                                    userRecording = state.audioSegment
+                                    userRecording = event.recordedSegment
                                 )
                             } ?: ShadowingState.Listening
                         } else {
