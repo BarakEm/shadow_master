@@ -18,7 +18,9 @@
       "Bash(./gradlew assembleDebug:*)",
       "Bash(apt list:*)",
       "Bash(sudo apt update:*)",
-      "Bash(sudo apt install:*)"
+      "Bash(sudo apt install:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)"
     ]
   }
 }
