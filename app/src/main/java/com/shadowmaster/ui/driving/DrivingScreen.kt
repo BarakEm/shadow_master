@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -15,6 +16,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -184,14 +186,31 @@ private fun StatusIndicator(state: ShadowingState) {
         is ShadowingState.PausedForNavigation -> Pair(stringResource(R.string.state_paused), MaterialTheme.colorScheme.outline)
     }
 
+    // Pulse animation for active states
+    val shouldPulse = state is ShadowingState.Listening ||
+            state is ShadowingState.UserRecording ||
+            state is ShadowingState.Assessment
+
+    val infiniteTransition = rememberInfiniteTransition(label = "statusPulse")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = if (shouldPulse) 1.3f else 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseScale"
+    )
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.padding(16.dp)
     ) {
-        // Animated status dot
+        // Animated status dot with pulse
         Box(
             modifier = Modifier
                 .size(16.dp)
+                .scale(if (shouldPulse) scale else 1f)
                 .background(color = color, shape = CircleShape)
         )
 
