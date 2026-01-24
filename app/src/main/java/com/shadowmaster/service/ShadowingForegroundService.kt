@@ -61,11 +61,16 @@ class ShadowingForegroundService : Service() {
         Log.i(TAG, "Service created")
     }
 
+    @Suppress("DEPRECATION")
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
                 val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, Activity.RESULT_CANCELED)
-                val resultData = intent.getParcelableExtra<Intent>(EXTRA_RESULT_DATA)
+                val resultData: Intent? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra(EXTRA_RESULT_DATA, Intent::class.java)
+                } else {
+                    intent.getParcelableExtra(EXTRA_RESULT_DATA)
+                }
 
                 if (resultCode == Activity.RESULT_OK && resultData != null) {
                     startForegroundWithNotification()
