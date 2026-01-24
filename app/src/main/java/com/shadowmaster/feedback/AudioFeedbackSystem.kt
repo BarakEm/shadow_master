@@ -1,11 +1,10 @@
 package com.shadowmaster.feedback
 
 import android.content.Context
-import android.media.AudioAttributes
-import android.media.SoundPool
 import android.media.ToneGenerator
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.*
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -28,6 +27,7 @@ class AudioFeedbackSystem @Inject constructor(
 
     private var toneGenerator: ToneGenerator? = null
     private var isInitialized = false
+    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     fun initialize() {
         if (isInitialized) return
@@ -51,12 +51,14 @@ class AudioFeedbackSystem @Inject constructor(
     fun playSegmentDetected() {
         if (!isInitialized) return
 
-        try {
-            toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, SHORT_TONE_DURATION)
-            Thread.sleep(150)
-            toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP2, SHORT_TONE_DURATION)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error playing segment detected tone", e)
+        scope.launch {
+            try {
+                toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, SHORT_TONE_DURATION)
+                delay(150)
+                toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP2, SHORT_TONE_DURATION)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error playing segment detected tone", e)
+            }
         }
     }
 
@@ -81,14 +83,16 @@ class AudioFeedbackSystem @Inject constructor(
     fun playGoodScore() {
         if (!isInitialized) return
 
-        try {
-            toneGenerator?.startTone(ToneGenerator.TONE_PROP_ACK, SHORT_TONE_DURATION)
-            Thread.sleep(100)
-            toneGenerator?.startTone(ToneGenerator.TONE_PROP_ACK, SHORT_TONE_DURATION)
-            Thread.sleep(100)
-            toneGenerator?.startTone(ToneGenerator.TONE_PROP_ACK, MEDIUM_TONE_DURATION)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error playing good score tone", e)
+        scope.launch {
+            try {
+                toneGenerator?.startTone(ToneGenerator.TONE_PROP_ACK, SHORT_TONE_DURATION)
+                delay(100)
+                toneGenerator?.startTone(ToneGenerator.TONE_PROP_ACK, SHORT_TONE_DURATION)
+                delay(100)
+                toneGenerator?.startTone(ToneGenerator.TONE_PROP_ACK, MEDIUM_TONE_DURATION)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error playing good score tone", e)
+            }
         }
     }
 
@@ -146,6 +150,7 @@ class AudioFeedbackSystem @Inject constructor(
     }
 
     fun release() {
+        scope.cancel()
         try {
             toneGenerator?.release()
         } catch (e: Exception) {

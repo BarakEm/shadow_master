@@ -87,9 +87,9 @@ class AudioProcessingPipeline @Inject constructor(
             frameBuffer.add(sample)
 
             if (frameBuffer.size >= frameSize) {
-                val frame = frameBuffer.take(frameSize).toShortArray()
-                frameBuffer.clear()
-                frameBuffer.addAll(audioData.drop(frameSize - (audioData.size % frameSize)))
+                val frame = frameBuffer.subList(0, frameSize).toShortArray()
+                // Remove processed samples, keeping any extras
+                repeat(frameSize) { frameBuffer.removeAt(0) }
 
                 processFrame(frame)
             }

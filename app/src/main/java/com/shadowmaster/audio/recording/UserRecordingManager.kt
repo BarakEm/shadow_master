@@ -103,8 +103,9 @@ class UserRecordingManager @Inject constructor(
                         frameBuffer.add(buffer[i])
 
                         if (frameBuffer.size >= frameSize) {
-                            val frame = frameBuffer.take(frameSize).toShortArray()
-                            frameBuffer.clear()
+                            val frame = frameBuffer.subList(0, frameSize).toShortArray()
+                            // Remove processed samples, keeping any extras
+                            repeat(frameSize) { frameBuffer.removeAt(0) }
 
                             val hasSpeech = vadDetector.isSpeech(frame)
 

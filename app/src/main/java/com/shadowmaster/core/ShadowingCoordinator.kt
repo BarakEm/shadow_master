@@ -147,15 +147,9 @@ class ShadowingCoordinator @Inject constructor(
             onComplete = {
                 scope.launch {
                     stateMachine.processEvent(ShadowingEvent.PlaybackComplete)
-                    delay(500)
-                    if (stateMachine.state.value is ShadowingState.Playback) {
-                        stateMachine.processEvent(ShadowingEvent.PlaybackComplete)
-                    }
                 }
             }
         )
-
-        stateMachine.processEvent(ShadowingEvent.PlaybackComplete)
     }
 
     private fun startUserRecording(originalSegment: AudioSegment) {
