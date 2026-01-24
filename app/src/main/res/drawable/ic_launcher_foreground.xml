@@ -4,37 +4,83 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Microphone icon centered -->
+
+    <!-- 80s Ninja Shadow Master -->
     <group
-        android:translateX="30"
-        android:translateY="24">
-        <!-- Microphone body -->
+        android:translateX="18"
+        android:translateY="16">
+
+        <!-- Shadow/smoke effect behind ninja -->
+        <path
+            android:fillColor="#1A1A2E"
+            android:fillAlpha="0.6"
+            android:pathData="M10,70 Q-5,50 15,30 Q25,15 40,20 Q60,10 65,30 Q80,25 75,50 Q85,65 70,75 Q50,85 30,78 Q15,82 10,70 Z" />
+
+        <!-- Ninja body - crouching silhouette -->
+        <path
+            android:fillColor="#0F0F1A"
+            android:pathData="M30,75 L25,60 Q20,50 28,45 L35,42 L32,35 Q30,30 35,28 L45,30 Q48,28 50,30 L55,32 Q58,30 56,35 L52,42 L58,45 Q68,50 62,60 L58,75 Q55,78 45,78 Q35,78 30,75 Z" />
+
+        <!-- Ninja head -->
+        <path
+            android:fillColor="#0F0F1A"
+            android:pathData="M35,32 Q32,25 38,18 Q44,12 50,18 Q56,25 52,32 Q48,38 44,38 Q38,38 35,32 Z" />
+
+        <!-- Ninja mask/headband -->
+        <path
+            android:fillColor="#E94560"
+            android:pathData="M33,24 L55,24 L55,28 L33,28 Z" />
+
+        <!-- Headband tail flowing (80s style!) -->
+        <path
+            android:fillColor="#E94560"
+            android:pathData="M55,24 Q62,22 68,26 Q72,30 70,35 Q68,32 65,30 Q60,28 55,28 Z" />
+        <path
+            android:fillColor="#C73E54"
+            android:pathData="M68,26 Q75,24 78,30 Q76,28 72,28 Q70,30 70,35 Q72,30 68,26 Z" />
+
+        <!-- Ninja eyes - intense stare -->
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M24,10 C24,4.48 19.52,0 14,0 C8.48,0 4,4.48 4,10 L4,26 C4,31.52 8.48,36 14,36 C19.52,36 24,31.52 24,26 L24,10 Z" />
-        <!-- Microphone stand -->
+            android:pathData="M38,25 L42,25 L42,27 L38,27 Z" />
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M28,24 L28,26 C28,33.73 21.73,40 14,40 C6.27,40 0,33.73 0,26 L0,24 L4,24 L4,26 C4,31.52 8.48,36 14,36 C19.52,36 24,31.52 24,26 L24,24 L28,24 Z" />
-        <!-- Stand base -->
+            android:pathData="M46,25 L50,27 L50,25 L46,25 Z" />
+
+        <!-- Eye glow (80s neon effect) -->
         <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M12,40 L16,40 L16,48 L12,48 Z" />
+            android:fillColor="#FF6B6B"
+            android:fillAlpha="0.8"
+            android:pathData="M39,26 L41,26 L41,26.5 L39,26.5 Z" />
         <path
-            android:fillColor="#FFFFFF"
-            android:pathData="M6,48 L22,48 L22,52 L6,52 Z" />
-        <!-- Sound waves -->
+            android:fillColor="#FF6B6B"
+            android:fillAlpha="0.8"
+            android:pathData="M47,26 L49,26 L49,26.5 L47,26.5 Z" />
+
+        <!-- Arm with hand sign (ninja mudra) -->
         <path
-            android:fillColor="#FFFFFF"
-            android:strokeWidth="2"
-            android:strokeColor="#FFFFFF"
-            android:pathData="M32,18 C34,20 34,24 32,26"
-            android:fillAlpha="0.7" />
+            android:fillColor="#0F0F1A"
+            android:pathData="M28,48 Q22,44 20,50 L18,55 Q16,58 20,60 L28,58 Q30,55 28,48 Z" />
+
+        <!-- Sound wave emanating (he's listening/speaking) -->
         <path
-            android:fillColor="#FFFFFF"
-            android:strokeWidth="2"
-            android:strokeColor="#FFFFFF"
-            android:pathData="M38,14 C42,18 42,26 38,30"
-            android:fillAlpha="0.5" />
+            android:strokeColor="#E94560"
+            android:strokeWidth="1.5"
+            android:strokeAlpha="0.7"
+            android:fillColor="#00000000"
+            android:pathData="M60,40 Q65,44 60,50" />
+        <path
+            android:strokeColor="#E94560"
+            android:strokeWidth="1.5"
+            android:strokeAlpha="0.5"
+            android:fillColor="#00000000"
+            android:pathData="M65,36 Q72,44 65,54" />
+        <path
+            android:strokeColor="#E94560"
+            android:strokeWidth="1.5"
+            android:strokeAlpha="0.3"
+            android:fillColor="#00000000"
+            android:pathData="M70,32 Q80,44 70,58" />
+
     </group>
 </vector>

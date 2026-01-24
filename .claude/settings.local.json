@@ -6,7 +6,19 @@
       "WebFetch(domain:github.com)",
       "Bash(git init:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit: Shadow Master Android app\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nInitial commit: Shadow Master Android app\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(gh repo create:*)",
+      "Bash(gh auth:*)",
+      "Bash(gradle wrapper:*)",
+      "Bash(chmod:*)",
+      "Bash(curl:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd Gradle wrapper and .gitignore\n\n- Add Gradle 8.5 wrapper scripts and jar\n- Add comprehensive .gitignore for Android projects\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(git commit:*)",
+      "Bash(./gradlew assembleDebug:*)",
+      "Bash(apt list:*)",
+      "Bash(sudo apt update:*)",
+      "Bash(sudo apt install:*)"
     ]
   }
 }
