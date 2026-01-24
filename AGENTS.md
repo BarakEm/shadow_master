@@ -82,7 +82,13 @@ Shadow Master is an Android app for language learning through "shadowing" - a te
 1. **Azure Assessment**: Currently returns mock scores. Real Azure Speech integration pending.
 2. **Android Auto**: MediaBrowserService is minimal stub. Full Android Auto UI not implemented.
 3. **Navigation Detection**: `NavigationAudioDetector` needs testing with various nav apps.
-4. **Circular Buffer**: Edge cases in `CircularAudioBuffer.getLastNMillis()` may need review.
+
+## Recently Fixed Issues
+
+- **Playback Event Race Condition**: Fixed premature PlaybackComplete event in ShadowingCoordinator that caused state transitions before audio finished
+- **Frame Buffer Handling**: Fixed audio sample loss in AudioProcessingPipeline and UserRecordingManager frame processing
+- **User Recording Flow**: Fixed RecordingComplete event to properly pass recorded audio to Assessment state
+- **Thread Blocking**: Replaced Thread.sleep() with coroutine delay() in AudioFeedbackSystem
 
 ## Testing Notes
 
