@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shadow Master - Audio Shadowing for Language Learning</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: linear-gradient(135deg, #0F0F1A 0%, #1A1A2E 50%, #16213E 100%);
+            min-height: 100vh;
+            color: #fff;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 60px 0;
+        }
+
+        .logo-container {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            width: 180px;
+            height: 180px;
+            filter: drop-shadow(0 0 30px rgba(233, 69, 96, 0.5));
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .glow-ring {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(233, 69, 96, 0.2) 0%, transparent 70%);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; }
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #E94560, #FF6B6B);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .tagline {
+            font-size: 1.3rem;
+            color: #8892b0;
+            margin-bottom: 40px;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, #E94560, #C73E54);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(233, 69, 96, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 80px;
+        }
+
+        .feature {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .feature:hover {
+            transform: translateY(-5px);
+            border-color: rgba(233, 69, 96, 0.3);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 15px;
+        }
+
+        .feature h3 {
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: #E94560;
+        }
+
+        .feature p {
+            color: #8892b0;
+            line-height: 1.6;
+        }
+
+        .how-it-works {
+            margin-top: 80px;
+            text-align: center;
+        }
+
+        .how-it-works h2 {
+            font-size: 2rem;
+            margin-bottom: 40px;
+            color: #fff;
+        }
+
+        .steps {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .step {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 20px 25px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .step-number {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(90deg, #E94560, #C73E54);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .step-text {
+            color: #ccd6f6;
+        }
+
+        .arrow {
+            color: #E94560;
+            font-size: 1.5rem;
+        }
+
+        .requirements {
+            margin-top: 80px;
+            text-align: center;
+        }
+
+        .requirements h2 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        .requirements p {
+            color: #8892b0;
+            font-size: 1.1rem;
+        }
+
+        footer {
+            margin-top: 100px;
+            text-align: center;
+            padding: 30px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            color: #8892b0;
+        }
+
+        footer a {
+            color: #E94560;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 2rem;
+            }
+            .tagline {
+                font-size: 1.1rem;
+            }
+            .step {
+                width: 100%;
+            }
+            .arrow {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <section class="hero">
+            <div class="logo-container">
+                <div class="glow-ring"></div>
+                <img src="ninja-logo.svg" alt="Shadow Master Logo" class="logo">
+            </div>
+            <h1>Shadow Master</h1>
+            <p class="tagline">Master any language through audio shadowing</p>
+            <div class="cta-buttons">
+                <a href="https://github.com/BarakEm/shadow_master/releases" class="btn btn-primary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                    Download APK
+                </a>
+                <a href="https://github.com/BarakEm/shadow_master" class="btn btn-secondary">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                    View Source
+                </a>
+            </div>
+        </section>
+
+        <section class="features">
+            <div class="feature">
+                <div class="feature-icon">🎧</div>
+                <h3>Universal Audio Capture</h3>
+                <p>Captures audio from any app - podcasts, YouTube, audiobooks, music. Practice with content you love.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🗣️</div>
+                <h3>Smart Voice Detection</h3>
+                <p>Silero VAD automatically detects speech segments so you can focus on what matters.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🚗</div>
+                <h3>Android Auto Ready</h3>
+                <p>Designed for hands-free use while driving. Practice during your commute.</p>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">⚡</div>
+                <h3>Adjustable Playback</h3>
+                <p>Slow down difficult content or repeat segments multiple times before practicing.</p>
+            </div>
+        </section>
+
+        <section class="how-it-works">
+            <h2>How It Works</h2>
+            <div class="steps">
+                <div class="step">
+                    <span class="step-number">1</span>
+                    <span class="step-text">Play any audio</span>
+                </div>
+                <span class="arrow">→</span>
+                <div class="step">
+                    <span class="step-number">2</span>
+                    <span class="step-text">Speech detected</span>
+                </div>
+                <span class="arrow">→</span>
+                <div class="step">
+                    <span class="step-number">3</span>
+                    <span class="step-text">Repeat it back</span>
+                </div>
+                <span class="arrow">→</span>
+                <div class="step">
+                    <span class="step-number">4</span>
+                    <span class="step-text">Get feedback</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="requirements">
+            <h2>Requirements</h2>
+            <p>Android 10+ (API 29) required for audio capture</p>
+        </section>
+
+        <footer>
+            <p>MIT License • Built with Kotlin + Jetpack Compose</p>
+            <p style="margin-top: 10px;"><a href="https://github.com/BarakEm/shadow_master">GitHub</a></p>
+        </footer>
+    </div>
+</body>
+</html>

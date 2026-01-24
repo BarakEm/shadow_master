@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 108 108">
+  <!-- 80s Ninja Shadow Master -->
+  <g transform="translate(18, 16)">
+
+    <!-- Shadow/smoke effect behind ninja -->
+    <path fill="#1A1A2E" fill-opacity="0.6" d="M10,70 Q-5,50 15,30 Q25,15 40,20 Q60,10 65,30 Q80,25 75,50 Q85,65 70,75 Q50,85 30,78 Q15,82 10,70 Z"/>
+
+    <!-- Ninja body - crouching silhouette -->
+    <path fill="#0F0F1A" d="M30,75 L25,60 Q20,50 28,45 L35,42 L32,35 Q30,30 35,28 L45,30 Q48,28 50,30 L55,32 Q58,30 56,35 L52,42 L58,45 Q68,50 62,60 L58,75 Q55,78 45,78 Q35,78 30,75 Z"/>
+
+    <!-- Ninja head -->
+    <path fill="#0F0F1A" d="M35,32 Q32,25 38,18 Q44,12 50,18 Q56,25 52,32 Q48,38 44,38 Q38,38 35,32 Z"/>
+
+    <!-- Ninja mask/headband -->
+    <path fill="#E94560" d="M33,24 L55,24 L55,28 L33,28 Z"/>
+
+    <!-- Headband tail flowing (80s style!) -->
+    <path fill="#E94560" d="M55,24 Q62,22 68,26 Q72,30 70,35 Q68,32 65,30 Q60,28 55,28 Z"/>
+    <path fill="#C73E54" d="M68,26 Q75,24 78,30 Q76,28 72,28 Q70,30 70,35 Q72,30 68,26 Z"/>
+
+    <!-- Ninja eyes - intense stare -->
+    <path fill="#FFFFFF" d="M38,25 L42,25 L42,27 L38,27 Z"/>
+    <path fill="#FFFFFF" d="M46,25 L50,27 L50,25 L46,25 Z"/>
+
+    <!-- Eye glow (80s neon effect) -->
+    <path fill="#FF6B6B" fill-opacity="0.8" d="M39,26 L41,26 L41,26.5 L39,26.5 Z"/>
+    <path fill="#FF6B6B" fill-opacity="0.8" d="M47,26 L49,26 L49,26.5 L47,26.5 Z"/>
+
+    <!-- Arm with hand sign (ninja mudra) -->
+    <path fill="#0F0F1A" d="M28,48 Q22,44 20,50 L18,55 Q16,58 20,60 L28,58 Q30,55 28,48 Z"/>
+
+    <!-- Sound wave emanating (he's listening/speaking) -->
+    <path stroke="#E94560" stroke-width="1.5" stroke-opacity="0.7" fill="none" d="M60,40 Q65,44 60,50"/>
+    <path stroke="#E94560" stroke-width="1.5" stroke-opacity="0.5" fill="none" d="M65,36 Q72,44 65,54"/>
+    <path stroke="#E94560" stroke-width="1.5" stroke-opacity="0.3" fill="none" d="M70,32 Q80,44 70,58"/>
+
+  </g>
+</svg>
