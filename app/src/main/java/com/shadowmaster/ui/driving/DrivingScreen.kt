@@ -1,0 +1,274 @@
+package com.shadowmaster.ui.driving
+
+import android.Manifest
+import android.app.Activity
+import android.content.Intent
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.shadowmaster.R
+import com.shadowmaster.data.model.ShadowingState
+
+@Composable
+fun DrivingScreen(
+    onNavigateToSettings: () -> Unit,
+    viewModel: DrivingViewModel = hiltViewModel()
+) {
+    val context = LocalContext.current
+    val state by viewModel.state.collectAsState()
+    val config by viewModel.config.collectAsState()
+    val isActive by viewModel.isSessionActive.collectAsState()
+
+    var showPermissionDialog by remember { mutableStateOf(false) }
+    var pendingProjectionResult by remember { mutableStateOf<Pair<Int, Intent>?>(null) }
+
+    val audioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            pendingProjectionResult?.let { (resultCode, data) ->
+                viewModel.startSession(resultCode, data)
+            }
+        }
+        pendingProjectionResult = null
+    }
+
+    val mediaProjectionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            val hasAudioPermission = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+
+            if (hasAudioPermission) {
+                viewModel.startSession(result.resultCode, result.data!!)
+            } else {
+                pendingProjectionResult = Pair(result.resultCode, result.data!!)
+                audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            }
+        }
+    }
+
+    Scaffold(
+        topBar = {
+            DrivingTopBar(
+                languageName = config.language.displayName,
+                onSettingsClick = onNavigateToSettings
+            )
+        }
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(32.dp)
+            ) {
+                // Status indicator
+                StatusIndicator(state = state)
+
+                // Main action button
+                MainActionButton(
+                    isActive = isActive,
+                    state = state,
+                    onStart = {
+                        mediaProjectionLauncher.launch(viewModel.getMediaProjectionIntent())
+                    },
+                    onStop = { viewModel.stopSession() }
+                )
+
+                // Skip button (only visible during active session)
+                if (isActive && state !is ShadowingState.Listening) {
+                    OutlinedButton(
+                        onClick = { viewModel.skip() },
+                        modifier = Modifier.padding(top = 16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SkipNext,
+                            contentDescription = "Skip"
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Skip")
+                    }
+                }
+            }
+        }
+    }
+
+    if (showPermissionDialog) {
+        PermissionDialog(
+            onDismiss = { showPermissionDialog = false },
+            onConfirm = {
+                showPermissionDialog = false
+                audioPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DrivingTopBar(
+    languageName: String,
+    onSettingsClick: () -> Unit
+) {
+    TopAppBar(
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Language,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(languageName)
+            }
+        },
+        actions = {
+            IconButton(onClick = onSettingsClick) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = stringResource(R.string.settings)
+                )
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.primary,
+            titleContentColor = MaterialTheme.colorScheme.onPrimary,
+            actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+        )
+    )
+}
+
+@Composable
+private fun StatusIndicator(state: ShadowingState) {
+    val (text, color) = when (state) {
+        is ShadowingState.Idle -> Pair(stringResource(R.string.state_idle), MaterialTheme.colorScheme.outline)
+        is ShadowingState.Listening -> Pair(stringResource(R.string.state_listening), MaterialTheme.colorScheme.primary)
+        is ShadowingState.SegmentDetected -> Pair(stringResource(R.string.state_segment_detected), MaterialTheme.colorScheme.secondary)
+        is ShadowingState.Playback -> Pair(
+            "${stringResource(R.string.state_playback)} (${state.currentRepeat}/${state.totalRepeats})",
+            MaterialTheme.colorScheme.secondary
+        )
+        is ShadowingState.UserRecording -> Pair(
+            "${stringResource(R.string.state_user_recording)} (${state.currentRepeat}/${state.totalRepeats})",
+            MaterialTheme.colorScheme.tertiary
+        )
+        is ShadowingState.Assessment -> Pair(stringResource(R.string.state_assessment), MaterialTheme.colorScheme.primary)
+        is ShadowingState.Feedback -> Pair(stringResource(R.string.state_feedback),
+            if (state.result.isGood) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.error
+        )
+        is ShadowingState.PausedForNavigation -> Pair(stringResource(R.string.state_paused), MaterialTheme.colorScheme.outline)
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.padding(16.dp)
+    ) {
+        // Animated status dot
+        Box(
+            modifier = Modifier
+                .size(16.dp)
+                .background(color = color, shape = CircleShape)
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            text = text,
+            style = MaterialTheme.typography.headlineSmall,
+            color = color,
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+private fun MainActionButton(
+    isActive: Boolean,
+    state: ShadowingState,
+    onStart: () -> Unit,
+    onStop: () -> Unit
+) {
+    val buttonColor = if (isActive) {
+        MaterialTheme.colorScheme.error
+    } else {
+        MaterialTheme.colorScheme.primary
+    }
+
+    Button(
+        onClick = { if (isActive) onStop() else onStart() },
+        modifier = Modifier
+            .size(200.dp),
+        shape = CircleShape,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = buttonColor
+        )
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = if (isActive) Icons.Default.Stop else Icons.Default.Mic,
+                contentDescription = null,
+                modifier = Modifier.size(64.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = if (isActive) {
+                    stringResource(R.string.stop_shadowing)
+                } else {
+                    stringResource(R.string.start_shadowing)
+                },
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+    }
+}
+
+@Composable
+private fun PermissionDialog(
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.permission_audio_title)) },
+        text = { Text(stringResource(R.string.permission_audio_message)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.grant_permission))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}

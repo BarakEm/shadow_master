@@ -1,0 +1,8 @@
+# Copy this file to local.properties and fill in your Azure Speech credentials
+# Do NOT commit local.properties to version control
+
+# Azure Speech Service credentials (optional - for pronunciation assessment)
+AZURE_SPEECH_KEY=your_azure_speech_key_here
+AZURE_SPEECH_REGION=your_azure_region_here
+
+# Example regions: eastus, westus2, westeurope, etc.
