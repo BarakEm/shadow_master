@@ -120,7 +120,7 @@ dependencies {
     implementation("androidx.media:media:1.7.0")
 
     // Silero VAD (Voice Activity Detection)
-    implementation("com.github.gkonovalov.android-vad:silero:2.0.1")
+    implementation("com.github.gkonovalov.android-vad:silero:2.0.5")
 
     // Azure Speech Services (pronunciation assessment)
     implementation("com.microsoft.cognitiveservices.speech:client-sdk:1.35.0")
