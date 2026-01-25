@@ -1,6 +1,8 @@
 package com.shadowmaster.library
 
 import android.content.Context
+import android.media.MediaCodec
+import android.media.MediaCodecList
 import android.media.MediaExtractor
 import android.media.MediaFormat
 import android.media.MediaMetadataRetriever
@@ -181,70 +183,179 @@ class AudioImporter @Inject constructor(
     }
 
     /**
-     * Extract audio from any format to mono 16kHz PCM.
+     * Extract and decode audio from any format to mono 16kHz PCM.
+     * Uses MediaCodec for proper audio decoding.
      */
     private fun extractAudioToPcm(uri: Uri): File? {
         val tempFile = File(context.cacheDir, "temp_pcm_${System.currentTimeMillis()}.pcm")
+        var extractor: MediaExtractor? = null
+        var codec: MediaCodec? = null
 
         try {
-            val extractor = MediaExtractor()
+            extractor = MediaExtractor()
             context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
                 extractor.setDataSource(pfd.fileDescriptor)
             } ?: return null
 
             // Find audio track
             var audioTrackIndex = -1
+            var inputFormat: MediaFormat? = null
             for (i in 0 until extractor.trackCount) {
                 val format = extractor.getTrackFormat(i)
                 val mime = format.getString(MediaFormat.KEY_MIME) ?: ""
                 if (mime.startsWith("audio/")) {
                     audioTrackIndex = i
+                    inputFormat = format
                     break
                 }
             }
 
-            if (audioTrackIndex < 0) {
+            if (audioTrackIndex < 0 || inputFormat == null) {
                 Log.e(TAG, "No audio track found")
                 return null
             }
 
             extractor.selectTrack(audioTrackIndex)
-            val format = extractor.getTrackFormat(audioTrackIndex)
-            val sampleRate = format.getInteger(MediaFormat.KEY_SAMPLE_RATE)
-            val channels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
+            val mime = inputFormat.getString(MediaFormat.KEY_MIME) ?: ""
+            val sampleRate = inputFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE)
+            val channels = inputFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
 
-            Log.i(TAG, "Audio: ${sampleRate}Hz, $channels channels")
+            Log.i(TAG, "Audio: $mime, ${sampleRate}Hz, $channels channels")
 
-            // For now, we'll use a simple approach - just extract raw samples
-            // In production, you'd use MediaCodec to decode properly
-            // This is simplified for the initial implementation
+            // Create and configure the decoder
+            codec = MediaCodec.createDecoderByType(mime)
+            codec.configure(inputFormat, null, null, 0)
+            codec.start()
 
-            val buffer = ByteBuffer.allocate(1024 * 1024)
             val outputStream = FileOutputStream(tempFile)
+            val inputBuffer = ByteBuffer.allocate(1024 * 1024)
+            val bufferInfo = MediaCodec.BufferInfo()
+            var isEOS = false
 
-            while (true) {
-                val sampleSize = extractor.readSampleData(buffer, 0)
-                if (sampleSize < 0) break
+            while (!isEOS) {
+                // Feed input to decoder
+                val inputBufferIndex = codec.dequeueInputBuffer(10000)
+                if (inputBufferIndex >= 0) {
+                    val buffer = codec.getInputBuffer(inputBufferIndex)
+                    if (buffer != null) {
+                        val sampleSize = extractor.readSampleData(buffer, 0)
+                        if (sampleSize < 0) {
+                            codec.queueInputBuffer(
+                                inputBufferIndex, 0, 0, 0,
+                                MediaCodec.BUFFER_FLAG_END_OF_STREAM
+                            )
+                            isEOS = true
+                        } else {
+                            codec.queueInputBuffer(
+                                inputBufferIndex, 0, sampleSize,
+                                extractor.sampleTime, 0
+                            )
+                            extractor.advance()
+                        }
+                    }
+                }
 
-                val bytes = ByteArray(sampleSize)
-                buffer.get(bytes, 0, sampleSize)
-                outputStream.write(bytes)
-                buffer.clear()
+                // Get decoded output
+                val outputBufferIndex = codec.dequeueOutputBuffer(bufferInfo, 10000)
+                if (outputBufferIndex >= 0) {
+                    val outputBuffer = codec.getOutputBuffer(outputBufferIndex)
+                    if (outputBuffer != null && bufferInfo.size > 0) {
+                        val pcmData = ByteArray(bufferInfo.size)
+                        outputBuffer.get(pcmData)
 
-                extractor.advance()
+                        // Convert to mono 16kHz if needed
+                        val monoData = if (channels > 1) {
+                            convertToMono(pcmData, channels)
+                        } else {
+                            pcmData
+                        }
+
+                        // Resample if needed
+                        val resampledData = if (sampleRate != TARGET_SAMPLE_RATE) {
+                            resample(monoData, sampleRate, TARGET_SAMPLE_RATE)
+                        } else {
+                            monoData
+                        }
+
+                        outputStream.write(resampledData)
+                    }
+                    codec.releaseOutputBuffer(outputBufferIndex, false)
+
+                    if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
+                        break
+                    }
+                }
             }
 
             outputStream.close()
+            codec.stop()
+            codec.release()
             extractor.release()
 
-            Log.i(TAG, "Extracted ${tempFile.length()} bytes of audio")
+            Log.i(TAG, "Decoded ${tempFile.length()} bytes of PCM audio")
             return tempFile
 
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to extract audio", e)
+            Log.e(TAG, "Failed to decode audio", e)
             tempFile.delete()
+            codec?.release()
+            extractor?.release()
             return null
         }
+    }
+
+    /**
+     * Convert stereo/multi-channel PCM to mono by averaging channels.
+     */
+    private fun convertToMono(pcmData: ByteArray, channels: Int): ByteArray {
+        if (channels == 1) return pcmData
+
+        val samplesPerChannel = pcmData.size / (channels * 2) // 16-bit samples
+        val monoData = ByteArray(samplesPerChannel * 2)
+
+        for (i in 0 until samplesPerChannel) {
+            var sum = 0
+            for (ch in 0 until channels) {
+                val offset = (i * channels + ch) * 2
+                val sample = (pcmData[offset + 1].toInt() shl 8) or (pcmData[offset].toInt() and 0xFF)
+                sum += sample
+            }
+            val monoSample = (sum / channels).toShort()
+            monoData[i * 2] = (monoSample.toInt() and 0xFF).toByte()
+            monoData[i * 2 + 1] = ((monoSample.toInt() shr 8) and 0xFF).toByte()
+        }
+
+        return monoData
+    }
+
+    /**
+     * Simple linear resampling for rate conversion.
+     */
+    private fun resample(pcmData: ByteArray, fromRate: Int, toRate: Int): ByteArray {
+        if (fromRate == toRate) return pcmData
+
+        val inputSamples = pcmData.size / 2
+        val outputSamples = (inputSamples.toLong() * toRate / fromRate).toInt()
+        val outputData = ByteArray(outputSamples * 2)
+
+        val ratio = fromRate.toDouble() / toRate
+
+        for (i in 0 until outputSamples) {
+            val srcPos = i * ratio
+            val srcIndex = srcPos.toInt().coerceIn(0, inputSamples - 2)
+            val frac = srcPos - srcIndex
+
+            // Get two adjacent samples for interpolation
+            val s1 = (pcmData[srcIndex * 2 + 1].toInt() shl 8) or (pcmData[srcIndex * 2].toInt() and 0xFF)
+            val s2 = (pcmData[(srcIndex + 1) * 2 + 1].toInt() shl 8) or (pcmData[(srcIndex + 1) * 2].toInt() and 0xFF)
+
+            // Linear interpolation
+            val sample = (s1 + (s2 - s1) * frac).toInt().toShort()
+            outputData[i * 2] = (sample.toInt() and 0xFF).toByte()
+            outputData[i * 2 + 1] = ((sample.toInt() shr 8) and 0xFF).toByte()
+        }
+
+        return outputData
     }
 
     /**
