@@ -269,7 +269,7 @@ private fun ImportJobCard(job: ImportJob) {
             }
             Spacer(modifier = Modifier.height(8.dp))
             LinearProgressIndicator(
-                progress = { job.progress / 100f },
+                progress = job.progress / 100f,
                 modifier = Modifier.fillMaxWidth()
             )
         }
