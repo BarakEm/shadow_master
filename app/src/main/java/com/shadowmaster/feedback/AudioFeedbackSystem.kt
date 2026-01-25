@@ -46,33 +46,61 @@ class AudioFeedbackSystem @Inject constructor(
 
     /**
      * Play when a segment is detected (ready to play back)
-     * Two short ascending tones
+     * Single gentle beep
      */
     fun playSegmentDetected() {
         if (!isInitialized) return
 
-        scope.launch {
-            try {
-                toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, SHORT_TONE_DURATION)
-                delay(150)
-                toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP2, SHORT_TONE_DURATION)
-            } catch (e: Exception) {
-                Log.e(TAG, "Error playing segment detected tone", e)
-            }
+        try {
+            toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, SHORT_TONE_DURATION)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error playing segment detected tone", e)
+        }
+    }
+
+    /**
+     * Play when playback starts
+     * Single gentle low beep - indicates "I'm speaking now"
+     */
+    fun playPlaybackStart() {
+        if (!isInitialized) return
+
+        try {
+            toneGenerator?.startTone(ToneGenerator.TONE_CDMA_ALERT_NETWORK_LITE, SHORT_TONE_DURATION)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error playing playback start tone", e)
         }
     }
 
     /**
      * Play when starting to record user's voice
-     * Single medium tone
+     * Double beep - indicates "Your turn to speak"
      */
     fun playRecordingStart() {
         if (!isInitialized) return
 
+        scope.launch {
+            try {
+                toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, SHORT_TONE_DURATION)
+                delay(120)
+                toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP2, SHORT_TONE_DURATION)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error playing recording start tone", e)
+            }
+        }
+    }
+
+    /**
+     * Play when returning to listening state
+     * Soft descending tone - indicates "I'm listening for audio"
+     */
+    fun playListening() {
+        if (!isInitialized) return
+
         try {
-            toneGenerator?.startTone(ToneGenerator.TONE_PROP_PROMPT, MEDIUM_TONE_DURATION)
+            toneGenerator?.startTone(ToneGenerator.TONE_PROP_ACK, SHORT_TONE_DURATION)
         } catch (e: Exception) {
-            Log.e(TAG, "Error playing recording start tone", e)
+            Log.e(TAG, "Error playing listening tone", e)
         }
     }
 

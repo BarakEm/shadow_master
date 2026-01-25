@@ -72,4 +72,16 @@ class SettingsViewModel @Inject constructor(
             settingsRepository.updatePauseForNavigation(enabled)
         }
     }
+
+    fun updateBusMode(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.updateBusMode(enabled)
+        }
+    }
+
+    fun updateAudioFeedbackEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.updateAudioFeedbackEnabled(enabled)
+        }
+    }
 }

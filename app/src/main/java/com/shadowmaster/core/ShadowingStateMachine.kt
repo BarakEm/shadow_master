@@ -78,6 +78,10 @@ class ShadowingStateMachine @Inject constructor() {
                                 currentRepeat = currentPlaybackRepeat,
                                 totalRepeats = currentConfig.playbackRepeats
                             )
+                        } else if (currentConfig.busMode) {
+                            // Bus mode: skip user recording, go back to listening
+                            resetCounters()
+                            ShadowingState.Listening
                         } else {
                             currentUserRepeat = 1
                             ShadowingState.UserRecording(

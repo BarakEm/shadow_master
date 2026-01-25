@@ -80,13 +80,15 @@ fun SettingsScreen(
                 onValueChange = { viewModel.updatePlaybackRepeats(it) }
             )
 
-            // User Repeats
-            IntSliderSetting(
-                title = stringResource(R.string.user_repeats),
-                value = config.userRepeats,
-                valueRange = ShadowingConfig.MIN_USER_REPEATS..ShadowingConfig.MAX_USER_REPEATS,
-                onValueChange = { viewModel.updateUserRepeats(it) }
-            )
+            // User Repeats (hidden in bus mode)
+            if (!config.busMode) {
+                IntSliderSetting(
+                    title = stringResource(R.string.user_repeats),
+                    value = config.userRepeats,
+                    valueRange = ShadowingConfig.MIN_USER_REPEATS..ShadowingConfig.MAX_USER_REPEATS,
+                    onValueChange = { viewModel.updateUserRepeats(it) }
+                )
+            }
 
             // Silence Threshold
             IntSliderSetting(
@@ -100,12 +102,32 @@ fun SettingsScreen(
 
             Divider()
 
-            // Assessment Toggle
+            // Bus Mode Toggle (most prominent - at the top of modes)
             SwitchSetting(
-                title = stringResource(R.string.assessment_enabled),
-                subtitle = "Evaluate pronunciation after recording",
-                checked = config.assessmentEnabled,
-                onCheckedChange = { viewModel.updateAssessmentEnabled(it) }
+                title = stringResource(R.string.bus_mode),
+                subtitle = stringResource(R.string.bus_mode_desc),
+                checked = config.busMode,
+                onCheckedChange = { viewModel.updateBusMode(it) }
+            )
+
+            // Assessment Toggle (disabled if bus mode is on)
+            if (!config.busMode) {
+                SwitchSetting(
+                    title = stringResource(R.string.assessment_enabled),
+                    subtitle = "Evaluate pronunciation after recording",
+                    checked = config.assessmentEnabled,
+                    onCheckedChange = { viewModel.updateAssessmentEnabled(it) }
+                )
+            }
+
+            Divider()
+
+            // Audio Feedback Toggle
+            SwitchSetting(
+                title = stringResource(R.string.audio_feedback),
+                subtitle = stringResource(R.string.audio_feedback_desc),
+                checked = config.audioFeedbackEnabled,
+                onCheckedChange = { viewModel.updateAudioFeedbackEnabled(it) }
             )
 
             // Navigation Pause Toggle

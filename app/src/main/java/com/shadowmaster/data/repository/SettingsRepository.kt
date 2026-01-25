@@ -28,6 +28,8 @@ class SettingsRepository @Inject constructor(
         val USER_REPEATS = intPreferencesKey("user_repeats")
         val ASSESSMENT_ENABLED = booleanPreferencesKey("assessment_enabled")
         val PAUSE_FOR_NAVIGATION = booleanPreferencesKey("pause_for_navigation")
+        val BUS_MODE = booleanPreferencesKey("bus_mode")
+        val AUDIO_FEEDBACK_ENABLED = booleanPreferencesKey("audio_feedback_enabled")
     }
 
     val config: Flow<ShadowingConfig> = context.dataStore.data.map { preferences ->
@@ -45,7 +47,9 @@ class SettingsRepository @Inject constructor(
             playbackRepeats = preferences[Keys.PLAYBACK_REPEATS] ?: 1,
             userRepeats = preferences[Keys.USER_REPEATS] ?: 1,
             assessmentEnabled = preferences[Keys.ASSESSMENT_ENABLED] ?: true,
-            pauseForNavigation = preferences[Keys.PAUSE_FOR_NAVIGATION] ?: true
+            pauseForNavigation = preferences[Keys.PAUSE_FOR_NAVIGATION] ?: true,
+            busMode = preferences[Keys.BUS_MODE] ?: false,
+            audioFeedbackEnabled = preferences[Keys.AUDIO_FEEDBACK_ENABLED] ?: true
         )
     }
 
@@ -109,6 +113,18 @@ class SettingsRepository @Inject constructor(
         }
     }
 
+    suspend fun updateBusMode(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.BUS_MODE] = enabled
+        }
+    }
+
+    suspend fun updateAudioFeedbackEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.AUDIO_FEEDBACK_ENABLED] = enabled
+        }
+    }
+
     suspend fun updateConfig(config: ShadowingConfig) {
         context.dataStore.edit { preferences ->
             preferences[Keys.LANGUAGE] = config.language.code
@@ -119,6 +135,8 @@ class SettingsRepository @Inject constructor(
             preferences[Keys.USER_REPEATS] = config.userRepeats
             preferences[Keys.ASSESSMENT_ENABLED] = config.assessmentEnabled
             preferences[Keys.PAUSE_FOR_NAVIGATION] = config.pauseForNavigation
+            preferences[Keys.BUS_MODE] = config.busMode
+            preferences[Keys.AUDIO_FEEDBACK_ENABLED] = config.audioFeedbackEnabled
         }
     }
 }

@@ -23,6 +23,10 @@
     <string name="silence_threshold">Silence Threshold (ms)</string>
     <string name="assessment_enabled">Pronunciation Assessment</string>
     <string name="pause_for_navigation">Pause for Navigation</string>
+    <string name="bus_mode">Bus/Passive Mode</string>
+    <string name="bus_mode_desc">Just listen and repeat - no speaking practice required</string>
+    <string name="audio_feedback">Audio Beeps</string>
+    <string name="audio_feedback_desc">Beep sounds for hands-free state awareness</string>
 
     <!-- Languages -->
     <string name="lang_en_us">English (US)</string>

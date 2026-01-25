@@ -14,11 +14,14 @@ import com.shadowmaster.MainActivity
 import com.shadowmaster.R
 import com.shadowmaster.core.FeedbackEvent
 import com.shadowmaster.core.ShadowingCoordinator
+import com.shadowmaster.data.model.ShadowingConfig
 import com.shadowmaster.data.model.ShadowingState
+import com.shadowmaster.data.repository.SettingsRepository
 import com.shadowmaster.feedback.AudioFeedbackSystem
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -48,7 +51,11 @@ class ShadowingForegroundService : Service() {
     @Inject
     lateinit var audioFeedbackSystem: AudioFeedbackSystem
 
+    @Inject
+    lateinit var settingsRepository: SettingsRepository
+
     private var mediaProjection: MediaProjection? = null
+    private var currentConfig: ShadowingConfig = ShadowingConfig()
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var stateObserverJob: Job? = null
     private var feedbackObserverJob: Job? = null
@@ -135,13 +142,25 @@ class ShadowingForegroundService : Service() {
     }
 
     private fun observeFeedback() {
+        // Observe config changes
+        serviceScope.launch {
+            settingsRepository.config.collect { config ->
+                currentConfig = config
+            }
+        }
+
         feedbackObserverJob = serviceScope.launch {
             shadowingCoordinator.feedbackEvents.collect { event ->
+                if (!currentConfig.audioFeedbackEnabled) return@collect
+
                 when (event) {
+                    is FeedbackEvent.Listening -> audioFeedbackSystem.playListening()
                     is FeedbackEvent.SegmentDetected -> audioFeedbackSystem.playSegmentDetected()
+                    is FeedbackEvent.PlaybackStarted -> audioFeedbackSystem.playPlaybackStart()
                     is FeedbackEvent.RecordingStarted -> audioFeedbackSystem.playRecordingStart()
                     is FeedbackEvent.GoodScore -> audioFeedbackSystem.playGoodScore()
                     is FeedbackEvent.BadScore -> audioFeedbackSystem.playBadScore()
+                    is FeedbackEvent.Paused -> audioFeedbackSystem.playPaused()
                     else -> { }
                 }
             }
