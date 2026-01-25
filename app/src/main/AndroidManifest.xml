@@ -34,12 +34,12 @@
         android:theme="@style/Theme.ShadowMaster"
         tools:targetApi="34">
 
-        <!-- Main Activity -->
+        <!-- Main Activity with splash screen -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.ShadowMaster"
+            android:theme="@style/Theme.ShadowMaster.Splash"
             android:screenOrientation="portrait"
             android:launchMode="singleTop">
             <intent-filter>

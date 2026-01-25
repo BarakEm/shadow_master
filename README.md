@@ -1,8 +1,17 @@
-# Shadow Master
+<p align="center">
+  <img src="docs/ninja-logo.svg" width="180" alt="Shadow Master Logo">
+</p>
 
-**[Project Website](https://barakem.github.io/shadow_master/)**
+<h1 align="center">Shadow Master</h1>
 
-Android app for language learning through audio shadowing. Captures audio from any app (podcasts, YouTube, etc.), detects speech segments, and prompts you to repeat them.
+<p align="center">
+  <strong>Language learning through audio shadowing</strong><br>
+  <a href="https://barakem.github.io/shadow_master/">Project Website</a>
+</p>
+
+---
+
+Android app that captures audio from any app (podcasts, YouTube, etc.), detects speech segments, and prompts you to repeat them.
 
 ## Features
 

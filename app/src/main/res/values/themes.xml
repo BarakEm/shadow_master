@@ -4,4 +4,11 @@
         <item name="android:statusBarColor">@color/primary</item>
         <item name="android:navigationBarColor">@color/primary</item>
     </style>
+
+    <!-- Splash screen theme -->
+    <style name="Theme.ShadowMaster.Splash" parent="Theme.ShadowMaster">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+        <item name="android:statusBarColor">@color/ic_launcher_background</item>
+        <item name="android:navigationBarColor">@color/ic_launcher_background</item>
+    </style>
 </resources>

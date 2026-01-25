@@ -1,38 +1,92 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 108 108">
-  <!-- 80s Ninja Shadow Master -->
-  <g transform="translate(18, 16)">
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <defs>
+    <!-- Background gradient -->
+    <radialGradient id="bgGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#2D1B4E"/>
+      <stop offset="100%" stop-color="#0F0F1A"/>
+    </radialGradient>
+    <!-- Headband gradient -->
+    <linearGradient id="headband" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#E94560"/>
+      <stop offset="100%" stop-color="#FF6B6B"/>
+    </linearGradient>
+    <!-- Eye glow -->
+    <filter id="eyeGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <!-- Sound wave glow -->
+    <filter id="waveGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
 
-    <!-- Shadow/smoke effect behind ninja -->
-    <path fill="#1A1A2E" fill-opacity="0.6" d="M10,70 Q-5,50 15,30 Q25,15 40,20 Q60,10 65,30 Q80,25 75,50 Q85,65 70,75 Q50,85 30,78 Q15,82 10,70 Z"/>
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="url(#bgGlow)"/>
+  <circle cx="100" cy="100" r="95" fill="none" stroke="#E94560" stroke-width="2" stroke-opacity="0.3"/>
 
-    <!-- Ninja body - crouching silhouette -->
-    <path fill="#0F0F1A" d="M30,75 L25,60 Q20,50 28,45 L35,42 L32,35 Q30,30 35,28 L45,30 Q48,28 50,30 L55,32 Q58,30 56,35 L52,42 L58,45 Q68,50 62,60 L58,75 Q55,78 45,78 Q35,78 30,75 Z"/>
+  <g transform="translate(50, 45)">
+    <!-- Shadow beneath ninja -->
+    <ellipse cx="50" cy="115" rx="35" ry="8" fill="#000" fill-opacity="0.3"/>
+
+    <!-- Ninja body silhouette - simplified and cleaner -->
+    <path fill="#1A1A2E" d="
+      M35,110
+      L30,85
+      Q25,70 35,60
+      L40,55
+      L40,50
+      Q40,45 45,42
+      L50,40
+      L55,42
+      Q60,45 60,50
+      L60,55
+      L65,60
+      Q75,70 70,85
+      L65,110
+      Q60,115 50,115
+      Q40,115 35,110
+      Z"/>
 
     <!-- Ninja head -->
-    <path fill="#0F0F1A" d="M35,32 Q32,25 38,18 Q44,12 50,18 Q56,25 52,32 Q48,38 44,38 Q38,38 35,32 Z"/>
+    <ellipse cx="50" cy="35" rx="18" ry="20" fill="#1A1A2E"/>
 
-    <!-- Ninja mask/headband -->
-    <path fill="#E94560" d="M33,24 L55,24 L55,28 L33,28 Z"/>
+    <!-- Headband -->
+    <rect x="30" y="28" width="40" height="8" rx="2" fill="url(#headband)"/>
 
-    <!-- Headband tail flowing (80s style!) -->
-    <path fill="#E94560" d="M55,24 Q62,22 68,26 Q72,30 70,35 Q68,32 65,30 Q60,28 55,28 Z"/>
-    <path fill="#C73E54" d="M68,26 Q75,24 78,30 Q76,28 72,28 Q70,30 70,35 Q72,30 68,26 Z"/>
+    <!-- Flowing headband tail -->
+    <path fill="#E94560" d="M70,28 Q82,26 90,32 Q88,35 82,36 Q76,34 70,36 Z"/>
+    <path fill="#C73E54" d="M90,32 Q98,30 102,38 Q96,38 90,36 Q88,35 90,32 Z"/>
 
-    <!-- Ninja eyes - intense stare -->
-    <path fill="#FFFFFF" d="M38,25 L42,25 L42,27 L38,27 Z"/>
-    <path fill="#FFFFFF" d="M46,25 L50,27 L50,25 L46,25 Z"/>
+    <!-- Eyes - glowing -->
+    <g filter="url(#eyeGlow)">
+      <rect x="38" y="32" width="8" height="4" rx="1" fill="#FFF"/>
+      <rect x="54" y="32" width="8" height="4" rx="1" fill="#FFF"/>
+      <!-- Pupils -->
+      <rect x="42" y="33" width="3" height="2" fill="#FF6B6B"/>
+      <rect x="56" y="33" width="3" height="2" fill="#FF6B6B"/>
+    </g>
 
-    <!-- Eye glow (80s neon effect) -->
-    <path fill="#FF6B6B" fill-opacity="0.8" d="M39,26 L41,26 L41,26.5 L39,26.5 Z"/>
-    <path fill="#FF6B6B" fill-opacity="0.8" d="M47,26 L49,26 L49,26.5 L47,26.5 Z"/>
-
-    <!-- Arm with hand sign (ninja mudra) -->
-    <path fill="#0F0F1A" d="M28,48 Q22,44 20,50 L18,55 Q16,58 20,60 L28,58 Q30,55 28,48 Z"/>
-
-    <!-- Sound wave emanating (he's listening/speaking) -->
-    <path stroke="#E94560" stroke-width="1.5" stroke-opacity="0.7" fill="none" d="M60,40 Q65,44 60,50"/>
-    <path stroke="#E94560" stroke-width="1.5" stroke-opacity="0.5" fill="none" d="M65,36 Q72,44 65,54"/>
-    <path stroke="#E94560" stroke-width="1.5" stroke-opacity="0.3" fill="none" d="M70,32 Q80,44 70,58"/>
-
+    <!-- Sound waves - representing audio/speech -->
+    <g filter="url(#waveGlow)">
+      <path stroke="#E94560" stroke-width="2.5" stroke-opacity="0.9" fill="none" stroke-linecap="round"
+            d="M75,45 Q82,55 75,65"/>
+      <path stroke="#E94560" stroke-width="2" stroke-opacity="0.6" fill="none" stroke-linecap="round"
+            d="M82,38 Q92,55 82,72"/>
+      <path stroke="#E94560" stroke-width="1.5" stroke-opacity="0.3" fill="none" stroke-linecap="round"
+            d="M89,32 Q102,55 89,78"/>
+    </g>
   </g>
+
+  <!-- App name arc at bottom -->
+  <text x="100" y="185" text-anchor="middle" fill="#8892b0" font-family="sans-serif" font-size="12" font-weight="500">
+    SHADOW MASTER
+  </text>
 </svg>
