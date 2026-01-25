@@ -32,6 +32,10 @@ class SettingsRepository @Inject constructor(
         val AUDIO_FEEDBACK_ENABLED = booleanPreferencesKey("audio_feedback_enabled")
     }
 
+    // Blocking access for initial value (use sparingly)
+    val configBlocking: ShadowingConfig
+        get() = ShadowingConfig()
+
     val config: Flow<ShadowingConfig> = context.dataStore.data.map { preferences ->
         ShadowingConfig(
             language = SupportedLanguage.fromCode(

@@ -113,6 +113,11 @@ dependencies {
     // DataStore for settings persistence
     implementation("androidx.datastore:datastore-preferences:1.0.0")
 
+    // Room Database for Shadow Library
+    implementation("androidx.room:room-runtime:2.6.1")
+    implementation("androidx.room:room-ktx:2.6.1")
+    ksp("androidx.room:room-compiler:2.6.1")
+
     // Media3 for MediaSession (Android Auto integration)
     implementation("androidx.media3:media3-session:1.2.1")
     implementation("androidx.media3:media3-common:1.2.1")
