@@ -47,6 +47,9 @@ fun NavGraph(
 
         composable(Screen.Driving.route) {
             DrivingScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
                 }

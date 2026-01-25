@@ -11,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,6 +32,7 @@ import com.shadowmaster.data.model.ShadowingState
 
 @Composable
 fun DrivingScreen(
+    onNavigateBack: () -> Unit,
     onNavigateToSettings: () -> Unit,
     viewModel: DrivingViewModel = hiltViewModel()
 ) {
@@ -75,6 +77,7 @@ fun DrivingScreen(
         topBar = {
             DrivingTopBar(
                 languageName = config.language.displayName,
+                onBackClick = onNavigateBack,
                 onSettingsClick = onNavigateToSettings
             )
         }
@@ -135,6 +138,7 @@ fun DrivingScreen(
 @Composable
 private fun DrivingTopBar(
     languageName: String,
+    onBackClick: () -> Unit,
     onSettingsClick: () -> Unit
 ) {
     TopAppBar(
@@ -149,6 +153,14 @@ private fun DrivingTopBar(
                 Text(languageName)
             }
         },
+        navigationIcon = {
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back"
+                )
+            }
+        },
         actions = {
             IconButton(onClick = onSettingsClick) {
                 Icon(
@@ -160,6 +172,7 @@ private fun DrivingTopBar(
         colors = TopAppBarDefaults.topAppBarColors(
             containerColor = MaterialTheme.colorScheme.primary,
             titleContentColor = MaterialTheme.colorScheme.onPrimary,
+            navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
             actionIconContentColor = MaterialTheme.colorScheme.onPrimary
         )
     )
