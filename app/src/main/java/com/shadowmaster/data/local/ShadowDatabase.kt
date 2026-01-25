@@ -49,7 +49,7 @@ interface ShadowItemDao {
 
 @Dao
 interface ShadowPlaylistDao {
-    @Query("SELECT * FROM shadow_playlists ORDER BY lastPracticedAt DESC NULLS LAST, createdAt DESC")
+    @Query("SELECT * FROM shadow_playlists ORDER BY CASE WHEN lastPracticedAt IS NULL THEN 1 ELSE 0 END, lastPracticedAt DESC, createdAt DESC")
     fun getAllPlaylists(): Flow<List<ShadowPlaylist>>
 
     @Query("SELECT * FROM shadow_playlists WHERE id = :id")
