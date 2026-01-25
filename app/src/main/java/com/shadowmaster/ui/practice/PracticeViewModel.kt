@@ -106,7 +106,7 @@ class PracticeViewModel @Inject constructor(
         val busMode = config.value.busMode
 
         for (index in itemsList.indices) {
-            if (!isActive) break
+            if (!coroutineContext.isActive) break
 
             _currentItemIndex.value = index
             _progress.value = index.toFloat() / itemsList.size
@@ -114,10 +114,10 @@ class PracticeViewModel @Inject constructor(
             val item = itemsList[index]
 
             for (repeat in 1..repeats) {
-                if (!isActive) break
+                if (!coroutineContext.isActive) break
 
                 // Wait if paused
-                while (isPaused && isActive) {
+                while (isPaused && coroutineContext.isActive) {
                     delay(100)
                 }
 
@@ -132,7 +132,7 @@ class PracticeViewModel @Inject constructor(
 
                 playAudioFile(item.audioFilePath)
 
-                if (!isActive) break
+                if (!coroutineContext.isActive) break
 
                 // In bus mode, skip user recording - just move to next
                 if (busMode) {
