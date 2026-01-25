@@ -8,6 +8,7 @@ import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.IBinder
+import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.shadowmaster.MainActivity
@@ -56,6 +57,7 @@ class ShadowingForegroundService : Service() {
 
     private var mediaProjection: MediaProjection? = null
     private var currentConfig: ShadowingConfig = ShadowingConfig()
+    private var wakeLock: PowerManager.WakeLock? = null
     private val serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var stateObserverJob: Job? = null
     private var feedbackObserverJob: Job? = null
@@ -112,6 +114,32 @@ class ShadowingForegroundService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
+
+        // Acquire wake lock to keep session alive
+        acquireWakeLock()
+    }
+
+    private fun acquireWakeLock() {
+        if (wakeLock == null) {
+            val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+            wakeLock = powerManager.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK,
+                "ShadowMaster::ShadowingSession"
+            ).apply {
+                acquire(10 * 60 * 60 * 1000L) // 10 hours max
+            }
+            Log.i(TAG, "Wake lock acquired")
+        }
+    }
+
+    private fun releaseWakeLock() {
+        wakeLock?.let {
+            if (it.isHeld) {
+                it.release()
+                Log.i(TAG, "Wake lock released")
+            }
+        }
+        wakeLock = null
     }
 
     private fun startCapture(resultCode: Int, resultData: Intent) {
@@ -248,6 +276,7 @@ class ShadowingForegroundService : Service() {
         shadowingCoordinator.stop()
         mediaProjection?.stop()
         mediaProjection = null
+        releaseWakeLock()
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
         Log.i(TAG, "Shadowing session stopped")
@@ -256,6 +285,7 @@ class ShadowingForegroundService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         instance = null
+        releaseWakeLock()
         serviceScope.cancel()
         shadowingCoordinator.release()
         audioFeedbackSystem.release()
