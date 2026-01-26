@@ -1,29 +1,34 @@
 package com.shadowmaster
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.rememberNavController
+import com.shadowmaster.crash.CrashReporter
 import com.shadowmaster.ui.navigation.NavGraph
-import com.shadowmaster.ui.navigation.Screen
 import com.shadowmaster.ui.theme.ShadowMasterTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
@@ -48,11 +53,19 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             var showSplash by remember { mutableStateOf(true) }
+            var showCrashDialog by remember { mutableStateOf(false) }
+            var crashReport by remember { mutableStateOf<String?>(null) }
 
             LaunchedEffect(Unit) {
                 delay(1500) // Show splash for 1.5 seconds
                 showSplash = false
                 keepSplashVisible = false
+
+                // Check for crash report after splash
+                if (CrashReporter.hasCrashReport(this@MainActivity)) {
+                    crashReport = CrashReporter.getCrashReport(this@MainActivity)
+                    showCrashDialog = true
+                }
             }
 
             ShadowMasterTheme {
@@ -68,6 +81,30 @@ class MainActivity : ComponentActivity() {
                             navController = navController,
                             sharedContent = sharedContent
                         )
+
+                        // Show crash dialog if there's a crash report
+                        if (showCrashDialog && crashReport != null) {
+                            CrashReportDialog(
+                                crashReport = crashReport!!,
+                                onCopy = {
+                                    val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    val clip = ClipData.newPlainText("Crash Report", crashReport)
+                                    clipboard.setPrimaryClip(clip)
+                                    Toast.makeText(this@MainActivity, "Crash report copied to clipboard", Toast.LENGTH_SHORT).show()
+                                },
+                                onShare = {
+                                    CrashReporter.createShareIntent(this@MainActivity)?.let { shareIntent ->
+                                        startActivity(Intent.createChooser(shareIntent, "Share Crash Report"))
+                                    }
+                                    CrashReporter.clearCrashReport(this@MainActivity)
+                                    showCrashDialog = false
+                                },
+                                onDismiss = {
+                                    CrashReporter.clearCrashReport(this@MainActivity)
+                                    showCrashDialog = false
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -148,4 +185,63 @@ private fun SplashContent() {
             )
         }
     }
+}
+
+@Composable
+private fun CrashReportDialog(
+    crashReport: String,
+    onCopy: () -> Unit,
+    onShare: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "App Crashed",
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = "The app crashed during the last session. Share or copy the crash report to help debug the issue.",
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 200.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = MaterialTheme.shapes.small
+                ) {
+                    Text(
+                        text = crashReport.take(2000) + if (crashReport.length > 2000) "\n..." else "",
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 10.sp,
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .verticalScroll(rememberScrollState())
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                OutlinedButton(onClick = onCopy) {
+                    Text("Copy")
+                }
+                Button(onClick = onShare) {
+                    Text("Share")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Dismiss")
+            }
+        }
+    )
 }
