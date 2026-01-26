@@ -4,6 +4,7 @@ import android.net.Uri
 import com.shadowmaster.data.local.*
 import com.shadowmaster.data.model.*
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,7 +18,8 @@ class LibraryRepository @Inject constructor(
     private val importJobDao: ImportJobDao,
     private val practiceSessionDao: PracticeSessionDao,
     private val audioImporter: AudioImporter,
-    private val urlAudioImporter: UrlAudioImporter
+    private val urlAudioImporter: UrlAudioImporter,
+    private val audioExporter: AudioExporter
 ) {
     // Playlists
     fun getAllPlaylists(): Flow<List<ShadowPlaylist>> = shadowPlaylistDao.getAllPlaylists()
@@ -48,6 +50,22 @@ class LibraryRepository @Inject constructor(
 
     suspend fun toggleFavorite(itemId: String, isFavorite: Boolean) =
         shadowItemDao.setFavorite(itemId, isFavorite)
+
+    suspend fun updateItemTranscription(itemId: String, transcription: String?) =
+        shadowItemDao.updateTranscription(itemId, transcription)
+
+    suspend fun updateItemTranslation(itemId: String, translation: String?) =
+        shadowItemDao.updateTranslation(itemId, translation)
+
+    suspend fun renamePlaylist(playlistId: String, name: String) =
+        shadowPlaylistDao.updateName(playlistId, name)
+
+    // Segment operations
+    suspend fun splitSegment(item: ShadowItem, splitPointMs: Long): List<ShadowItem>? =
+        audioImporter.splitSegment(item, splitPointMs)
+
+    suspend fun mergeSegments(items: List<ShadowItem>): ShadowItem? =
+        audioImporter.mergeSegments(items)
 
     suspend fun getItemCount(): Int = shadowItemDao.getItemCount()
 
@@ -109,4 +127,18 @@ class LibraryRepository @Inject constructor(
     suspend fun getTotalPracticeTime(): Long = practiceSessionDao.getTotalPracticeTime() ?: 0L
 
     suspend fun getTotalItemsPracticed(): Int = practiceSessionDao.getTotalItemsPracticed() ?: 0
+
+    // Export
+    suspend fun exportPlaylist(
+        playlistId: String,
+        playlistName: String,
+        config: ShadowingConfig,
+        includeYourTurnSilence: Boolean = true
+    ): Result<String> = audioExporter.exportPlaylist(playlistId, playlistName, config, includeYourTurnSilence)
+
+    fun getExportProgress(): StateFlow<ExportProgress> = audioExporter.exportProgress
+
+    fun clearExportProgress() = audioExporter.clearProgress()
+
+    fun cancelExport() = audioExporter.cancelExport()
 }
