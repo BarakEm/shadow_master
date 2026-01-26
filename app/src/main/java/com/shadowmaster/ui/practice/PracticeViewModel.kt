@@ -216,11 +216,20 @@ class PracticeViewModel @Inject constructor(
             val audioData = file.readBytes()
 
             // Create AudioTrack for PCM playback
-            val bufferSize = AudioTrack.getMinBufferSize(
+            val minBufferSize = AudioTrack.getMinBufferSize(
                 SAMPLE_RATE,
                 AudioFormat.CHANNEL_OUT_MONO,
                 AudioFormat.ENCODING_PCM_16BIT
             )
+
+            // Validate buffer size - getMinBufferSize can return ERROR (-1) or ERROR_BAD_VALUE (-2)
+            if (minBufferSize <= 0) {
+                Log.e(TAG, "Invalid buffer size from getMinBufferSize: $minBufferSize")
+                return
+            }
+
+            // Use 2x minimum buffer for stability (same as PlaybackEngine)
+            val bufferSize = minBufferSize * 2
 
             audioTrack = AudioTrack.Builder()
                 .setAudioAttributes(
@@ -280,8 +289,10 @@ class PracticeViewModel @Inject constructor(
     }
 
     fun skip() {
-        // Cancel current and let loop continue
+        // Cancel current playback and release resources
         audioTrack?.stop()
+        audioTrack?.release()
+        audioTrack = null
     }
 
     fun skipToItem(index: Int) {
