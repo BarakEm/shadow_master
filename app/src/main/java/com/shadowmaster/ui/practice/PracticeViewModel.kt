@@ -206,6 +206,7 @@ class PracticeViewModel @Inject constructor(
     }
 
     private suspend fun playAudioFile(filePath: String) {
+        var localTrack: AudioTrack? = null
         try {
             val file = File(filePath)
             if (!file.exists()) {
@@ -213,7 +214,18 @@ class PracticeViewModel @Inject constructor(
                 return
             }
 
+            // Check file size to avoid OOM
+            val fileSize = file.length()
+            if (fileSize > 50 * 1024 * 1024) { // 50MB limit
+                Log.e(TAG, "Audio file too large: $fileSize bytes")
+                return
+            }
+
             val audioData = file.readBytes()
+            if (audioData.isEmpty()) {
+                Log.e(TAG, "Audio file is empty: $filePath")
+                return
+            }
 
             // Create AudioTrack for PCM playback
             val minBufferSize = AudioTrack.getMinBufferSize(
@@ -228,10 +240,10 @@ class PracticeViewModel @Inject constructor(
                 return
             }
 
-            // Use 2x minimum buffer for stability (same as PlaybackEngine)
+            // Use 2x minimum buffer for stability
             val bufferSize = minBufferSize * 2
 
-            audioTrack = AudioTrack.Builder()
+            localTrack = AudioTrack.Builder()
                 .setAudioAttributes(
                     AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -249,35 +261,63 @@ class PracticeViewModel @Inject constructor(
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build()
 
-            audioTrack?.play()
+            // Verify AudioTrack was created successfully
+            if (localTrack.state != AudioTrack.STATE_INITIALIZED) {
+                Log.e(TAG, "AudioTrack failed to initialize, state: ${localTrack.state}")
+                localTrack.release()
+                return
+            }
+
+            audioTrack = localTrack
+            localTrack.play()
 
             // Write audio data in chunks
             var offset = 0
             val chunkSize = bufferSize
-            while (offset < audioData.size && audioTrack?.playState == AudioTrack.PLAYSTATE_PLAYING) {
+            while (offset < audioData.size && localTrack.playState == AudioTrack.PLAYSTATE_PLAYING) {
                 // Check for pause
-                while (isPaused && audioTrack?.playState == AudioTrack.PLAYSTATE_PLAYING) {
-                    audioTrack?.pause()
+                while (isPaused && localTrack.playState == AudioTrack.PLAYSTATE_PLAYING) {
+                    localTrack.pause()
                     delay(100)
-                    if (!isPaused) {
-                        audioTrack?.play()
+                    if (!isPaused && localTrack.playState == AudioTrack.PLAYSTATE_PAUSED) {
+                        localTrack.play()
                     }
                 }
 
+                // Check if we should stop (e.g., skip was called)
+                if (audioTrack == null) {
+                    break
+                }
+
                 val bytesToWrite = minOf(chunkSize, audioData.size - offset)
-                audioTrack?.write(audioData, offset, bytesToWrite)
-                offset += bytesToWrite
+                val written = localTrack.write(audioData, offset, bytesToWrite)
+                if (written < 0) {
+                    Log.e(TAG, "AudioTrack write error: $written")
+                    break
+                }
+                offset += written
             }
 
             // Wait for playback to complete
             delay(100)
 
-            audioTrack?.stop()
-            audioTrack?.release()
-            audioTrack = null
-
         } catch (e: Exception) {
-            Log.e(TAG, "Error playing audio", e)
+            Log.e(TAG, "Error playing audio: ${e.message}", e)
+        } finally {
+            // Always clean up
+            try {
+                localTrack?.stop()
+            } catch (e: Exception) {
+                Log.w(TAG, "Error stopping AudioTrack", e)
+            }
+            try {
+                localTrack?.release()
+            } catch (e: Exception) {
+                Log.w(TAG, "Error releasing AudioTrack", e)
+            }
+            if (audioTrack == localTrack) {
+                audioTrack = null
+            }
         }
     }
 
@@ -289,15 +329,22 @@ class PracticeViewModel @Inject constructor(
     }
 
     fun skip() {
-        // Cancel current playback and release resources
-        audioTrack?.stop()
-        audioTrack?.release()
+        // Signal playback to stop by nulling the reference
+        // The playback loop will detect this and stop
+        val track = audioTrack
         audioTrack = null
+        try {
+            track?.stop()
+            track?.release()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error stopping AudioTrack in skip", e)
+        }
     }
 
     fun skipToItem(index: Int) {
         if (index in _items.value.indices) {
             practiceJob?.cancel()
+            skip() // Clean up current playback
             _currentItemIndex.value = index
             startPractice()
         }
@@ -305,15 +352,25 @@ class PracticeViewModel @Inject constructor(
 
     fun stop() {
         practiceJob?.cancel()
-        audioTrack?.stop()
-        audioTrack?.release()
+        val track = audioTrack
         audioTrack = null
+        try {
+            track?.stop()
+            track?.release()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error stopping AudioTrack in stop", e)
+        }
         _state.value = PracticeState.Ready
     }
 
     override fun onCleared() {
         super.onCleared()
         practiceJob?.cancel()
-        audioTrack?.release()
+        try {
+            audioTrack?.release()
+        } catch (e: Exception) {
+            Log.w(TAG, "Error releasing AudioTrack in onCleared", e)
+        }
+        audioTrack = null
     }
 }
