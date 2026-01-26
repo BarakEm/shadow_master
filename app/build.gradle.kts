@@ -17,12 +17,12 @@ if (localPropertiesFile.exists()) {
 
 android {
     namespace = "com.shadowmaster"
-    compileSdk = 36
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.shadowmaster"
         minSdk = 29 // Android 10 required for AudioPlaybackCapture
-        targetSdk = 36
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
 
@@ -92,7 +92,7 @@ dependencies {
     // Compose - Updated BOM to fix CircularProgressIndicator crash on API 36
     // The crash was caused by KeyframesSpec.at() method signature mismatch between
     // material3 and animation-core in older BOM versions
-    implementation(platform("androidx.compose:compose-bom:2025.01.01"))
+    implementation(platform("androidx.compose:compose-bom:2024.06.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
@@ -106,8 +106,8 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.7.6")
 
     // Hilt Dependency Injection
-    implementation("com.google.dagger:hilt-android:2.54")
-    ksp("com.google.dagger:hilt-compiler:2.54")
+    implementation("com.google.dagger:hilt-android:2.51.1")
+    ksp("com.google.dagger:hilt-compiler:2.51.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     // DataStore for settings persistence
@@ -142,6 +142,6 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.7.3")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
-    androidTestImplementation(platform("androidx.compose:compose-bom:2025.01.01"))
+    androidTestImplementation(platform("androidx.compose:compose-bom:2024.06.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 }
