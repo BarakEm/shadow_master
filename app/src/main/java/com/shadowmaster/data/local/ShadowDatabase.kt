@@ -40,6 +40,12 @@ interface ShadowItemDao {
     @Query("UPDATE shadow_items SET isFavorite = :isFavorite WHERE id = :id")
     suspend fun setFavorite(id: String, isFavorite: Boolean)
 
+    @Query("UPDATE shadow_items SET transcription = :transcription WHERE id = :id")
+    suspend fun updateTranscription(id: String, transcription: String?)
+
+    @Query("UPDATE shadow_items SET translation = :translation WHERE id = :id")
+    suspend fun updateTranslation(id: String, translation: String?)
+
     @Query("SELECT COUNT(*) FROM shadow_items")
     suspend fun getItemCount(): Int
 
@@ -66,6 +72,9 @@ interface ShadowPlaylistDao {
 
     @Query("UPDATE shadow_playlists SET lastPracticedAt = :timestamp WHERE id = :id")
     suspend fun markPracticed(id: String, timestamp: Long = System.currentTimeMillis())
+
+    @Query("UPDATE shadow_playlists SET name = :name WHERE id = :id")
+    suspend fun updateName(id: String, name: String)
 }
 
 @Dao

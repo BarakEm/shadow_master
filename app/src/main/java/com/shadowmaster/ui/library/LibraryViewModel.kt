@@ -152,4 +152,88 @@ class LibraryViewModel @Inject constructor(
     fun clearUrlImportProgress() {
         libraryRepository.clearUrlImportProgress()
     }
+
+    fun renamePlaylist(playlistId: String, newName: String) {
+        viewModelScope.launch {
+            libraryRepository.renamePlaylist(playlistId, newName)
+            // Update selected playlist if it's the one being renamed
+            _selectedPlaylist.value?.let { current ->
+                if (current.id == playlistId) {
+                    _selectedPlaylist.value = current.copy(name = newName)
+                }
+            }
+        }
+    }
+
+    fun updateItemTranscription(itemId: String, transcription: String?) {
+        viewModelScope.launch {
+            libraryRepository.updateItemTranscription(itemId, transcription)
+            // Refresh playlist items
+            _playlistItems.value = _playlistItems.value.map { item ->
+                if (item.id == itemId) item.copy(transcription = transcription) else item
+            }
+        }
+    }
+
+    fun updateItemTranslation(itemId: String, translation: String?) {
+        viewModelScope.launch {
+            libraryRepository.updateItemTranslation(itemId, translation)
+            // Refresh playlist items
+            _playlistItems.value = _playlistItems.value.map { item ->
+                if (item.id == itemId) item.copy(translation = translation) else item
+            }
+        }
+    }
+
+    fun splitSegment(item: ShadowItem, splitPointMs: Long) {
+        viewModelScope.launch {
+            val result = libraryRepository.splitSegment(item, splitPointMs)
+            if (result != null) {
+                _importSuccess.value = "Segment split into 2 parts"
+                // Refresh playlist items
+                _selectedPlaylist.value?.let { playlist ->
+                    selectPlaylist(playlist)
+                }
+            } else {
+                _importError.value = "Failed to split segment"
+            }
+        }
+    }
+
+    private val _selectedForMerge = MutableStateFlow<Set<String>>(emptySet())
+    val selectedForMerge: StateFlow<Set<String>> = _selectedForMerge.asStateFlow()
+
+    fun toggleMergeSelection(itemId: String) {
+        _selectedForMerge.value = _selectedForMerge.value.let { current ->
+            if (current.contains(itemId)) current - itemId else current + itemId
+        }
+    }
+
+    fun clearMergeSelection() {
+        _selectedForMerge.value = emptySet()
+    }
+
+    fun mergeSelectedSegments() {
+        viewModelScope.launch {
+            val selectedIds = _selectedForMerge.value
+            if (selectedIds.size < 2) {
+                _importError.value = "Select at least 2 segments to merge"
+                return@launch
+            }
+
+            val itemsToMerge = _playlistItems.value.filter { it.id in selectedIds }
+            val result = libraryRepository.mergeSegments(itemsToMerge)
+
+            if (result != null) {
+                _importSuccess.value = "Merged ${itemsToMerge.size} segments"
+                clearMergeSelection()
+                // Refresh playlist items
+                _selectedPlaylist.value?.let { playlist ->
+                    selectPlaylist(playlist)
+                }
+            } else {
+                _importError.value = "Failed to merge segments"
+            }
+        }
+    }
 }

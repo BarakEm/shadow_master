@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.Slider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -40,8 +41,13 @@ fun LibraryScreen(
     val importError by viewModel.importError.collectAsState()
     val importSuccess by viewModel.importSuccess.collectAsState()
     val urlImportProgress by viewModel.urlImportProgress.collectAsState()
+    val selectedForMerge by viewModel.selectedForMerge.collectAsState()
 
     var showDeleteDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
+    var showRenamePlaylistDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
+    var showEditItemDialog by remember { mutableStateOf<ShadowItem?>(null) }
+    var showSplitDialog by remember { mutableStateOf<ShadowItem?>(null) }
+    var mergeMode by remember { mutableStateOf(false) }
     var showUrlImportDialog by remember { mutableStateOf(false) }
     var urlToImport by remember { mutableStateOf("") }
 
@@ -102,11 +108,38 @@ fun LibraryScreen(
                 },
                 actions = {
                     if (selectedPlaylist != null) {
-                        IconButton(onClick = { onStartPractice(selectedPlaylist!!.id) }) {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = "Start Practice"
-                            )
+                        // Merge mode toggle
+                        if (mergeMode) {
+                            if (selectedForMerge.size >= 2) {
+                                IconButton(onClick = { viewModel.mergeSelectedSegments() }) {
+                                    Icon(
+                                        imageVector = Icons.Default.CallMerge,
+                                        contentDescription = "Merge Selected"
+                                    )
+                                }
+                            }
+                            IconButton(onClick = {
+                                mergeMode = false
+                                viewModel.clearMergeSelection()
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Cancel Merge"
+                                )
+                            }
+                        } else {
+                            IconButton(onClick = { mergeMode = true }) {
+                                Icon(
+                                    imageVector = Icons.Default.CallMerge,
+                                    contentDescription = "Merge Mode"
+                                )
+                            }
+                            IconButton(onClick = { onStartPractice(selectedPlaylist!!.id) }) {
+                                Icon(
+                                    imageVector = Icons.Default.PlayArrow,
+                                    contentDescription = "Start Practice"
+                                )
+                            }
                         }
                     }
                 },
@@ -168,7 +201,12 @@ fun LibraryScreen(
                 // Show playlist items
                 PlaylistDetailContent(
                     items = playlistItems,
-                    onToggleFavorite = { viewModel.toggleFavorite(it) }
+                    onToggleFavorite = { viewModel.toggleFavorite(it) },
+                    onEditItem = { showEditItemDialog = it },
+                    onSplitItem = { showSplitDialog = it },
+                    mergeMode = mergeMode,
+                    selectedForMerge = selectedForMerge,
+                    onToggleMergeSelection = { viewModel.toggleMergeSelection(it.id) }
                 )
             } else {
                 // Show playlists list
@@ -177,6 +215,7 @@ fun LibraryScreen(
                     activeImports = activeImports,
                     onPlaylistClick = { viewModel.selectPlaylist(it) },
                     onDeleteClick = { showDeleteDialog = it },
+                    onRenameClick = { showRenamePlaylistDialog = it },
                     onStartPractice = onStartPractice
                 )
             }
@@ -217,6 +256,160 @@ fun LibraryScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Rename playlist dialog
+    showRenamePlaylistDialog?.let { playlist ->
+        var newName by remember { mutableStateOf(playlist.name) }
+        AlertDialog(
+            onDismissRequest = { showRenamePlaylistDialog = null },
+            title = { Text("Rename Playlist") },
+            text = {
+                OutlinedTextField(
+                    value = newName,
+                    onValueChange = { newName = it },
+                    label = { Text("Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (newName.isNotBlank()) {
+                            viewModel.renamePlaylist(playlist.id, newName.trim())
+                            showRenamePlaylistDialog = null
+                        }
+                    },
+                    enabled = newName.isNotBlank()
+                ) {
+                    Text("Rename")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRenamePlaylistDialog = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Edit item dialog (transcription/translation)
+    showEditItemDialog?.let { item ->
+        var transcription by remember { mutableStateOf(item.transcription ?: "") }
+        var translation by remember { mutableStateOf(item.translation ?: "") }
+        AlertDialog(
+            onDismissRequest = { showEditItemDialog = null },
+            title = { Text("Edit Segment") },
+            text = {
+                Column {
+                    Text(
+                        text = "Segment ${item.orderInPlaylist + 1} (${formatDuration(item.durationMs)})",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = transcription,
+                        onValueChange = { transcription = it },
+                        label = { Text("Transcription (original text)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2,
+                        maxLines = 4
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = translation,
+                        onValueChange = { translation = it },
+                        label = { Text("Translation") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2,
+                        maxLines = 4
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.updateItemTranscription(
+                            item.id,
+                            transcription.ifBlank { null }
+                        )
+                        viewModel.updateItemTranslation(
+                            item.id,
+                            translation.ifBlank { null }
+                        )
+                        showEditItemDialog = null
+                    }
+                ) {
+                    Text("Save")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditItemDialog = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Split segment dialog
+    showSplitDialog?.let { item ->
+        var splitPosition by remember { mutableStateOf(item.durationMs / 2f) }
+        AlertDialog(
+            onDismissRequest = { showSplitDialog = null },
+            title = { Text("Split Segment") },
+            text = {
+                Column {
+                    Text(
+                        text = "Segment ${item.orderInPlaylist + 1} (${formatDuration(item.durationMs)})",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Split point: ${formatDuration(splitPosition.toLong())}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Slider(
+                        value = splitPosition,
+                        onValueChange = { splitPosition = it },
+                        valueRange = 500f..(item.durationMs - 500f).coerceAtLeast(501f),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Part 1: ${formatDuration(splitPosition.toLong())}",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                        Text(
+                            text = "Part 2: ${formatDuration((item.durationMs - splitPosition.toLong()))}",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.splitSegment(item, splitPosition.toLong())
+                        showSplitDialog = null
+                    },
+                    enabled = splitPosition >= 500f && splitPosition <= item.durationMs - 500f
+                ) {
+                    Text("Split")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSplitDialog = null }) {
                     Text("Cancel")
                 }
             }
@@ -336,6 +529,7 @@ private fun PlaylistsContent(
     activeImports: List<ImportJob>,
     onPlaylistClick: (ShadowPlaylist) -> Unit,
     onDeleteClick: (ShadowPlaylist) -> Unit,
+    onRenameClick: (ShadowPlaylist) -> Unit,
     onStartPractice: (String) -> Unit
 ) {
     LazyColumn(
@@ -380,6 +574,7 @@ private fun PlaylistsContent(
                     playlist = playlist,
                     onClick = { onPlaylistClick(playlist) },
                     onDeleteClick = { onDeleteClick(playlist) },
+                    onRenameClick = { onRenameClick(playlist) },
                     onPlayClick = { onStartPractice(playlist.id) }
                 )
             }
@@ -438,6 +633,7 @@ private fun PlaylistCard(
     playlist: ShadowPlaylist,
     onClick: () -> Unit,
     onDeleteClick: () -> Unit,
+    onRenameClick: () -> Unit,
     onPlayClick: () -> Unit
 ) {
     Card(
@@ -495,6 +691,12 @@ private fun PlaylistCard(
                     contentDescription = "Practice"
                 )
             }
+            IconButton(onClick = onRenameClick) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Rename"
+                )
+            }
             IconButton(onClick = onDeleteClick) {
                 Icon(
                     imageVector = Icons.Default.Delete,
@@ -509,7 +711,12 @@ private fun PlaylistCard(
 @Composable
 private fun PlaylistDetailContent(
     items: List<ShadowItem>,
-    onToggleFavorite: (ShadowItem) -> Unit
+    onToggleFavorite: (ShadowItem) -> Unit,
+    onEditItem: (ShadowItem) -> Unit,
+    onSplitItem: (ShadowItem) -> Unit,
+    mergeMode: Boolean,
+    selectedForMerge: Set<String>,
+    onToggleMergeSelection: (ShadowItem) -> Unit
 ) {
     if (items.isEmpty()) {
         Box(
@@ -529,17 +736,36 @@ private fun PlaylistDetailContent(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item {
-                Text(
-                    text = "${items.size} segments",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "${items.size} segments",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (mergeMode) {
+                        Text(
+                            text = "${selectedForMerge.size} selected",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
             items(items, key = { it.id }) { item ->
                 ShadowItemCard(
                     item = item,
-                    onToggleFavorite = { onToggleFavorite(item) }
+                    onToggleFavorite = { onToggleFavorite(item) },
+                    onEditClick = { onEditItem(item) },
+                    onSplitClick = { onSplitItem(item) },
+                    mergeMode = mergeMode,
+                    isSelectedForMerge = item.id in selectedForMerge,
+                    onToggleMergeSelection = { onToggleMergeSelection(item) }
                 )
             }
         }
@@ -549,10 +775,30 @@ private fun PlaylistDetailContent(
 @Composable
 private fun ShadowItemCard(
     item: ShadowItem,
-    onToggleFavorite: () -> Unit
+    onToggleFavorite: () -> Unit,
+    onEditClick: () -> Unit,
+    onSplitClick: () -> Unit,
+    mergeMode: Boolean,
+    isSelectedForMerge: Boolean,
+    onToggleMergeSelection: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (mergeMode) {
+                    Modifier.clickable(onClick = onToggleMergeSelection)
+                } else {
+                    Modifier
+                }
+            ),
+        colors = if (isSelectedForMerge) {
+            CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.primaryContainer
+            )
+        } else {
+            CardDefaults.cardColors()
+        }
     ) {
         Row(
             modifier = Modifier
@@ -560,6 +806,15 @@ private fun ShadowItemCard(
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Merge checkbox
+            if (mergeMode) {
+                Checkbox(
+                    checked = isSelectedForMerge,
+                    onCheckedChange = { onToggleMergeSelection() }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+
             // Duration badge
             Surface(
                 color = MaterialTheme.colorScheme.primaryContainer,
@@ -582,6 +837,16 @@ private fun ShadowItemCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
+                // Show translation if available
+                item.translation?.let { translation ->
+                    Text(
+                        text = translation,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
                 Row(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -601,13 +866,36 @@ private fun ShadowItemCard(
                 }
             }
 
-            // Favorite button
-            IconButton(onClick = onToggleFavorite) {
-                Icon(
-                    imageVector = if (item.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                    contentDescription = "Favorite",
-                    tint = if (item.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            // Show action buttons only when not in merge mode
+            if (!mergeMode) {
+                // Split button (only if segment is long enough)
+                if (item.durationMs > 1000) {
+                    IconButton(onClick = onSplitClick) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCut,
+                            contentDescription = "Split",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                // Edit button
+                IconButton(onClick = onEditClick) {
+                    Icon(
+                        imageVector = Icons.Default.Edit,
+                        contentDescription = "Edit",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Favorite button
+                IconButton(onClick = onToggleFavorite) {
+                    Icon(
+                        imageVector = if (item.isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = "Favorite",
+                        tint = if (item.isFavorite) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }

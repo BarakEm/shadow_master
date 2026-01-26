@@ -236,6 +236,92 @@ private fun StatusIndicator(state: ShadowingState) {
             textAlign = TextAlign.Center,
             fontWeight = FontWeight.Medium
         )
+
+        // Show detailed score feedback when in Feedback state
+        if (state is ShadowingState.Feedback) {
+            Spacer(modifier = Modifier.height(16.dp))
+            ScoreFeedbackCard(result = state.result)
+        }
+    }
+}
+
+@Composable
+private fun ScoreFeedbackCard(result: com.shadowmaster.data.model.AssessmentResult) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (result.isGood)
+                MaterialTheme.colorScheme.tertiaryContainer
+            else
+                MaterialTheme.colorScheme.errorContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Overall score - large display
+            Text(
+                text = "${result.overallScore.toInt()}%",
+                style = MaterialTheme.typography.displayMedium,
+                fontWeight = FontWeight.Bold,
+                color = if (result.isGood)
+                    MaterialTheme.colorScheme.onTertiaryContainer
+                else
+                    MaterialTheme.colorScheme.onErrorContainer
+            )
+
+            Text(
+                text = if (result.isGood) "Good job!" else "Keep practicing!",
+                style = MaterialTheme.typography.titleMedium,
+                color = if (result.isGood)
+                    MaterialTheme.colorScheme.onTertiaryContainer
+                else
+                    MaterialTheme.colorScheme.onErrorContainer
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Detail scores
+            ScoreBar(label = "Pronunciation", score = result.pronunciationScore)
+            ScoreBar(label = "Fluency", score = result.fluencyScore)
+            ScoreBar(label = "Completeness", score = result.completenessScore)
+        }
+    }
+}
+
+@Composable
+private fun ScoreBar(label: String, score: Float) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.width(100.dp)
+        )
+        LinearProgressIndicator(
+            progress = (score / 100f).coerceIn(0f, 1f),
+            modifier = Modifier
+                .weight(1f)
+                .height(8.dp),
+            color = when {
+                score >= 80f -> MaterialTheme.colorScheme.tertiary
+                score >= 60f -> MaterialTheme.colorScheme.primary
+                else -> MaterialTheme.colorScheme.error
+            }
+        )
+        Text(
+            text = "${score.toInt()}%",
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.width(40.dp),
+            textAlign = TextAlign.End
+        )
     }
 }
 

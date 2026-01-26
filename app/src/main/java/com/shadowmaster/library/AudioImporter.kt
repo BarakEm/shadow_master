@@ -546,6 +546,166 @@ class AudioImporter @Inject constructor(
     fun release() {
         scope.cancel()
     }
+
+    /**
+     * Split a segment into two parts at the given timestamp.
+     * @param item The item to split
+     * @param splitPointMs The position within the segment to split (relative to segment start)
+     * @return List of two new ShadowItems, or null if split failed
+     */
+    suspend fun splitSegment(item: ShadowItem, splitPointMs: Long): List<ShadowItem>? = withContext(Dispatchers.IO) {
+        try {
+            if (splitPointMs <= MIN_SEGMENT_DURATION_MS || splitPointMs >= item.durationMs - MIN_SEGMENT_DURATION_MS) {
+                Log.w(TAG, "Split point too close to edge: $splitPointMs / ${item.durationMs}")
+                return@withContext null
+            }
+
+            val sourceFile = File(item.audioFilePath)
+            if (!sourceFile.exists()) {
+                Log.e(TAG, "Source file not found: ${item.audioFilePath}")
+                return@withContext null
+            }
+
+            val bytesPerMs = (TARGET_SAMPLE_RATE * 2) / 1000 // 16-bit mono
+            val splitByte = (splitPointMs * bytesPerMs).toInt()
+            val totalBytes = sourceFile.length().toInt()
+
+            // Read source audio
+            val audioData = sourceFile.readBytes()
+
+            // Create first segment
+            val segment1File = File(segmentsDir, "${UUID.randomUUID()}.pcm")
+            FileOutputStream(segment1File).use { output ->
+                output.write(audioData, 0, splitByte)
+            }
+
+            // Create second segment
+            val segment2File = File(segmentsDir, "${UUID.randomUUID()}.pcm")
+            FileOutputStream(segment2File).use { output ->
+                output.write(audioData, splitByte, totalBytes - splitByte)
+            }
+
+            // Create new ShadowItems
+            val item1 = item.copy(
+                id = UUID.randomUUID().toString(),
+                sourceEndMs = item.sourceStartMs + splitPointMs,
+                audioFilePath = segment1File.absolutePath,
+                durationMs = splitPointMs,
+                createdAt = System.currentTimeMillis()
+            )
+
+            val item2 = item.copy(
+                id = UUID.randomUUID().toString(),
+                sourceStartMs = item.sourceStartMs + splitPointMs,
+                audioFilePath = segment2File.absolutePath,
+                durationMs = item.durationMs - splitPointMs,
+                orderInPlaylist = item.orderInPlaylist + 1,
+                createdAt = System.currentTimeMillis()
+            )
+
+            // Insert new items
+            shadowItemDao.insert(item1)
+            shadowItemDao.insert(item2)
+
+            // Delete original
+            shadowItemDao.delete(item)
+            sourceFile.delete()
+
+            // Update order for subsequent items in playlist
+            item.playlistId?.let { playlistId ->
+                val items = shadowItemDao.getItemsByPlaylist(playlistId).first()
+                items.filter { it.orderInPlaylist > item.orderInPlaylist && it.id != item1.id && it.id != item2.id }
+                    .forEach { laterItem ->
+                        shadowItemDao.update(laterItem.copy(orderInPlaylist = laterItem.orderInPlaylist + 1))
+                    }
+            }
+
+            Log.i(TAG, "Split segment ${item.id} into ${item1.id} and ${item2.id}")
+            listOf(item1, item2)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to split segment", e)
+            null
+        }
+    }
+
+    /**
+     * Merge multiple segments into one.
+     * @param items The items to merge (must be from same playlist, in order)
+     * @return The new merged ShadowItem, or null if merge failed
+     */
+    suspend fun mergeSegments(items: List<ShadowItem>): ShadowItem? = withContext(Dispatchers.IO) {
+        try {
+            if (items.size < 2) {
+                Log.w(TAG, "Need at least 2 items to merge")
+                return@withContext null
+            }
+
+            // Verify all items are from same playlist
+            val playlistId = items.first().playlistId
+            if (items.any { it.playlistId != playlistId }) {
+                Log.w(TAG, "Cannot merge items from different playlists")
+                return@withContext null
+            }
+
+            // Sort by order in playlist
+            val sortedItems = items.sortedBy { it.orderInPlaylist }
+
+            // Concatenate audio data
+            val mergedFile = File(segmentsDir, "${UUID.randomUUID()}.pcm")
+            FileOutputStream(mergedFile).use { output ->
+                sortedItems.forEach { item ->
+                    val sourceFile = File(item.audioFilePath)
+                    if (sourceFile.exists()) {
+                        output.write(sourceFile.readBytes())
+                    }
+                }
+            }
+
+            // Calculate total duration
+            val totalDuration = sortedItems.sumOf { it.durationMs }
+
+            // Create merged item
+            val mergedItem = sortedItems.first().copy(
+                id = UUID.randomUUID().toString(),
+                sourceEndMs = sortedItems.last().sourceEndMs,
+                audioFilePath = mergedFile.absolutePath,
+                durationMs = totalDuration,
+                transcription = sortedItems.mapNotNull { it.transcription }.joinToString(" ").takeIf { it.isNotBlank() },
+                translation = sortedItems.mapNotNull { it.translation }.joinToString(" ").takeIf { it.isNotBlank() },
+                createdAt = System.currentTimeMillis(),
+                practiceCount = 0,
+                lastPracticedAt = null
+            )
+
+            // Insert merged item
+            shadowItemDao.insert(mergedItem)
+
+            // Delete original items and their audio files
+            sortedItems.forEach { item ->
+                shadowItemDao.delete(item)
+                File(item.audioFilePath).delete()
+            }
+
+            // Update order for subsequent items
+            playlistId?.let { pid ->
+                val lowestOrder = sortedItems.minOf { it.orderInPlaylist }
+                val itemsRemoved = sortedItems.size - 1
+                val allItems = shadowItemDao.getItemsByPlaylist(pid).first()
+                allItems.filter { it.orderInPlaylist > lowestOrder && it.id != mergedItem.id }
+                    .forEach { laterItem ->
+                        shadowItemDao.update(laterItem.copy(orderInPlaylist = laterItem.orderInPlaylist - itemsRemoved))
+                    }
+            }
+
+            Log.i(TAG, "Merged ${sortedItems.size} segments into ${mergedItem.id}")
+            mergedItem
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to merge segments", e)
+            null
+        }
+    }
 }
 
 data class AudioSegmentBounds(

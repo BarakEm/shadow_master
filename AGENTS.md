@@ -104,3 +104,50 @@ Shadow Master is an Android app for language learning through "shadowing" - a te
 - StateFlow/SharedFlow for reactive streams
 - Compose for all UI (no XML layouts except resources)
 - Single-activity architecture with Compose Navigation
+
+## Version 1.1 Features Implementation Guide
+
+### Rename Feature
+- **Location**: `ui/library/LibraryScreen.kt`
+- **DAO methods**: `updatePlaylistName()`, `updateItemTranscription()` in DAOs
+- **UI**: Long-press context menu or edit icon in detail view
+
+### Transcription Feature
+- **Data field**: `ShadowItem.transcription` (already exists, nullable String)
+- **Display**: Show in practice screen and library detail
+- **Manual entry**: Edit dialog in segment detail view
+- **Future**: Add Speech-to-Text API integration (Google Cloud, Azure, Whisper)
+
+### Translation Feature
+- **Data field**: `ShadowItem.translation` (already exists, nullable String)
+- **Display**: Below transcription in practice screen
+- **Manual entry**: Edit dialog in segment detail view
+- **Future**: Add Translation API (Google Translate, Azure, DeepL)
+
+### Pronunciation Feedback Display
+- **Data**: `AssessmentResult` with overallScore, pronunciationScore, fluencyScore, completenessScore
+- **Display**: Score bars or percentage in practice screen
+- **Current**: Mock scores returned - real Azure integration planned
+
+### Segment Split Feature
+- **Location**: `ui/library/SegmentDetailScreen.kt` (new)
+- **Logic**:
+  1. Load segment audio samples
+  2. User selects split point(s) via timeline
+  3. Create new ShadowItem entries with adjusted sourceStartMs/sourceEndMs
+  4. Save new segment audio files
+- **Audio**: Use `AudioImporter.extractSegment()` pattern
+
+### Segment Merge Feature
+- **Location**: `ui/library/LibraryScreen.kt`
+- **Logic**:
+  1. Select multiple segments (checkbox mode)
+  2. Combine audio samples in order
+  3. Create new ShadowItem with combined audio
+  4. Optionally delete originals
+- **Constraint**: Only merge segments from same source file
+
+### Audio Beeps Enhancement
+- **Current implementation**: `feedback/AudioFeedbackSystem.kt`
+- **Existing beeps**: segment detected, playback start, recording start, good/bad scores, pause/resume
+- **Enhancement**: Add volume control, different tone sets, custom sounds

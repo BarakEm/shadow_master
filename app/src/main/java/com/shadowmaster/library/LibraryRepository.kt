@@ -49,6 +49,22 @@ class LibraryRepository @Inject constructor(
     suspend fun toggleFavorite(itemId: String, isFavorite: Boolean) =
         shadowItemDao.setFavorite(itemId, isFavorite)
 
+    suspend fun updateItemTranscription(itemId: String, transcription: String?) =
+        shadowItemDao.updateTranscription(itemId, transcription)
+
+    suspend fun updateItemTranslation(itemId: String, translation: String?) =
+        shadowItemDao.updateTranslation(itemId, translation)
+
+    suspend fun renamePlaylist(playlistId: String, name: String) =
+        shadowPlaylistDao.updateName(playlistId, name)
+
+    // Segment operations
+    suspend fun splitSegment(item: ShadowItem, splitPointMs: Long): List<ShadowItem>? =
+        audioImporter.splitSegment(item, splitPointMs)
+
+    suspend fun mergeSegments(items: List<ShadowItem>): ShadowItem? =
+        audioImporter.mergeSegments(items)
+
     suspend fun getItemCount(): Int = shadowItemDao.getItemCount()
 
     suspend fun getPlaylistItemCount(playlistId: String): Int =

@@ -153,6 +153,41 @@ com.shadowmaster/
 - **Silero VAD** for voice activity detection
 - **Azure Speech SDK** for pronunciation assessment (optional)
 
+## Roadmap
+
+### ✅ Version 1.0 (Current - Stable)
+- [x] Shadow Library with audio import and segmentation
+- [x] Live Shadow with real-time capture
+- [x] VAD-based speech detection (Silero)
+- [x] Playback speed control and repeat options
+- [x] User recording with silence detection
+- [x] Audio feedback beeps for hands-free use
+- [x] Bus mode (listen-only)
+- [x] Settings persistence
+
+### 🚧 Version 1.1 (In Progress)
+- [x] Rename playlists and segments
+- [x] Transcription display and manual entry
+- [x] Translation display and manual entry
+- [x] Pronunciation feedback display (scores visualization)
+- [ ] Split long segments into smaller parts
+- [ ] Merge short segments together
+- [ ] Enhanced audio beep customization
+
+### 📋 Version 1.2 (Planned)
+- [ ] Automatic transcription (Speech-to-Text API)
+- [ ] Automatic translation (Translation API)
+- [ ] Real pronunciation assessment (Azure Speech Services)
+- [ ] Export/backup playlists
+- [ ] Import from URL (YouTube, podcast links)
+
+### 🔮 Future Ideas
+- [ ] Full Android Auto integration
+- [ ] Spaced repetition for difficult segments
+- [ ] Social features (share playlists)
+- [ ] Waveform visualization
+- [ ] A/B comparison (original vs your recording)
+
 ## License
 
 MIT
