@@ -45,6 +45,9 @@ interface ShadowItemDao {
 
     @Query("SELECT COUNT(*) FROM shadow_items WHERE playlistId = :playlistId")
     suspend fun getItemCountByPlaylist(playlistId: String): Int
+
+    @Query("UPDATE shadow_items SET transcription = :transcription WHERE id = :id")
+    suspend fun updateTranscription(id: String, transcription: String)
 }
 
 @Dao

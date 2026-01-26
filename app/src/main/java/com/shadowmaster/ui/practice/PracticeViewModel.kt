@@ -18,6 +18,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.io.FileInputStream
 import javax.inject.Inject
@@ -33,6 +35,7 @@ sealed class PracticeState {
     data class UserRecording(val itemIndex: Int, val repeatNumber: Int) : PracticeState()
     data object Paused : PracticeState()
     data object Finished : PracticeState()
+    data object Transcribing : PracticeState()
 }
 
 @HiltViewModel
@@ -63,9 +66,24 @@ class PracticeViewModel @Inject constructor(
     private val _progress = MutableStateFlow(0f)
     val progress: StateFlow<Float> = _progress.asStateFlow()
 
+    // Loop mode for sentence-by-sentence practice
+    private val _isLoopMode = MutableStateFlow(false)
+    val isLoopMode: StateFlow<Boolean> = _isLoopMode.asStateFlow()
+
+    // Transcription state
+    private val _isTranscribing = MutableStateFlow(false)
+    val isTranscribing: StateFlow<Boolean> = _isTranscribing.asStateFlow()
+
+    // Thread-safe AudioTrack management
+    private val audioTrackMutex = Mutex()
     private var audioTrack: AudioTrack? = null
     private var practiceJob: Job? = null
+    private var singlePlayJob: Job? = null
     private var isPaused = false
+
+    // Flag to stop current playback
+    @Volatile
+    private var stopPlayback = false
 
     private val config = settingsRepository.config
         .stateIn(
@@ -96,8 +114,201 @@ class PracticeViewModel @Inject constructor(
         if (_items.value.isEmpty()) return
 
         practiceJob?.cancel()
+        singlePlayJob?.cancel()
         practiceJob = viewModelScope.launch(Dispatchers.IO) {
             runPracticeLoop()
+        }
+    }
+
+    /**
+     * Play only the current segment (for sentence mode).
+     * Loops if loop mode is enabled.
+     */
+    fun playCurrentSegment() {
+        val items = _items.value
+        val index = _currentItemIndex.value
+        if (index !in items.indices) return
+
+        practiceJob?.cancel()
+        singlePlayJob?.cancel()
+        stopPlayback = false
+
+        singlePlayJob = viewModelScope.launch(Dispatchers.IO) {
+            do {
+                if (!isActive || stopPlayback) break
+
+                _state.value = PracticeState.Playing(index, 1)
+                playAudioFile(items[index].audioFilePath)
+
+                if (_isLoopMode.value && isActive && !stopPlayback) {
+                    delay(500) // Brief pause between loops
+                }
+            } while (_isLoopMode.value && isActive && !stopPlayback)
+
+            if (isActive && !stopPlayback) {
+                _state.value = PracticeState.Ready
+            }
+        }
+    }
+
+    /**
+     * Toggle loop mode for current segment.
+     */
+    fun toggleLoopMode() {
+        _isLoopMode.value = !_isLoopMode.value
+    }
+
+    /**
+     * Navigate to previous segment.
+     */
+    fun previousSegment() {
+        val currentIndex = _currentItemIndex.value
+        if (currentIndex > 0) {
+            stopCurrentPlayback()
+            _currentItemIndex.value = currentIndex - 1
+            _progress.value = _currentItemIndex.value.toFloat() / _items.value.size
+        }
+    }
+
+    /**
+     * Navigate to next segment.
+     */
+    fun nextSegment() {
+        val items = _items.value
+        val currentIndex = _currentItemIndex.value
+        if (currentIndex < items.size - 1) {
+            stopCurrentPlayback()
+            _currentItemIndex.value = currentIndex + 1
+            _progress.value = _currentItemIndex.value.toFloat() / items.size
+        }
+    }
+
+    /**
+     * Transcribe the current segment using Azure Speech SDK.
+     */
+    fun transcribeCurrentSegment() {
+        val items = _items.value
+        val index = _currentItemIndex.value
+        if (index !in items.indices) return
+
+        val item = items[index]
+        // Skip if already transcribed
+        if (!item.transcription.isNullOrBlank()) return
+
+        viewModelScope.launch {
+            _isTranscribing.value = true
+            val previousState = _state.value
+            _state.value = PracticeState.Transcribing
+
+            try {
+                val transcription = transcribeAudioFile(item.audioFilePath)
+                if (transcription != null) {
+                    // Update the item with transcription
+                    libraryRepository.updateTranscription(item.id, transcription)
+                    // Refresh the items list
+                    libraryRepository.getItemsByPlaylist(playlistId)
+                        .first()
+                        .let { loadedItems ->
+                            _items.value = loadedItems
+                        }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Transcription failed", e)
+            } finally {
+                _isTranscribing.value = false
+                _state.value = previousState
+            }
+        }
+    }
+
+    private suspend fun transcribeAudioFile(filePath: String): String? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val file = File(filePath)
+                if (!file.exists()) {
+                    Log.e(TAG, "Audio file not found for transcription: $filePath")
+                    return@withContext null
+                }
+
+                // Read the PCM audio data
+                val audioData = file.readBytes()
+                if (audioData.isEmpty()) {
+                    Log.e(TAG, "Empty audio file: $filePath")
+                    return@withContext null
+                }
+
+                // Use Azure Speech SDK for transcription
+                // Note: Requires AZURE_SPEECH_KEY and AZURE_SPEECH_REGION in BuildConfig
+                transcribeWithAzure(audioData)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error transcribing audio", e)
+                null
+            }
+        }
+    }
+
+    private fun transcribeWithAzure(audioData: ByteArray): String? {
+        return try {
+            // Azure Speech SDK transcription
+            // The SDK is already included as a dependency
+            val speechKey = com.shadowmaster.BuildConfig.AZURE_SPEECH_KEY
+            val speechRegion = com.shadowmaster.BuildConfig.AZURE_SPEECH_REGION
+
+            if (speechKey.isBlank() || speechKey == "your_azure_speech_key_here") {
+                Log.w(TAG, "Azure Speech key not configured")
+                return null
+            }
+
+            val speechConfig = com.microsoft.cognitiveservices.speech.SpeechConfig.fromSubscription(
+                speechKey,
+                speechRegion
+            )
+
+            // Configure for the audio format (16kHz, mono, 16-bit PCM)
+            val audioFormat = com.microsoft.cognitiveservices.speech.audio.AudioStreamFormat.getWaveFormatPCM(
+                SAMPLE_RATE.toLong(),
+                16.toShort(),
+                1.toShort()
+            )
+
+            val pushStream = com.microsoft.cognitiveservices.speech.audio.PushAudioInputStream.create(audioFormat)
+            pushStream.write(audioData)
+            pushStream.close()
+
+            val audioConfig = com.microsoft.cognitiveservices.speech.audio.AudioConfig.fromStreamInput(pushStream)
+            val recognizer = com.microsoft.cognitiveservices.speech.SpeechRecognizer(speechConfig, audioConfig)
+
+            val result = recognizer.recognizeOnceAsync().get()
+
+            recognizer.close()
+            audioConfig.close()
+            speechConfig.close()
+
+            when (result.reason) {
+                com.microsoft.cognitiveservices.speech.ResultReason.RecognizedSpeech -> {
+                    Log.d(TAG, "Transcription successful: ${result.text}")
+                    result.text
+                }
+                com.microsoft.cognitiveservices.speech.ResultReason.NoMatch -> {
+                    Log.w(TAG, "No speech recognized")
+                    null
+                }
+                else -> {
+                    Log.e(TAG, "Transcription failed: ${result.reason}")
+                    null
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Azure transcription error", e)
+            null
+        }
+    }
+
+    private fun stopCurrentPlayback() {
+        stopPlayback = true
+        singlePlayJob?.cancel()
+        viewModelScope.launch {
+            releaseAudioTrackSafely()
         }
     }
 
@@ -108,7 +319,8 @@ class PracticeViewModel @Inject constructor(
         val busMode = cfg.busMode
         val silenceBetweenRepeats = cfg.silenceBetweenRepeatsMs.toLong()
 
-        for (index in itemsList.indices) {
+        var index = _currentItemIndex.value
+        while (index < itemsList.size) {
             if (!coroutineContext.isActive) break
 
             _currentItemIndex.value = index
@@ -182,6 +394,12 @@ class PracticeViewModel @Inject constructor(
                 }
             }
 
+            // In loop mode, stay on current segment
+            if (_isLoopMode.value) {
+                delay(500)
+                continue
+            }
+
             // Brief pause between items
             delay(500)
 
@@ -192,6 +410,8 @@ class PracticeViewModel @Inject constructor(
                 }
                 delay(300)
             }
+
+            index++
         }
 
         // Session complete
@@ -214,6 +434,10 @@ class PracticeViewModel @Inject constructor(
             }
 
             val audioData = file.readBytes()
+            if (audioData.isEmpty()) {
+                Log.e(TAG, "Empty audio file: $filePath")
+                return
+            }
 
             // Create AudioTrack for PCM playback
             val minBufferSize = AudioTrack.getMinBufferSize(
@@ -228,10 +452,10 @@ class PracticeViewModel @Inject constructor(
                 return
             }
 
-            // Use 2x minimum buffer for stability (same as PlaybackEngine)
+            // Use 2x minimum buffer for stability
             val bufferSize = minBufferSize * 2
 
-            audioTrack = AudioTrack.Builder()
+            val track = AudioTrack.Builder()
                 .setAudioAttributes(
                     AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -249,35 +473,74 @@ class PracticeViewModel @Inject constructor(
                 .setTransferMode(AudioTrack.MODE_STREAM)
                 .build()
 
-            audioTrack?.play()
+            // Store reference with mutex protection
+            audioTrackMutex.withLock {
+                audioTrack = track
+            }
+
+            track.play()
 
             // Write audio data in chunks
             var offset = 0
             val chunkSize = bufferSize
-            while (offset < audioData.size && audioTrack?.playState == AudioTrack.PLAYSTATE_PLAYING) {
+            while (offset < audioData.size && !stopPlayback) {
+                // Check track state safely
+                val currentTrack = audioTrackMutex.withLock { audioTrack }
+                if (currentTrack == null || currentTrack.playState != AudioTrack.PLAYSTATE_PLAYING) {
+                    break
+                }
+
                 // Check for pause
-                while (isPaused && audioTrack?.playState == AudioTrack.PLAYSTATE_PLAYING) {
-                    audioTrack?.pause()
+                while (isPaused && !stopPlayback) {
+                    audioTrackMutex.withLock {
+                        audioTrack?.pause()
+                    }
                     delay(100)
                     if (!isPaused) {
-                        audioTrack?.play()
+                        audioTrackMutex.withLock {
+                            audioTrack?.play()
+                        }
                     }
                 }
 
+                if (stopPlayback) break
+
                 val bytesToWrite = minOf(chunkSize, audioData.size - offset)
-                audioTrack?.write(audioData, offset, bytesToWrite)
-                offset += bytesToWrite
+                val written = currentTrack.write(audioData, offset, bytesToWrite)
+                if (written < 0) {
+                    Log.e(TAG, "AudioTrack write error: $written")
+                    break
+                }
+                offset += written
             }
 
             // Wait for playback to complete
-            delay(100)
+            if (!stopPlayback) {
+                delay(100)
+            }
 
-            audioTrack?.stop()
-            audioTrack?.release()
-            audioTrack = null
+            // Release the track
+            releaseAudioTrackSafely()
 
         } catch (e: Exception) {
             Log.e(TAG, "Error playing audio", e)
+            releaseAudioTrackSafely()
+        }
+    }
+
+    private suspend fun releaseAudioTrackSafely() {
+        audioTrackMutex.withLock {
+            try {
+                audioTrack?.stop()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error stopping AudioTrack", e)
+            }
+            try {
+                audioTrack?.release()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error releasing AudioTrack", e)
+            }
+            audioTrack = null
         }
     }
 
@@ -289,31 +552,37 @@ class PracticeViewModel @Inject constructor(
     }
 
     fun skip() {
-        // Cancel current playback and release resources
-        audioTrack?.stop()
-        audioTrack?.release()
-        audioTrack = null
+        // Stop current playback and move to next
+        stopCurrentPlayback()
     }
 
     fun skipToItem(index: Int) {
         if (index in _items.value.indices) {
+            stopCurrentPlayback()
             practiceJob?.cancel()
             _currentItemIndex.value = index
+            _progress.value = index.toFloat() / _items.value.size
             startPractice()
         }
     }
 
     fun stop() {
+        stopPlayback = true
         practiceJob?.cancel()
-        audioTrack?.stop()
-        audioTrack?.release()
-        audioTrack = null
-        _state.value = PracticeState.Ready
+        singlePlayJob?.cancel()
+        viewModelScope.launch {
+            releaseAudioTrackSafely()
+            _state.value = PracticeState.Ready
+        }
     }
 
     override fun onCleared() {
         super.onCleared()
+        stopPlayback = true
         practiceJob?.cancel()
-        audioTrack?.release()
+        singlePlayJob?.cancel()
+        runBlocking {
+            releaseAudioTrackSafely()
+        }
     }
 }

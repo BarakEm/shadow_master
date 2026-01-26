@@ -4,6 +4,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -29,6 +30,8 @@ fun PracticeScreen(
     val items by viewModel.items.collectAsState()
     val currentIndex by viewModel.currentItemIndex.collectAsState()
     val progress by viewModel.progress.collectAsState()
+    val isLoopMode by viewModel.isLoopMode.collectAsState()
+    val isTranscribing by viewModel.isTranscribing.collectAsState()
 
     val currentItem = items.getOrNull(currentIndex)
 
@@ -57,6 +60,20 @@ fun PracticeScreen(
                         )
                     }
                 },
+                actions = {
+                    // Loop mode toggle
+                    IconButton(onClick = { viewModel.toggleLoopMode() }) {
+                        Icon(
+                            imageVector = Icons.Default.Repeat,
+                            contentDescription = if (isLoopMode) "Disable loop" else "Enable loop",
+                            tint = if (isLoopMode) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.6f)
+                            }
+                        )
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
@@ -73,25 +90,42 @@ fun PracticeScreen(
         ) {
             // Progress bar
             LinearProgressIndicator(
-                progress = progress,
+                progress = { progress },
                 modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.weight(0.2f))
+            Spacer(modifier = Modifier.weight(0.15f))
 
             // State indicator
             PracticeStateIndicator(state = state)
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Current segment info
             currentItem?.let { item ->
-                SegmentInfo(item = item)
+                SegmentInfo(
+                    item = item,
+                    isTranscribing = isTranscribing,
+                    onTranscribe = { viewModel.transcribeCurrentSegment() }
+                )
             }
 
-            Spacer(modifier = Modifier.weight(0.3f))
+            Spacer(modifier = Modifier.weight(0.2f))
 
-            // Control buttons
+            // Segment navigation controls
+            SegmentNavigationControls(
+                currentIndex = currentIndex,
+                totalItems = items.size,
+                isLoopMode = isLoopMode,
+                onPrevious = { viewModel.previousSegment() },
+                onNext = { viewModel.nextSegment() },
+                onPlayCurrent = { viewModel.playCurrentSegment() },
+                onToggleLoop = { viewModel.toggleLoopMode() }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Main control buttons
             PracticeControls(
                 state = state,
                 onStart = { viewModel.startPractice() },
@@ -130,6 +164,7 @@ private fun PracticeStateIndicator(state: PracticeState) {
         )
         is PracticeState.Paused -> Triple("Paused", MaterialTheme.colorScheme.outline, false)
         is PracticeState.Finished -> Triple("Complete!", MaterialTheme.colorScheme.primary, false)
+        is PracticeState.Transcribing -> Triple("Transcribing...", MaterialTheme.colorScheme.tertiary, true)
     }
 
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
@@ -166,7 +201,11 @@ private fun PracticeStateIndicator(state: PracticeState) {
 }
 
 @Composable
-private fun SegmentInfo(item: ShadowItem) {
+private fun SegmentInfo(
+    item: ShadowItem,
+    isTranscribing: Boolean,
+    onTranscribe: () -> Unit
+) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -187,13 +226,42 @@ private fun SegmentInfo(item: ShadowItem) {
             Spacer(modifier = Modifier.height(8.dp))
 
             // Transcription if available
-            item.transcription?.let { text ->
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
+            if (!item.transcription.isNullOrBlank()) {
+                Surface(
+                    color = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = item.transcription,
+                        style = MaterialTheme.typography.bodyLarge,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            } else {
+                // Transcribe button
+                OutlinedButton(
+                    onClick = onTranscribe,
+                    enabled = !isTranscribing
+                ) {
+                    if (isTranscribing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Transcribing...")
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Subtitles,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Transcribe")
+                    }
+                }
             }
 
             // Translation if available
@@ -233,6 +301,71 @@ private fun SegmentInfo(item: ShadowItem) {
 }
 
 @Composable
+private fun SegmentNavigationControls(
+    currentIndex: Int,
+    totalItems: Int,
+    isLoopMode: Boolean,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onPlayCurrent: () -> Unit,
+    onToggleLoop: () -> Unit
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Previous segment
+        FilledTonalIconButton(
+            onClick = onPrevious,
+            enabled = currentIndex > 0
+        ) {
+            Icon(
+                imageVector = Icons.Default.SkipPrevious,
+                contentDescription = "Previous segment"
+            )
+        }
+
+        // Play current segment (single play)
+        FilledIconButton(
+            onClick = onPlayCurrent
+        ) {
+            Icon(
+                imageVector = Icons.Default.PlayCircle,
+                contentDescription = "Play this segment"
+            )
+        }
+
+        // Loop toggle
+        FilledTonalIconButton(
+            onClick = onToggleLoop,
+            colors = if (isLoopMode) {
+                IconButtonDefaults.filledTonalIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                )
+            } else {
+                IconButtonDefaults.filledTonalIconButtonColors()
+            }
+        ) {
+            Icon(
+                imageVector = Icons.Default.Repeat,
+                contentDescription = if (isLoopMode) "Disable loop" else "Enable loop"
+            )
+        }
+
+        // Next segment
+        FilledTonalIconButton(
+            onClick = onNext,
+            enabled = currentIndex < totalItems - 1
+        ) {
+            Icon(
+                imageVector = Icons.Default.SkipNext,
+                contentDescription = "Next segment"
+            )
+        }
+    }
+}
+
+@Composable
 private fun PracticeControls(
     state: PracticeState,
     onStart: () -> Unit,
@@ -244,25 +377,25 @@ private fun PracticeControls(
         is PracticeState.Ready, is PracticeState.Finished -> {
             Button(
                 onClick = onStart,
-                modifier = Modifier.size(160.dp),
+                modifier = Modifier.size(140.dp),
                 shape = CircleShape
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
                         contentDescription = "Start",
-                        modifier = Modifier.size(48.dp)
+                        modifier = Modifier.size(40.dp)
                     )
                     Text(
                         text = if (state is PracticeState.Finished) "Restart" else "Start",
-                        fontSize = 16.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
             }
         }
 
-        is PracticeState.Loading -> {
+        is PracticeState.Loading, is PracticeState.Transcribing -> {
             CircularProgressIndicator(modifier = Modifier.size(64.dp))
         }
 

@@ -49,6 +49,9 @@ class LibraryRepository @Inject constructor(
     suspend fun toggleFavorite(itemId: String, isFavorite: Boolean) =
         shadowItemDao.setFavorite(itemId, isFavorite)
 
+    suspend fun updateTranscription(itemId: String, transcription: String) =
+        shadowItemDao.updateTranscription(itemId, transcription)
+
     suspend fun getItemCount(): Int = shadowItemDao.getItemCount()
 
     suspend fun getPlaylistItemCount(playlistId: String): Int =
