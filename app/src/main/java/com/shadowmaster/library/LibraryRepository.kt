@@ -4,6 +4,7 @@ import android.net.Uri
 import com.shadowmaster.data.local.*
 import com.shadowmaster.data.model.*
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,7 +18,8 @@ class LibraryRepository @Inject constructor(
     private val importJobDao: ImportJobDao,
     private val practiceSessionDao: PracticeSessionDao,
     private val audioImporter: AudioImporter,
-    private val urlAudioImporter: UrlAudioImporter
+    private val urlAudioImporter: UrlAudioImporter,
+    private val audioExporter: AudioExporter
 ) {
     // Playlists
     fun getAllPlaylists(): Flow<List<ShadowPlaylist>> = shadowPlaylistDao.getAllPlaylists()
@@ -125,4 +127,18 @@ class LibraryRepository @Inject constructor(
     suspend fun getTotalPracticeTime(): Long = practiceSessionDao.getTotalPracticeTime() ?: 0L
 
     suspend fun getTotalItemsPracticed(): Int = practiceSessionDao.getTotalItemsPracticed() ?: 0
+
+    // Export
+    suspend fun exportPlaylist(
+        playlistId: String,
+        playlistName: String,
+        config: ShadowingConfig,
+        includeYourTurnSilence: Boolean = true
+    ): Result<String> = audioExporter.exportPlaylist(playlistId, playlistName, config, includeYourTurnSilence)
+
+    fun getExportProgress(): StateFlow<ExportProgress> = audioExporter.exportProgress
+
+    fun clearExportProgress() = audioExporter.clearProgress()
+
+    fun cancelExport() = audioExporter.cancelExport()
 }

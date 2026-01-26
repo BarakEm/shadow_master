@@ -170,15 +170,15 @@ com.shadowmaster/
 - [x] Transcription display and manual entry
 - [x] Translation display and manual entry
 - [x] Pronunciation feedback display (scores visualization)
-- [ ] Split long segments into smaller parts
-- [ ] Merge short segments together
+- [x] Split long segments into smaller parts
+- [x] Merge short segments together
+- [x] Export playlist as practice audio (WAV with beeps and silence gaps)
 - [ ] Enhanced audio beep customization
 
 ### 📋 Version 1.2 (Planned)
 - [ ] Automatic transcription (Speech-to-Text API)
 - [ ] Automatic translation (Translation API)
 - [ ] Real pronunciation assessment (Azure Speech Services)
-- [ ] Export/backup playlists
 - [ ] Import from URL (YouTube, podcast links)
 
 ### 🔮 Future Ideas

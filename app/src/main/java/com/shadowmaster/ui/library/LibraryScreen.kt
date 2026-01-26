@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.shadowmaster.data.model.*
+import com.shadowmaster.library.ExportStatus
 import com.shadowmaster.library.UrlImportStatus
 import java.text.SimpleDateFormat
 import java.util.*
@@ -42,11 +43,13 @@ fun LibraryScreen(
     val importSuccess by viewModel.importSuccess.collectAsState()
     val urlImportProgress by viewModel.urlImportProgress.collectAsState()
     val selectedForMerge by viewModel.selectedForMerge.collectAsState()
+    val exportProgress by viewModel.exportProgress.collectAsState()
 
     var showDeleteDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
     var showRenamePlaylistDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
     var showEditItemDialog by remember { mutableStateOf<ShadowItem?>(null) }
     var showSplitDialog by remember { mutableStateOf<ShadowItem?>(null) }
+    var showExportDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
     var mergeMode by remember { mutableStateOf(false) }
     var showUrlImportDialog by remember { mutableStateOf(false) }
     var urlToImport by remember { mutableStateOf("") }
@@ -216,6 +219,7 @@ fun LibraryScreen(
                     onPlaylistClick = { viewModel.selectPlaylist(it) },
                     onDeleteClick = { showDeleteDialog = it },
                     onRenameClick = { showRenamePlaylistDialog = it },
+                    onExportClick = { showExportDialog = it },
                     onStartPractice = onStartPractice
                 )
             }
@@ -416,6 +420,127 @@ fun LibraryScreen(
         )
     }
 
+    // Export dialog
+    showExportDialog?.let { playlist ->
+        var includeYourTurnSilence by remember { mutableStateOf(true) }
+        AlertDialog(
+            onDismissRequest = { showExportDialog = null },
+            title = { Text("Export Playlist") },
+            text = {
+                Column {
+                    Text(
+                        text = "Export \"${playlist.name}\" as a practice audio file",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "The exported file will include:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "• Beeps between segments\n• Playback repeats (from settings)\n• Your current speed settings",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = includeYourTurnSilence,
+                            onCheckedChange = { includeYourTurnSilence = it }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = "Include silence for practice",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                            Text(
+                                text = "Adds silent gaps for you to shadow",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.exportPlaylist(playlist, includeYourTurnSilence)
+                        showExportDialog = null
+                    }
+                ) {
+                    Text("Export")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExportDialog = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Export progress dialog
+    if (exportProgress.status != ExportStatus.IDLE) {
+        AlertDialog(
+            onDismissRequest = {
+                if (exportProgress.status == ExportStatus.COMPLETED || exportProgress.status == ExportStatus.FAILED) {
+                    viewModel.clearExportProgress()
+                }
+            },
+            title = { Text("Exporting Audio") },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = when (exportProgress.status) {
+                            ExportStatus.PREPARING -> "Preparing..."
+                            ExportStatus.EXPORTING -> "Exporting segment ${exportProgress.currentSegment}/${exportProgress.totalSegments}"
+                            ExportStatus.ENCODING -> "Creating audio file..."
+                            ExportStatus.COMPLETED -> "Export complete!"
+                            ExportStatus.FAILED -> "Export failed: ${exportProgress.error}"
+                            ExportStatus.IDLE -> ""
+                        },
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    if (exportProgress.status == ExportStatus.EXPORTING || exportProgress.status == ExportStatus.ENCODING) {
+                        Spacer(modifier = Modifier.height(16.dp))
+                        LinearProgressIndicator(
+                            progress = exportProgress.progress / 100f,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                    if (exportProgress.status == ExportStatus.COMPLETED && exportProgress.outputPath != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Saved to: ${exportProgress.outputPath}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                if (exportProgress.status == ExportStatus.COMPLETED || exportProgress.status == ExportStatus.FAILED) {
+                    TextButton(onClick = { viewModel.clearExportProgress() }) {
+                        Text("OK")
+                    }
+                }
+            },
+            dismissButton = {
+                if (exportProgress.status != ExportStatus.COMPLETED && exportProgress.status != ExportStatus.FAILED) {
+                    TextButton(onClick = { viewModel.cancelExport() }) {
+                        Text("Cancel")
+                    }
+                }
+            }
+        )
+    }
+
     // URL import dialog
     if (showUrlImportDialog) {
         AlertDialog(
@@ -530,6 +655,7 @@ private fun PlaylistsContent(
     onPlaylistClick: (ShadowPlaylist) -> Unit,
     onDeleteClick: (ShadowPlaylist) -> Unit,
     onRenameClick: (ShadowPlaylist) -> Unit,
+    onExportClick: (ShadowPlaylist) -> Unit,
     onStartPractice: (String) -> Unit
 ) {
     LazyColumn(
@@ -575,6 +701,7 @@ private fun PlaylistsContent(
                     onClick = { onPlaylistClick(playlist) },
                     onDeleteClick = { onDeleteClick(playlist) },
                     onRenameClick = { onRenameClick(playlist) },
+                    onExportClick = { onExportClick(playlist) },
                     onPlayClick = { onStartPractice(playlist.id) }
                 )
             }
@@ -634,6 +761,7 @@ private fun PlaylistCard(
     onClick: () -> Unit,
     onDeleteClick: () -> Unit,
     onRenameClick: () -> Unit,
+    onExportClick: () -> Unit,
     onPlayClick: () -> Unit
 ) {
     Card(
@@ -689,6 +817,12 @@ private fun PlaylistCard(
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
                     contentDescription = "Practice"
+                )
+            }
+            IconButton(onClick = onExportClick) {
+                Icon(
+                    imageVector = Icons.Default.FileDownload,
+                    contentDescription = "Export"
                 )
             }
             IconButton(onClick = onRenameClick) {

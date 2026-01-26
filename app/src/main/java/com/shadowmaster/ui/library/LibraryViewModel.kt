@@ -5,6 +5,8 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shadowmaster.data.model.*
+import com.shadowmaster.data.repository.SettingsRepository
+import com.shadowmaster.library.ExportProgress
 import com.shadowmaster.library.LibraryRepository
 import com.shadowmaster.library.UrlImportProgress
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,7 +19,8 @@ import javax.inject.Inject
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val libraryRepository: LibraryRepository
+    private val libraryRepository: LibraryRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     val playlists: StateFlow<List<ShadowPlaylist>> = libraryRepository.getAllPlaylists()
@@ -235,5 +238,39 @@ class LibraryViewModel @Inject constructor(
                 _importError.value = "Failed to merge segments"
             }
         }
+    }
+
+    // Export functionality
+    val exportProgress: StateFlow<ExportProgress> = libraryRepository.getExportProgress()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = ExportProgress(com.shadowmaster.library.ExportStatus.IDLE)
+        )
+
+    fun exportPlaylist(playlist: ShadowPlaylist, includeYourTurnSilence: Boolean = true) {
+        viewModelScope.launch {
+            val config = settingsRepository.configBlocking
+            val result = libraryRepository.exportPlaylist(
+                playlistId = playlist.id,
+                playlistName = playlist.name,
+                config = config,
+                includeYourTurnSilence = includeYourTurnSilence
+            )
+            result.onSuccess { path ->
+                _importSuccess.value = "Exported to $path"
+            }
+            result.onFailure { error ->
+                _importError.value = "Export failed: ${error.message}"
+            }
+        }
+    }
+
+    fun clearExportProgress() {
+        libraryRepository.clearExportProgress()
+    }
+
+    fun cancelExport() {
+        libraryRepository.cancelExport()
     }
 }

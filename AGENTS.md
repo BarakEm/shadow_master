@@ -151,3 +151,15 @@ Shadow Master is an Android app for language learning through "shadowing" - a te
 - **Current implementation**: `feedback/AudioFeedbackSystem.kt`
 - **Existing beeps**: segment detected, playback start, recording start, good/bad scores, pause/resume
 - **Enhancement**: Add volume control, different tone sets, custom sounds
+
+### Export Playlist as Audio
+- **Location**: `library/AudioExporter.kt`
+- **Output**: WAV file saved to Music/ShadowMaster folder
+- **Format**: 16kHz mono PCM wrapped in WAV header
+- **Features**:
+  1. Beeps between segments (playback start, your turn, segment end)
+  2. Playback repeats according to settings
+  3. Optional silence gaps for user to practice
+  4. Compatible with any audio player for passive practice
+- **UI**: Export button on playlist card, export dialog with options
+- **Progress**: ExportProgress state flow shows status and progress
