@@ -22,26 +22,46 @@ class SileroVadDetector @Inject constructor(
 
     private var vad: VadSilero? = null
     private var isInitialized = false
+    private val lock = Any()
 
     fun initialize(): Boolean {
-        if (isInitialized) return true
+        synchronized(lock) {
+            if (isInitialized && vad != null) return true
 
-        return try {
-            vad = Vad.builder()
-                .setContext(context)
-                .setSampleRate(SampleRate.SAMPLE_RATE_16K)
-                .setFrameSize(FrameSize.FRAME_SIZE_512)
-                .setMode(Mode.NORMAL)
-                .setSilenceDurationMs(300)
-                .setSpeechDurationMs(50)
-                .build()
+            return try {
+                // Close any existing instance first
+                try {
+                    vad?.close()
+                } catch (e: Exception) {
+                    Log.w(TAG, "Error closing existing VAD", e)
+                }
+                vad = null
+                isInitialized = false
 
-            isInitialized = true
-            Log.i(TAG, "Silero VAD initialized successfully")
-            true
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize Silero VAD", e)
-            false
+                vad = Vad.builder()
+                    .setContext(context)
+                    .setSampleRate(SampleRate.SAMPLE_RATE_16K)
+                    .setFrameSize(FrameSize.FRAME_SIZE_512)
+                    .setMode(Mode.NORMAL)
+                    .setSilenceDurationMs(300)
+                    .setSpeechDurationMs(50)
+                    .build()
+
+                isInitialized = true
+                Log.i(TAG, "Silero VAD initialized successfully")
+                true
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to initialize Silero VAD: ${e.message}", e)
+                vad = null
+                isInitialized = false
+                false
+            } catch (e: Error) {
+                // Catch errors like UnsatisfiedLinkError for native library issues
+                Log.e(TAG, "Error loading Silero VAD native library: ${e.message}", e)
+                vad = null
+                isInitialized = false
+                false
+            }
         }
     }
 
@@ -60,12 +80,14 @@ class SileroVadDetector @Inject constructor(
     }
 
     fun close() {
-        try {
-            vad?.close()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error closing VAD", e)
+        synchronized(lock) {
+            try {
+                vad?.close()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error closing VAD", e)
+            }
+            vad = null
+            isInitialized = false
         }
-        vad = null
-        isInitialized = false
     }
 }

@@ -103,28 +103,54 @@ class AudioImporter @Inject constructor(
         language: String,
         enableTranscription: Boolean
     ) {
+        var pcmFile: File? = null
         try {
             // Update status
             importJobDao.updateProgress(jobId, ImportStatus.EXTRACTING_AUDIO, 10)
 
             // Extract audio to PCM
-            val pcmFile = extractAudioToPcm(uri)
+            pcmFile = try {
+                extractAudioToPcm(uri)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to extract audio to PCM", e)
+                null
+            }
+
             if (pcmFile == null) {
-                importJobDao.markFailed(jobId, "Failed to extract audio")
+                importJobDao.markFailed(jobId, "Failed to extract audio - unsupported format or corrupted file")
                 return
             }
 
             // Update status
             importJobDao.updateProgress(jobId, ImportStatus.DETECTING_SEGMENTS, 30)
 
-            // Initialize VAD
-            if (!vadDetector.initialize()) {
+            // Initialize VAD with retry
+            var vadInitialized = false
+            repeat(3) { attempt ->
+                try {
+                    if (vadDetector.initialize()) {
+                        vadInitialized = true
+                        return@repeat
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "VAD initialization attempt ${attempt + 1} failed", e)
+                }
+            }
+
+            if (!vadInitialized) {
                 importJobDao.markFailed(jobId, "Failed to initialize voice detection")
+                pcmFile.delete()
                 return
             }
 
             // Detect speech segments
-            val segments = detectSpeechSegments(pcmFile)
+            val segments = try {
+                detectSpeechSegments(pcmFile)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to detect speech segments", e)
+                emptyList()
+            }
+
             Log.i(TAG, "Detected ${segments.size} speech segments")
 
             if (segments.isEmpty()) {
@@ -139,27 +165,40 @@ class AudioImporter @Inject constructor(
             // Extract and save each segment
             val shadowItems = mutableListOf<ShadowItem>()
             val fileName = getFileName(uri) ?: "audio"
+            val totalSegments = segments.size
 
             segments.forEachIndexed { index, segment ->
-                val segmentFile = extractSegment(pcmFile, segment)
-                if (segmentFile != null) {
-                    val item = ShadowItem(
-                        sourceFileUri = uri.toString(),
-                        sourceFileName = fileName,
-                        sourceStartMs = segment.startMs,
-                        sourceEndMs = segment.endMs,
-                        audioFilePath = segmentFile.absolutePath,
-                        durationMs = segment.endMs - segment.startMs,
-                        language = language,
-                        playlistId = playlistId,
-                        orderInPlaylist = index
-                    )
-                    shadowItems.add(item)
+                try {
+                    val segmentFile = extractSegment(pcmFile, segment)
+                    if (segmentFile != null) {
+                        val item = ShadowItem(
+                            sourceFileUri = uri.toString(),
+                            sourceFileName = fileName,
+                            sourceStartMs = segment.startMs,
+                            sourceEndMs = segment.endMs,
+                            audioFilePath = segmentFile.absolutePath,
+                            durationMs = segment.endMs - segment.startMs,
+                            language = language,
+                            playlistId = playlistId,
+                            orderInPlaylist = index
+                        )
+                        shadowItems.add(item)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to extract segment $index", e)
                 }
 
-                // Update progress
-                val progress = 60 + (index * 30 / segments.size)
-                importJobDao.updateProgress(jobId, ImportStatus.DETECTING_SEGMENTS, progress)
+                // Update progress (avoid division by zero)
+                if (totalSegments > 0) {
+                    val progress = 60 + (index * 30 / totalSegments)
+                    importJobDao.updateProgress(jobId, ImportStatus.DETECTING_SEGMENTS, progress)
+                }
+            }
+
+            if (shadowItems.isEmpty()) {
+                importJobDao.markFailed(jobId, "Failed to extract any segments")
+                pcmFile.delete()
+                return
             }
 
             // Save all items
@@ -173,8 +212,15 @@ class AudioImporter @Inject constructor(
             Log.i(TAG, "Import complete: ${shadowItems.size} segments created")
 
         } catch (e: Exception) {
-            Log.e(TAG, "Import failed", e)
-            importJobDao.markFailed(jobId, e.message ?: "Unknown error")
+            Log.e(TAG, "Import failed with exception", e)
+            try {
+                importJobDao.markFailed(jobId, e.message ?: "Unknown error")
+            } catch (dbError: Exception) {
+                Log.e(TAG, "Failed to update job status", dbError)
+            }
+            try {
+                pcmFile?.delete()
+            } catch (ignored: Exception) {}
         }
     }
 
