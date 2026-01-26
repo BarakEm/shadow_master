@@ -74,19 +74,34 @@ class AudioFeedbackSystem @Inject constructor(
 
     /**
      * Play when starting to record user's voice
-     * Double beep - indicates "Your turn to speak"
+     * Gentle double beep - indicates "Your turn to speak"
      */
     fun playRecordingStart() {
         if (!isInitialized) return
 
         scope.launch {
             try {
-                toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP, SHORT_TONE_DURATION)
-                delay(120)
-                toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP2, SHORT_TONE_DURATION)
+                // Gentle ascending double beep
+                toneGenerator?.startTone(ToneGenerator.TONE_PROP_ACK, SHORT_TONE_DURATION)
+                delay(150)
+                toneGenerator?.startTone(ToneGenerator.TONE_PROP_ACK, SHORT_TONE_DURATION)
             } catch (e: Exception) {
                 Log.e(TAG, "Error playing recording start tone", e)
             }
+        }
+    }
+
+    /**
+     * Play a very gentle single beep for "your turn" in practice mode
+     */
+    fun playYourTurn() {
+        if (!isInitialized) return
+
+        try {
+            // Single gentle beep
+            toneGenerator?.startTone(ToneGenerator.TONE_PROP_ACK, MEDIUM_TONE_DURATION)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error playing your turn tone", e)
         }
     }
 

@@ -10,7 +10,9 @@ data class ShadowingConfig(
     val assessmentEnabled: Boolean = true,
     val pauseForNavigation: Boolean = true,
     val busMode: Boolean = false,  // Passive listening - no user recording required
-    val audioFeedbackEnabled: Boolean = true  // Beeps for state transitions
+    val audioFeedbackEnabled: Boolean = true,  // Beeps for state transitions
+    val playbackUserRecording: Boolean = false,  // Play back user's recording after shadowing
+    val silenceBetweenRepeatsMs: Int = 1000  // Silence between repeats in bus mode
 ) {
     companion object {
         const val MIN_SILENCE_THRESHOLD_MS = 300

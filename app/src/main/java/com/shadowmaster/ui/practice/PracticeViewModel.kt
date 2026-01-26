@@ -103,8 +103,10 @@ class PracticeViewModel @Inject constructor(
 
     private suspend fun runPracticeLoop() {
         val itemsList = _items.value
-        val repeats = config.value.playbackRepeats
-        val busMode = config.value.busMode
+        val cfg = config.value
+        val repeats = cfg.playbackRepeats
+        val busMode = cfg.busMode
+        val silenceBetweenRepeats = cfg.silenceBetweenRepeatsMs.toLong()
 
         for (index in itemsList.indices) {
             if (!coroutineContext.isActive) break
@@ -122,51 +124,81 @@ class PracticeViewModel @Inject constructor(
                     delay(100)
                 }
 
-                // Play the segment
+                // Play the audio segment
                 _state.value = PracticeState.Playing(index, repeat)
 
-                if (config.value.audioFeedbackEnabled) {
+                if (cfg.audioFeedbackEnabled) {
                     withContext(Dispatchers.Main) {
                         audioFeedbackSystem.playPlaybackStart()
                     }
+                    delay(150) // Brief pause after beep before audio starts
                 }
 
                 playAudioFile(item.audioFilePath)
 
                 if (!coroutineContext.isActive) break
 
-                // In bus mode, skip user recording - just move to next
+                // In bus mode: just play audio with silences and gentle beeps
                 if (busMode) {
-                    delay(500) // Brief pause between repeats in bus mode
+                    // Comfortable silence between repeats
+                    delay(silenceBetweenRepeats)
+
+                    // If this is the last repeat for this item, play a softer transition beep
+                    if (repeat == repeats && cfg.audioFeedbackEnabled) {
+                        withContext(Dispatchers.Main) {
+                            audioFeedbackSystem.playListening() // Gentle acknowledgment
+                        }
+                    }
                     continue
                 }
 
-                // Wait for user response
-                _state.value = PracticeState.WaitingForUser(index, repeat)
+                // Regular practice mode: user shadows the audio
 
-                if (config.value.audioFeedbackEnabled) {
-                    withContext(Dispatchers.Main) {
-                        audioFeedbackSystem.playListening()
-                    }
-                }
+                // Brief pause before "your turn" beep
+                delay(300)
 
-                // Simulate waiting for user recording (duration of original + buffer)
+                // Play "your turn" beep - gentle double beep
                 _state.value = PracticeState.UserRecording(index, repeat)
 
-                if (config.value.audioFeedbackEnabled) {
+                if (cfg.audioFeedbackEnabled) {
                     withContext(Dispatchers.Main) {
                         audioFeedbackSystem.playRecordingStart()
                     }
+                    delay(200) // Brief pause after beep
                 }
 
-                delay(item.durationMs + 500) // Give user time to shadow
+                // Silent period for user to shadow (same duration as the audio)
+                delay(item.durationMs)
 
-                // Mark item as practiced
+                // Small buffer after shadowing
+                delay(300)
+
+                // Mark item as practiced after user had chance to shadow
                 libraryRepository.markItemPracticed(item.id)
+
+                // Pause between repeats if more repeats coming
+                if (repeat < repeats) {
+                    delay(silenceBetweenRepeats)
+                }
             }
 
             // Brief pause between items
-            delay(300)
+            delay(500)
+
+            // Play transition beep for next item
+            if (index < itemsList.size - 1 && cfg.audioFeedbackEnabled) {
+                withContext(Dispatchers.Main) {
+                    audioFeedbackSystem.playListening()
+                }
+                delay(300)
+            }
+        }
+
+        // Session complete
+        if (config.value.audioFeedbackEnabled) {
+            withContext(Dispatchers.Main) {
+                audioFeedbackSystem.playGoodScore() // Celebration tone
+            }
         }
 
         _state.value = PracticeState.Finished

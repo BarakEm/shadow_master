@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun HomeScreen(
     onNavigateToLibrary: () -> Unit,
-    onNavigateToLiveShadow: () -> Unit,
+    onNavigateToCapture: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
     Scaffold(
@@ -57,7 +57,7 @@ fun HomeScreen(
             // Library Mode Card (Recommended)
             ModeCard(
                 title = "Shadow Library",
-                description = "Import audio files and practice offline. No permissions required. Better segmentation and hands-free experience.",
+                description = "Import audio files or share YouTube/podcasts with Shadow Master. Practice anytime with perfect speech segmentation.",
                 icon = Icons.Default.LibraryMusic,
                 isRecommended = true,
                 onClick = onNavigateToLibrary
@@ -65,13 +65,13 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Live Shadow Card
+            // Capture Audio Card
             ModeCard(
-                title = "Live Shadow",
-                description = "Capture audio from other apps in real-time. Requires screen recording permission each session.",
-                icon = Icons.Default.Mic,
+                title = "Capture Playing Audio",
+                description = "Record audio from any app (YouTube, Spotify, podcasts) and import it to your library for later practice.",
+                icon = Icons.Default.GraphicEq,
                 isRecommended = false,
-                onClick = onNavigateToLiveShadow
+                onClick = onNavigateToCapture
             )
         }
     }

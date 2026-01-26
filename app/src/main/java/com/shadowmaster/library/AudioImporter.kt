@@ -2,10 +2,8 @@ package com.shadowmaster.library
 
 import android.content.Context
 import android.media.MediaCodec
-import android.media.MediaCodecList
 import android.media.MediaExtractor
 import android.media.MediaFormat
-import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.util.Log
 import com.shadowmaster.audio.vad.SileroVadDetector
@@ -17,8 +15,6 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.io.*
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -190,12 +186,19 @@ class AudioImporter @Inject constructor(
         val tempFile = File(context.cacheDir, "temp_pcm_${System.currentTimeMillis()}.pcm")
         var extractor: MediaExtractor? = null
         var codec: MediaCodec? = null
+        var pfd: android.os.ParcelFileDescriptor? = null
 
         try {
             extractor = MediaExtractor()
-            context.contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
-                extractor.setDataSource(pfd.fileDescriptor)
-            } ?: return null
+
+            // Keep file descriptor open throughout extraction
+            pfd = context.contentResolver.openFileDescriptor(uri, "r")
+            if (pfd == null) {
+                Log.e(TAG, "Failed to open file descriptor for URI: $uri")
+                return null
+            }
+
+            extractor.setDataSource(pfd.fileDescriptor)
 
             // Find audio track
             var audioTrackIndex = -1
@@ -212,6 +215,7 @@ class AudioImporter @Inject constructor(
 
             if (audioTrackIndex < 0 || inputFormat == null) {
                 Log.e(TAG, "No audio track found")
+                pfd.close()
                 return null
             }
 
@@ -228,7 +232,6 @@ class AudioImporter @Inject constructor(
             codec.start()
 
             val outputStream = FileOutputStream(tempFile)
-            val inputBuffer = ByteBuffer.allocate(1024 * 1024)
             val bufferInfo = MediaCodec.BufferInfo()
             var isEOS = false
 
@@ -291,6 +294,7 @@ class AudioImporter @Inject constructor(
             codec.stop()
             codec.release()
             extractor.release()
+            pfd.close()
 
             Log.i(TAG, "Decoded ${tempFile.length()} bytes of PCM audio")
             return tempFile
@@ -298,8 +302,9 @@ class AudioImporter @Inject constructor(
         } catch (e: Exception) {
             Log.e(TAG, "Failed to decode audio", e)
             tempFile.delete()
-            codec?.release()
-            extractor?.release()
+            try { codec?.release() } catch (ignored: Exception) {}
+            try { extractor?.release() } catch (ignored: Exception) {}
+            try { pfd?.close() } catch (ignored: Exception) {}
             return null
         }
     }

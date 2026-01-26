@@ -20,6 +20,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.shadowmaster.data.model.*
+import com.shadowmaster.library.UrlImportStatus
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -28,6 +29,8 @@ import java.util.*
 fun LibraryScreen(
     onNavigateBack: () -> Unit,
     onStartPractice: (playlistId: String) -> Unit,
+    importUrl: String? = null,
+    importUri: String? = null,
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val playlists by viewModel.playlists.collectAsState()
@@ -35,8 +38,12 @@ fun LibraryScreen(
     val selectedPlaylist by viewModel.selectedPlaylist.collectAsState()
     val playlistItems by viewModel.playlistItems.collectAsState()
     val importError by viewModel.importError.collectAsState()
+    val importSuccess by viewModel.importSuccess.collectAsState()
+    val urlImportProgress by viewModel.urlImportProgress.collectAsState()
 
     var showDeleteDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
+    var showUrlImportDialog by remember { mutableStateOf(false) }
+    var urlToImport by remember { mutableStateOf("") }
 
     val audioPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
@@ -44,12 +51,30 @@ fun LibraryScreen(
         uri?.let { viewModel.importAudioFile(it) }
     }
 
+    // Handle shared content import
+    LaunchedEffect(importUrl, importUri) {
+        importUrl?.let { url ->
+            viewModel.importFromUrl(url)
+        }
+        importUri?.let { uri ->
+            viewModel.importFromUri(uri)
+        }
+    }
+
     // Show error snackbar
     importError?.let { error ->
         LaunchedEffect(error) {
             // Auto-dismiss after showing
-            kotlinx.coroutines.delay(3000)
+            kotlinx.coroutines.delay(5000)
             viewModel.clearError()
+        }
+    }
+
+    // Show success snackbar
+    importSuccess?.let { success ->
+        LaunchedEffect(success) {
+            kotlinx.coroutines.delay(3000)
+            viewModel.clearSuccess()
         }
     }
 
@@ -95,15 +120,41 @@ fun LibraryScreen(
         },
         floatingActionButton = {
             if (selectedPlaylist == null) {
-                FloatingActionButton(
-                    onClick = {
-                        audioPickerLauncher.launch(arrayOf("audio/*"))
+                var showMenu by remember { mutableStateOf(false) }
+                Box {
+                    FloatingActionButton(
+                        onClick = { showMenu = true }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Import Audio"
+                        )
                     }
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = "Import Audio"
-                    )
+                    DropdownMenu(
+                        expanded = showMenu,
+                        onDismissRequest = { showMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Import Audio File") },
+                            onClick = {
+                                showMenu = false
+                                audioPickerLauncher.launch(arrayOf("audio/*"))
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.AudioFile, contentDescription = null)
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Import from URL") },
+                            onClick = {
+                                showMenu = false
+                                showUrlImportDialog = true
+                            },
+                            leadingIcon = {
+                                Icon(Icons.Default.Link, contentDescription = null)
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -167,6 +218,112 @@ fun LibraryScreen(
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = null }) {
                     Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // URL import dialog
+    if (showUrlImportDialog) {
+        AlertDialog(
+            onDismissRequest = { showUrlImportDialog = false },
+            title = { Text("Import from URL") },
+            text = {
+                Column {
+                    Text(
+                        "Paste a YouTube, SoundCloud, or direct audio URL",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(
+                        value = urlToImport,
+                        onValueChange = { urlToImport = it },
+                        label = { Text("URL") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (urlToImport.isNotBlank()) {
+                            viewModel.importFromUrl(urlToImport)
+                            showUrlImportDialog = false
+                            urlToImport = ""
+                        }
+                    },
+                    enabled = urlToImport.isNotBlank()
+                ) {
+                    Text("Import")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = {
+                    showUrlImportDialog = false
+                    urlToImport = ""
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // URL import progress dialog
+    urlImportProgress?.let { progress ->
+        AlertDialog(
+            onDismissRequest = { /* Don't allow dismiss during import */ },
+            title = { Text("Importing from URL") },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    progress.title?.let { title ->
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                    Text(
+                        text = when (progress.status) {
+                            com.shadowmaster.library.UrlImportStatus.ANALYZING -> "Analyzing URL..."
+                            com.shadowmaster.library.UrlImportStatus.EXTRACTING_INFO -> "Extracting info..."
+                            com.shadowmaster.library.UrlImportStatus.DOWNLOADING -> "Downloading audio..."
+                            com.shadowmaster.library.UrlImportStatus.PROCESSING -> "Processing audio..."
+                            com.shadowmaster.library.UrlImportStatus.COMPLETED -> "Complete!"
+                            com.shadowmaster.library.UrlImportStatus.FAILED -> "Failed: ${progress.error ?: "Unknown error"}"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    if (progress.status == com.shadowmaster.library.UrlImportStatus.DOWNLOADING && progress.progress > 0) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            progress = progress.progress / 100f,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Text(
+                            text = "${progress.progress}%",
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.align(Alignment.End)
+                        )
+                    } else if (progress.status != com.shadowmaster.library.UrlImportStatus.FAILED &&
+                               progress.status != com.shadowmaster.library.UrlImportStatus.COMPLETED) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                    }
+                }
+            },
+            confirmButton = {
+                if (progress.status == com.shadowmaster.library.UrlImportStatus.FAILED ||
+                    progress.status == com.shadowmaster.library.UrlImportStatus.COMPLETED) {
+                    TextButton(onClick = { viewModel.clearUrlImportProgress() }) {
+                        Text("OK")
+                    }
                 }
             }
         )

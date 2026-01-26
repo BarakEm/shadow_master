@@ -30,6 +30,8 @@ class SettingsRepository @Inject constructor(
         val PAUSE_FOR_NAVIGATION = booleanPreferencesKey("pause_for_navigation")
         val BUS_MODE = booleanPreferencesKey("bus_mode")
         val AUDIO_FEEDBACK_ENABLED = booleanPreferencesKey("audio_feedback_enabled")
+        val PLAYBACK_USER_RECORDING = booleanPreferencesKey("playback_user_recording")
+        val SILENCE_BETWEEN_REPEATS_MS = intPreferencesKey("silence_between_repeats_ms")
     }
 
     // Blocking access for initial value (use sparingly)
@@ -53,7 +55,9 @@ class SettingsRepository @Inject constructor(
             assessmentEnabled = preferences[Keys.ASSESSMENT_ENABLED] ?: true,
             pauseForNavigation = preferences[Keys.PAUSE_FOR_NAVIGATION] ?: true,
             busMode = preferences[Keys.BUS_MODE] ?: false,
-            audioFeedbackEnabled = preferences[Keys.AUDIO_FEEDBACK_ENABLED] ?: true
+            audioFeedbackEnabled = preferences[Keys.AUDIO_FEEDBACK_ENABLED] ?: true,
+            playbackUserRecording = preferences[Keys.PLAYBACK_USER_RECORDING] ?: false,
+            silenceBetweenRepeatsMs = preferences[Keys.SILENCE_BETWEEN_REPEATS_MS] ?: 1000
         )
     }
 
@@ -141,6 +145,20 @@ class SettingsRepository @Inject constructor(
             preferences[Keys.PAUSE_FOR_NAVIGATION] = config.pauseForNavigation
             preferences[Keys.BUS_MODE] = config.busMode
             preferences[Keys.AUDIO_FEEDBACK_ENABLED] = config.audioFeedbackEnabled
+            preferences[Keys.PLAYBACK_USER_RECORDING] = config.playbackUserRecording
+            preferences[Keys.SILENCE_BETWEEN_REPEATS_MS] = config.silenceBetweenRepeatsMs
+        }
+    }
+
+    suspend fun updatePlaybackUserRecording(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.PLAYBACK_USER_RECORDING] = enabled
+        }
+    }
+
+    suspend fun updateSilenceBetweenRepeats(ms: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.SILENCE_BETWEEN_REPEATS_MS] = ms.coerceIn(500, 3000)
         }
     }
 }

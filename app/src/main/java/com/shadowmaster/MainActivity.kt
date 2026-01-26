@@ -1,5 +1,7 @@
 package com.shadowmaster
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -21,12 +23,14 @@ import androidx.compose.ui.unit.sp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.compose.rememberNavController
 import com.shadowmaster.ui.navigation.NavGraph
+import com.shadowmaster.ui.navigation.Screen
 import com.shadowmaster.ui.theme.ShadowMasterTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Install splash screen for Android 12+
         val splashScreen = installSplashScreen()
@@ -38,6 +42,9 @@ class MainActivity : ComponentActivity() {
         splashScreen.setKeepOnScreenCondition { keepSplashVisible }
 
         enableEdgeToEdge()
+
+        // Handle shared content from intent
+        val sharedContent = handleIntent(intent)
 
         setContent {
             var showSplash by remember { mutableStateOf(true) }
@@ -57,12 +64,57 @@ class MainActivity : ComponentActivity() {
                         color = MaterialTheme.colorScheme.background
                     ) {
                         val navController = rememberNavController()
-                        NavGraph(navController = navController)
+                        NavGraph(
+                            navController = navController,
+                            sharedContent = sharedContent
+                        )
                     }
                 }
             }
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        // Activity will be recreated with new intent
+        recreate()
+    }
+
+    private fun handleIntent(intent: Intent?): SharedContent? {
+        if (intent == null) return null
+
+        return when (intent.action) {
+            Intent.ACTION_SEND -> {
+                when {
+                    intent.type == "text/plain" -> {
+                        val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+                        text?.let { extractUrlFromText(it) }?.let { SharedContent.Url(it) }
+                    }
+                    intent.type?.startsWith("audio/") == true -> {
+                        val uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+                        uri?.let { SharedContent.AudioFile(it) }
+                    }
+                    else -> null
+                }
+            }
+            Intent.ACTION_VIEW -> {
+                intent.data?.let { SharedContent.Url(it.toString()) }
+            }
+            else -> null
+        }
+    }
+
+    private fun extractUrlFromText(text: String): String? {
+        // Extract URL from shared text (YouTube/Spotify often share with extra text)
+        val urlPattern = Regex("https?://[\\w.-]+[\\w/._-]*(?:\\?[\\w=&.-]*)?")
+        return urlPattern.find(text)?.value
+    }
+}
+
+sealed class SharedContent {
+    data class Url(val url: String) : SharedContent()
+    data class AudioFile(val uri: Uri) : SharedContent()
 }
 
 @Composable

@@ -46,6 +46,38 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+
+            <!-- Receive shared text (URLs from YouTube, Spotify, etc.) -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+
+            <!-- Receive shared audio files -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="audio/*" />
+            </intent-filter>
+
+            <!-- Handle VIEW intent for audio URLs -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="www.youtube.com" />
+                <data android:scheme="https" android:host="youtube.com" />
+                <data android:scheme="https" android:host="youtu.be" />
+                <data android:scheme="https" android:host="m.youtube.com" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="open.spotify.com" />
+            </intent-filter>
         </activity>
 
         <!-- Foreground Service for audio capture and processing -->
@@ -54,6 +86,13 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="mediaProjection|microphone|mediaPlayback" />
+
+        <!-- Audio Capture Service for capturing playing audio to file -->
+        <service
+            android:name=".service.AudioCaptureService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
 
         <!-- Media Browser Service for Android Auto -->
         <service

@@ -16,7 +16,8 @@ class LibraryRepository @Inject constructor(
     private val shadowPlaylistDao: ShadowPlaylistDao,
     private val importJobDao: ImportJobDao,
     private val practiceSessionDao: PracticeSessionDao,
-    private val audioImporter: AudioImporter
+    private val audioImporter: AudioImporter,
+    private val urlAudioImporter: UrlAudioImporter
 ) {
     // Playlists
     fun getAllPlaylists(): Flow<List<ShadowPlaylist>> = shadowPlaylistDao.getAllPlaylists()
@@ -66,6 +67,21 @@ class LibraryRepository @Inject constructor(
     fun getActiveImports(): Flow<List<ImportJob>> = importJobDao.getActiveJobs()
 
     fun getAllImports(): Flow<List<ImportJob>> = importJobDao.getAllJobs()
+
+    // URL Import
+    suspend fun importFromUrl(
+        url: String,
+        playlistName: String? = null,
+        language: String = "auto"
+    ): Result<String> {
+        return urlAudioImporter.importFromUrl(url, playlistName, language)
+    }
+
+    fun getUrlImportProgress() = urlAudioImporter.importProgress
+
+    fun detectUrlType(url: String) = urlAudioImporter.detectUrlType(url)
+
+    fun clearUrlImportProgress() = urlAudioImporter.clearProgress()
 
     // Practice sessions
     suspend fun startPracticeSession(playlistId: String?): PracticeSession {
