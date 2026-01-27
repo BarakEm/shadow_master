@@ -5,6 +5,7 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioManager
 import android.media.AudioTrack
+import android.media.PlaybackParams
 import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -207,6 +208,7 @@ class PracticeViewModel @Inject constructor(
 
     private suspend fun playAudioFile(filePath: String) {
         var localTrack: AudioTrack? = null
+        val speed = config.value.playbackSpeed
         try {
             val file = File(filePath)
             if (!file.exists()) {
@@ -268,6 +270,13 @@ class PracticeViewModel @Inject constructor(
                 return
             }
 
+            // Apply playback speed
+            val playbackParams = PlaybackParams().apply {
+                setSpeed(speed)
+                setPitch(1.0f) // Keep pitch constant
+            }
+            localTrack.playbackParams = playbackParams
+
             audioTrack = localTrack
             localTrack.play()
 
@@ -298,8 +307,8 @@ class PracticeViewModel @Inject constructor(
                 offset += written
             }
 
-            // Wait for playback to complete
-            delay(100)
+            // Wait for playback to complete (adjusted for speed)
+            delay((100 / speed).toLong())
 
         } catch (e: Exception) {
             Log.e(TAG, "Error playing audio: ${e.message}", e)

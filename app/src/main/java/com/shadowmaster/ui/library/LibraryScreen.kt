@@ -116,7 +116,7 @@ fun LibraryScreen(
                             if (selectedForMerge.size >= 2) {
                                 IconButton(onClick = { viewModel.mergeSelectedSegments() }) {
                                     Icon(
-                                        imageVector = Icons.Default.CallMerge,
+                                        imageVector = Icons.Default.SwapHoriz,
                                         contentDescription = "Merge Selected"
                                     )
                                 }
@@ -133,7 +133,7 @@ fun LibraryScreen(
                         } else {
                             IconButton(onClick = { mergeMode = true }) {
                                 Icon(
-                                    imageVector = Icons.Default.CallMerge,
+                                    imageVector = Icons.Default.SwapHoriz,
                                     contentDescription = "Merge Mode"
                                 )
                             }
@@ -821,7 +821,7 @@ private fun PlaylistCard(
             }
             IconButton(onClick = onExportClick) {
                 Icon(
-                    imageVector = Icons.Default.FileDownload,
+                    imageVector = Icons.Default.Share,
                     contentDescription = "Export"
                 )
             }
@@ -1006,7 +1006,7 @@ private fun ShadowItemCard(
                 if (item.durationMs > 1000) {
                     IconButton(onClick = onSplitClick) {
                         Icon(
-                            imageVector = Icons.Default.ContentCut,
+                            imageVector = Icons.Default.Splitscreen,
                             contentDescription = "Split",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
