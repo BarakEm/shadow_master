@@ -12,7 +12,9 @@ data class ShadowingConfig(
     val busMode: Boolean = false,  // Passive listening - no user recording required
     val audioFeedbackEnabled: Boolean = true,  // Beeps for state transitions
     val playbackUserRecording: Boolean = false,  // Play back user's recording after shadowing
-    val silenceBetweenRepeatsMs: Int = 1000  // Silence between repeats in bus mode
+    val silenceBetweenRepeatsMs: Int = 1000,  // Silence between repeats in bus mode
+    val practiceMode: PracticeMode = PracticeMode.STANDARD,  // Learning approach
+    val buildupChunkMs: Int = 1500  // Target chunk size for buildup mode
 ) {
     companion object {
         const val MIN_SILENCE_THRESHOLD_MS = 300
@@ -29,6 +31,14 @@ data class ShadowingConfig(
 enum class SegmentMode {
     WORD,
     SENTENCE
+}
+
+/**
+ * Practice mode determines how segments are presented to the learner.
+ */
+enum class PracticeMode {
+    STANDARD,   // Play full segment, user repeats
+    BUILDUP     // Backward buildup: play last chunk, then last 2 chunks, etc. until full segment
 }
 
 enum class SupportedLanguage(

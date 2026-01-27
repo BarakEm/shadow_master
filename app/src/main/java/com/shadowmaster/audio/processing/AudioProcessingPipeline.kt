@@ -17,7 +17,7 @@ class AudioProcessingPipeline @Inject constructor(
     companion object {
         private const val TAG = "AudioProcessingPipeline"
         private const val MIN_SPEECH_DURATION_MS = 500L
-        private const val MAX_SPEECH_DURATION_MS = 15000L
+        private const val MAX_SPEECH_DURATION_MS = 8000L
         private const val PRE_SPEECH_BUFFER_MS = 200L
     }
 

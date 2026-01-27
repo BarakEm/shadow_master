@@ -306,7 +306,7 @@ private fun ScoreBar(label: String, score: Float) {
             modifier = Modifier.width(100.dp)
         )
         LinearProgressIndicator(
-            progress = (score / 100f).coerceIn(0f, 1f),
+            progress = { (score / 100f).coerceIn(0f, 1f) },
             modifier = Modifier
                 .weight(1f)
                 .height(8.dp),

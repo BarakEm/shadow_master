@@ -2,6 +2,7 @@ package com.shadowmaster.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shadowmaster.data.model.PracticeMode
 import com.shadowmaster.data.model.SegmentMode
 import com.shadowmaster.data.model.ShadowingConfig
 import com.shadowmaster.data.model.SupportedLanguage
@@ -82,6 +83,18 @@ class SettingsViewModel @Inject constructor(
     fun updateAudioFeedbackEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.updateAudioFeedbackEnabled(enabled)
+        }
+    }
+
+    fun updatePracticeMode(mode: PracticeMode) {
+        viewModelScope.launch {
+            settingsRepository.updatePracticeMode(mode)
+        }
+    }
+
+    fun updateBuildupChunkMs(ms: Int) {
+        viewModelScope.launch {
+            settingsRepository.updateBuildupChunkMs(ms)
         }
     }
 }
