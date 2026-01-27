@@ -11,6 +11,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shadowmaster.feedback.AudioFeedbackSystem
+import com.shadowmaster.data.model.PracticeMode
 import com.shadowmaster.data.model.ShadowItem
 import com.shadowmaster.data.repository.SettingsRepository
 import com.shadowmaster.library.LibraryRepository
@@ -117,71 +118,15 @@ class PracticeViewModel @Inject constructor(
 
             val item = itemsList[index]
 
-            for (repeat in 1..repeats) {
-                if (!coroutineContext.isActive) break
-
-                // Wait if paused
-                while (isPaused && coroutineContext.isActive) {
-                    delay(100)
-                }
-
-                // Play the audio segment
-                _state.value = PracticeState.Playing(index, repeat)
-
-                if (cfg.audioFeedbackEnabled) {
-                    withContext(Dispatchers.Main) {
-                        audioFeedbackSystem.playPlaybackStart()
-                    }
-                    delay(150) // Brief pause after beep before audio starts
-                }
-
-                playAudioFile(item.audioFilePath)
-
-                if (!coroutineContext.isActive) break
-
-                // In bus mode: just play audio with silences and gentle beeps
-                if (busMode) {
-                    // Comfortable silence between repeats
-                    delay(silenceBetweenRepeats)
-
-                    // If this is the last repeat for this item, play a softer transition beep
-                    if (repeat == repeats && cfg.audioFeedbackEnabled) {
-                        withContext(Dispatchers.Main) {
-                            audioFeedbackSystem.playListening() // Gentle acknowledgment
-                        }
-                    }
-                    continue
-                }
-
-                // Regular practice mode: user shadows the audio
-
-                // Brief pause before "your turn" beep
-                delay(300)
-
-                // Play "your turn" beep - gentle double beep
-                _state.value = PracticeState.UserRecording(index, repeat)
-
-                if (cfg.audioFeedbackEnabled) {
-                    withContext(Dispatchers.Main) {
-                        audioFeedbackSystem.playRecordingStart()
-                    }
-                    delay(200) // Brief pause after beep
-                }
-
-                // Silent period for user to shadow (same duration as the audio)
-                delay(item.durationMs)
-
-                // Small buffer after shadowing
-                delay(300)
-
-                // Mark item as practiced after user had chance to shadow
-                libraryRepository.markItemPracticed(item.id)
-
-                // Pause between repeats if more repeats coming
-                if (repeat < repeats) {
-                    delay(silenceBetweenRepeats)
-                }
+            if (cfg.practiceMode == PracticeMode.BUILDUP && !busMode) {
+                // Backward buildup mode: gradually build from end to full phrase
+                runBuildupForItem(index, item, cfg)
+            } else {
+                // Standard mode
+                runStandardForItem(index, item, cfg, repeats, busMode, silenceBetweenRepeats)
             }
+
+            if (!coroutineContext.isActive) break
 
             // Brief pause between items
             delay(500)
@@ -204,6 +149,211 @@ class PracticeViewModel @Inject constructor(
 
         _state.value = PracticeState.Finished
         _progress.value = 1f
+    }
+
+    /**
+     * Standard practice: play full segment, user repeats.
+     */
+    private suspend fun runStandardForItem(
+        index: Int,
+        item: ShadowItem,
+        cfg: com.shadowmaster.data.model.ShadowingConfig,
+        repeats: Int,
+        busMode: Boolean,
+        silenceBetweenRepeats: Long
+    ) {
+        for (repeat in 1..repeats) {
+            if (!coroutineContext.isActive) break
+
+            while (isPaused && coroutineContext.isActive) { delay(100) }
+
+            _state.value = PracticeState.Playing(index, repeat)
+
+            if (cfg.audioFeedbackEnabled) {
+                withContext(Dispatchers.Main) { audioFeedbackSystem.playPlaybackStart() }
+                delay(150)
+            }
+
+            playAudioFile(item.audioFilePath)
+
+            if (!coroutineContext.isActive) break
+
+            if (busMode) {
+                delay(silenceBetweenRepeats)
+                if (repeat == repeats && cfg.audioFeedbackEnabled) {
+                    withContext(Dispatchers.Main) { audioFeedbackSystem.playListening() }
+                }
+                continue
+            }
+
+            delay(300)
+            _state.value = PracticeState.UserRecording(index, repeat)
+
+            if (cfg.audioFeedbackEnabled) {
+                withContext(Dispatchers.Main) { audioFeedbackSystem.playRecordingStart() }
+                delay(200)
+            }
+
+            delay(item.durationMs)
+            delay(300)
+
+            libraryRepository.markItemPracticed(item.id)
+
+            if (repeat < repeats) { delay(silenceBetweenRepeats) }
+        }
+    }
+
+    /**
+     * Backward buildup practice mode.
+     *
+     * Splits the segment audio into chunks and presents them from end to beginning,
+     * gradually building up to the full phrase. Each buildup step is:
+     *   1. Play the partial audio (from chunk N to end)
+     *   2. Silence for user to repeat
+     *
+     * Example for a 4.5s segment with 1.5s chunks (3 chunks):
+     *   Step 1: Play last 1.5s → user repeats
+     *   Step 2: Play last 3.0s → user repeats
+     *   Step 3: Play full 4.5s → user repeats
+     *
+     * This is the "back-chaining" technique used in language pedagogy.
+     */
+    private suspend fun runBuildupForItem(
+        index: Int,
+        item: ShadowItem,
+        cfg: com.shadowmaster.data.model.ShadowingConfig
+    ) {
+        val file = File(item.audioFilePath)
+        if (!file.exists()) return
+
+        val audioData = file.readBytes()
+        if (audioData.isEmpty()) return
+
+        val chunkMs = cfg.buildupChunkMs.toLong()
+        val totalMs = item.durationMs
+        val bytesPerMs = (SAMPLE_RATE * 2) / 1000 // 16-bit mono
+
+        // Calculate number of buildup steps
+        // For short segments (<= chunk size), just play normally
+        val numSteps = if (totalMs <= chunkMs) 1
+                       else ((totalMs + chunkMs - 1) / chunkMs).toInt().coerceAtMost(8)
+
+        for (step in 1..numSteps) {
+            if (!coroutineContext.isActive) break
+
+            while (isPaused && coroutineContext.isActive) { delay(100) }
+
+            // Calculate the portion to play: from (totalMs - step * chunkMs) to end
+            val portionMs = if (step == numSteps) totalMs
+                           else (step * chunkMs).coerceAtMost(totalMs)
+            val startByteOffset = ((totalMs - portionMs) * bytesPerMs).toInt()
+                .coerceIn(0, audioData.size)
+            // Align to 2-byte boundary (16-bit samples)
+            val alignedOffset = startByteOffset and 0x7FFFFFFE
+
+            _state.value = PracticeState.Playing(index, step)
+
+            if (cfg.audioFeedbackEnabled) {
+                withContext(Dispatchers.Main) { audioFeedbackSystem.playPlaybackStart() }
+                delay(150)
+            }
+
+            // Play the partial audio from alignedOffset to end
+            playAudioData(audioData, alignedOffset, audioData.size - alignedOffset)
+
+            if (!coroutineContext.isActive) break
+
+            // User's turn
+            delay(300)
+            _state.value = PracticeState.UserRecording(index, step)
+
+            if (cfg.audioFeedbackEnabled) {
+                withContext(Dispatchers.Main) { audioFeedbackSystem.playRecordingStart() }
+                delay(200)
+            }
+
+            // Silence duration matches the portion just played
+            delay(portionMs)
+            delay(300)
+        }
+
+        libraryRepository.markItemPracticed(item.id)
+    }
+
+    /**
+     * Play a portion of audio data directly (used by buildup mode).
+     */
+    private suspend fun playAudioData(audioData: ByteArray, offset: Int, length: Int) {
+        var localTrack: AudioTrack? = null
+        val speed = config.value.playbackSpeed
+        try {
+            val minBufferSize = AudioTrack.getMinBufferSize(
+                SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
+            )
+            if (minBufferSize <= 0) return
+
+            val bufferSize = maxOf(minBufferSize * 4, SAMPLE_RATE * 2)
+
+            localTrack = AudioTrack.Builder()
+                .setAudioAttributes(
+                    AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .build()
+                )
+                .setAudioFormat(
+                    AudioFormat.Builder()
+                        .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                        .setSampleRate(SAMPLE_RATE)
+                        .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                        .build()
+                )
+                .setBufferSizeInBytes(bufferSize)
+                .setTransferMode(AudioTrack.MODE_STREAM)
+                .build()
+
+            if (localTrack.state != AudioTrack.STATE_INITIALIZED) {
+                localTrack.release()
+                return
+            }
+
+            localTrack.playbackParams = PlaybackParams().apply {
+                setSpeed(speed)
+                setPitch(1.0f)
+            }
+
+            audioTrack = localTrack
+            localTrack.play()
+
+            var writeOffset = offset
+            val end = offset + length
+            val chunkSize = minBufferSize
+            while (writeOffset < end) {
+                if (isPaused) {
+                    try { localTrack.pause() } catch (_: Exception) {}
+                    while (isPaused && audioTrack != null) { delay(50) }
+                    if (audioTrack == null) break
+                    try { localTrack.play() } catch (_: Exception) {}
+                }
+                if (audioTrack == null) break
+
+                val bytesToWrite = minOf(chunkSize, end - writeOffset)
+                val written = localTrack.write(audioData, writeOffset, bytesToWrite)
+                if (written < 0) break
+                writeOffset += written
+            }
+
+            // Wait for buffer to drain
+            val bufferDurationMs = (bufferSize.toLong() * 1000) / (SAMPLE_RATE * 2)
+            delay((bufferDurationMs / speed).toLong() + 50)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Error playing audio data: ${e.message}", e)
+        } finally {
+            try { localTrack?.stop() } catch (_: Exception) {}
+            try { localTrack?.release() } catch (_: Exception) {}
+            if (audioTrack == localTrack) audioTrack = null
+        }
     }
 
     private suspend fun playAudioFile(filePath: String) {
@@ -242,8 +392,8 @@ class PracticeViewModel @Inject constructor(
                 return
             }
 
-            // Use 2x minimum buffer for stability
-            val bufferSize = minBufferSize * 2
+            // Use larger buffer to prevent underruns and stuttering
+            val bufferSize = maxOf(minBufferSize * 4, SAMPLE_RATE * 2) // At least 0.5s buffer
 
             localTrack = AudioTrack.Builder()
                 .setAudioAttributes(
@@ -282,21 +432,20 @@ class PracticeViewModel @Inject constructor(
 
             // Write audio data in chunks
             var offset = 0
-            val chunkSize = bufferSize
-            while (offset < audioData.size && localTrack.playState == AudioTrack.PLAYSTATE_PLAYING) {
-                // Check for pause
-                while (isPaused && localTrack.playState == AudioTrack.PLAYSTATE_PLAYING) {
-                    localTrack.pause()
-                    delay(100)
-                    if (!isPaused && localTrack.playState == AudioTrack.PLAYSTATE_PAUSED) {
-                        localTrack.play()
+            val chunkSize = minBufferSize // Write in smaller chunks for responsiveness
+            while (offset < audioData.size) {
+                // Check for pause - wait without thrashing AudioTrack state
+                if (isPaused) {
+                    try { localTrack.pause() } catch (_: Exception) {}
+                    while (isPaused && audioTrack != null) {
+                        delay(50)
                     }
+                    if (audioTrack == null) break
+                    try { localTrack.play() } catch (_: Exception) {}
                 }
 
                 // Check if we should stop (e.g., skip was called)
-                if (audioTrack == null) {
-                    break
-                }
+                if (audioTrack == null) break
 
                 val bytesToWrite = minOf(chunkSize, audioData.size - offset)
                 val written = localTrack.write(audioData, offset, bytesToWrite)
@@ -307,8 +456,14 @@ class PracticeViewModel @Inject constructor(
                 offset += written
             }
 
-            // Wait for playback to complete (adjusted for speed)
-            delay((100 / speed).toLong())
+            // Wait for AudioTrack to finish playing buffered data
+            // Calculate remaining audio duration based on data written
+            val audioDurationMs = (audioData.size.toLong() * 1000) / (SAMPLE_RATE * 2) // 16-bit mono
+            val playbackDurationMs = (audioDurationMs / speed).toLong()
+            // AudioTrack.write() blocks when buffer is full, so by the time we finish writing,
+            // most audio has already played. Wait for the buffer to drain.
+            val bufferDurationMs = (bufferSize.toLong() * 1000) / (SAMPLE_RATE * 2)
+            delay((bufferDurationMs / speed).toLong() + 50)
 
         } catch (e: Exception) {
             Log.e(TAG, "Error playing audio: ${e.message}", e)

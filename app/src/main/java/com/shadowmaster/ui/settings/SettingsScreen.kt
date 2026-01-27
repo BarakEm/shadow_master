@@ -15,6 +15,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.shadowmaster.R
+import com.shadowmaster.data.model.PracticeMode
 import com.shadowmaster.data.model.SegmentMode
 import com.shadowmaster.data.model.ShadowingConfig
 import com.shadowmaster.data.model.SupportedLanguage
@@ -60,7 +61,7 @@ fun SettingsScreen(
                 onLanguageSelected = { viewModel.updateLanguage(it) }
             )
 
-            Divider()
+            HorizontalDivider()
 
             // Playback Speed
             SliderSetting(
@@ -100,7 +101,7 @@ fun SettingsScreen(
                 onValueChange = { viewModel.updateSilenceThreshold(it) }
             )
 
-            Divider()
+            HorizontalDivider()
 
             // Bus Mode Toggle (most prominent - at the top of modes)
             SwitchSetting(
@@ -109,6 +110,26 @@ fun SettingsScreen(
                 checked = config.busMode,
                 onCheckedChange = { viewModel.updateBusMode(it) }
             )
+
+            // Practice Mode (hidden in bus mode)
+            if (!config.busMode) {
+                PracticeModeSelector(
+                    selectedMode = config.practiceMode,
+                    onModeSelected = { viewModel.updatePracticeMode(it) }
+                )
+
+                // Buildup chunk size (only visible in buildup mode)
+                if (config.practiceMode == PracticeMode.BUILDUP) {
+                    IntSliderSetting(
+                        title = "Buildup Chunk Size",
+                        value = config.buildupChunkMs,
+                        valueRange = 500..3000,
+                        steps = 9,
+                        valueLabel = { "${it}ms" },
+                        onValueChange = { viewModel.updateBuildupChunkMs(it) }
+                    )
+                }
+            }
 
             // Assessment Toggle (disabled if bus mode is on)
             if (!config.busMode) {
@@ -120,7 +141,7 @@ fun SettingsScreen(
                 )
             }
 
-            Divider()
+            HorizontalDivider()
 
             // Audio Feedback Toggle
             SwitchSetting(
@@ -266,6 +287,57 @@ private fun IntSliderSetting(
             steps = steps,
             modifier = Modifier.fillMaxWidth()
         )
+    }
+}
+
+@Composable
+private fun PracticeModeSelector(
+    selectedMode: PracticeMode,
+    onModeSelected: (PracticeMode) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Practice Mode",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        PracticeMode.entries.forEach { mode ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onModeSelected(mode) }
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = mode == selectedMode,
+                    onClick = { onModeSelected(mode) }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = when (mode) {
+                            PracticeMode.STANDARD -> "Standard"
+                            PracticeMode.BUILDUP -> "Gradual Buildup"
+                        },
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = when (mode) {
+                            PracticeMode.STANDARD -> "Play full segment, then repeat"
+                            PracticeMode.BUILDUP -> "Build from end of phrase to full sentence"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
     }
 }
 

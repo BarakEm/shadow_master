@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.shadowmaster.data.model.PracticeMode
 import com.shadowmaster.data.model.SegmentMode
 import com.shadowmaster.data.model.ShadowingConfig
 import com.shadowmaster.data.model.SupportedLanguage
@@ -32,6 +33,8 @@ class SettingsRepository @Inject constructor(
         val AUDIO_FEEDBACK_ENABLED = booleanPreferencesKey("audio_feedback_enabled")
         val PLAYBACK_USER_RECORDING = booleanPreferencesKey("playback_user_recording")
         val SILENCE_BETWEEN_REPEATS_MS = intPreferencesKey("silence_between_repeats_ms")
+        val PRACTICE_MODE = stringPreferencesKey("practice_mode")
+        val BUILDUP_CHUNK_MS = intPreferencesKey("buildup_chunk_ms")
     }
 
     // Blocking access for initial value (use sparingly)
@@ -57,7 +60,13 @@ class SettingsRepository @Inject constructor(
             busMode = preferences[Keys.BUS_MODE] ?: false,
             audioFeedbackEnabled = preferences[Keys.AUDIO_FEEDBACK_ENABLED] ?: true,
             playbackUserRecording = preferences[Keys.PLAYBACK_USER_RECORDING] ?: false,
-            silenceBetweenRepeatsMs = preferences[Keys.SILENCE_BETWEEN_REPEATS_MS] ?: 1000
+            silenceBetweenRepeatsMs = preferences[Keys.SILENCE_BETWEEN_REPEATS_MS] ?: 1000,
+            practiceMode = try {
+                PracticeMode.valueOf(preferences[Keys.PRACTICE_MODE] ?: PracticeMode.STANDARD.name)
+            } catch (e: IllegalArgumentException) {
+                PracticeMode.STANDARD
+            },
+            buildupChunkMs = preferences[Keys.BUILDUP_CHUNK_MS] ?: 1500
         )
     }
 
@@ -147,6 +156,8 @@ class SettingsRepository @Inject constructor(
             preferences[Keys.AUDIO_FEEDBACK_ENABLED] = config.audioFeedbackEnabled
             preferences[Keys.PLAYBACK_USER_RECORDING] = config.playbackUserRecording
             preferences[Keys.SILENCE_BETWEEN_REPEATS_MS] = config.silenceBetweenRepeatsMs
+            preferences[Keys.PRACTICE_MODE] = config.practiceMode.name
+            preferences[Keys.BUILDUP_CHUNK_MS] = config.buildupChunkMs
         }
     }
 
@@ -159,6 +170,18 @@ class SettingsRepository @Inject constructor(
     suspend fun updateSilenceBetweenRepeats(ms: Int) {
         context.dataStore.edit { preferences ->
             preferences[Keys.SILENCE_BETWEEN_REPEATS_MS] = ms.coerceIn(500, 3000)
+        }
+    }
+
+    suspend fun updatePracticeMode(mode: PracticeMode) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.PRACTICE_MODE] = mode.name
+        }
+    }
+
+    suspend fun updateBuildupChunkMs(ms: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.BUILDUP_CHUNK_MS] = ms.coerceIn(500, 3000)
         }
     }
 }

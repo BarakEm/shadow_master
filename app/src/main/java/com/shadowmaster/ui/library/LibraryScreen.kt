@@ -510,7 +510,7 @@ fun LibraryScreen(
                     if (exportProgress.status == ExportStatus.EXPORTING || exportProgress.status == ExportStatus.ENCODING) {
                         Spacer(modifier = Modifier.height(16.dp))
                         LinearProgressIndicator(
-                            progress = exportProgress.progress / 100f,
+                            progress = { exportProgress.progress / 100f },
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -621,7 +621,7 @@ fun LibraryScreen(
                     if (progress.status == com.shadowmaster.library.UrlImportStatus.DOWNLOADING && progress.progress > 0) {
                         Spacer(modifier = Modifier.height(8.dp))
                         LinearProgressIndicator(
-                            progress = progress.progress / 100f,
+                            progress = { progress.progress / 100f },
                             modifier = Modifier.fillMaxWidth()
                         )
                         Text(
@@ -748,7 +748,7 @@ private fun ImportJobCard(job: ImportJob) {
             }
             Spacer(modifier = Modifier.height(8.dp))
             LinearProgressIndicator(
-                progress = job.progress / 100f,
+                progress = { job.progress / 100f },
                 modifier = Modifier.fillMaxWidth()
             )
         }

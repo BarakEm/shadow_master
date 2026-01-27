@@ -34,7 +34,7 @@ class AudioImporter @Inject constructor(
         private const val TAG = "AudioImporter"
         private const val TARGET_SAMPLE_RATE = 16000
         private const val MIN_SEGMENT_DURATION_MS = 500L
-        private const val MAX_SEGMENT_DURATION_MS = 15000L
+        private const val MAX_SEGMENT_DURATION_MS = 8000L
         private const val SILENCE_THRESHOLD_MS = 700L
         private const val PRE_SPEECH_BUFFER_MS = 200L
     }

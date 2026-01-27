@@ -130,7 +130,7 @@ fun CaptureScreen(
                             )
                             Spacer(modifier = Modifier.height(8.dp))
                             LinearProgressIndicator(
-                                progress = importProgress / 100f,
+                                progress = { importProgress / 100f },
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
