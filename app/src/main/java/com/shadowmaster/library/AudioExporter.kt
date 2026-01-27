@@ -123,7 +123,7 @@ class AudioExporter @Inject constructor(
                     writeSegmentAudio(outputStream, item, config, includeYourTurnSilence)
 
                     // Pause between segments
-                    writeSilence(outputStream, POST_SEGMENT_PAUSE_MS)
+                    writeSilence(outputStream, POST_SEGMENT_PAUSE_MS.toLong())
                 }
 
                 outputStream.flush()
@@ -182,13 +182,13 @@ class AudioExporter @Inject constructor(
         for (repeat in 1..config.playbackRepeats) {
             // Playback start beep (single tone)
             writeBeep(output, PLAYBACK_BEEP_FREQ, BEEP_DURATION_MS)
-            writeSilence(output, PRE_SEGMENT_PAUSE_MS)
+            writeSilence(output, PRE_SEGMENT_PAUSE_MS.toLong())
 
             // Play the segment
             output.write(segmentAudio)
 
             // Pause after playback
-            writeSilence(output, BETWEEN_REPEATS_PAUSE_MS)
+            writeSilence(output, BETWEEN_REPEATS_PAUSE_MS.toLong())
         }
 
         // "Your turn" section (if not bus mode and silence included)
@@ -198,13 +198,13 @@ class AudioExporter @Inject constructor(
                 writeBeep(output, YOUR_TURN_BEEP_FREQ, BEEP_DURATION_MS)
                 writeSilence(output, DOUBLE_BEEP_GAP_MS.toLong())
                 writeBeep(output, YOUR_TURN_BEEP_FREQ, BEEP_DURATION_MS)
-                writeSilence(output, PRE_SEGMENT_PAUSE_MS)
+                writeSilence(output, PRE_SEGMENT_PAUSE_MS.toLong())
 
                 // Silence for user to shadow (same duration as segment)
                 writeSilence(output, item.durationMs)
 
                 // Small buffer after shadowing
-                writeSilence(output, BETWEEN_REPEATS_PAUSE_MS)
+                writeSilence(output, BETWEEN_REPEATS_PAUSE_MS.toLong())
             }
 
             // Segment complete beep (descending tone)
