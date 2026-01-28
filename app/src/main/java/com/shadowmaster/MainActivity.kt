@@ -32,6 +32,7 @@ import com.shadowmaster.ui.navigation.NavGraph
 import com.shadowmaster.ui.theme.ShadowMasterTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
+import com.shadowmaster.core.getParcelableExtraProvider
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -129,7 +130,7 @@ class MainActivity : ComponentActivity() {
                         text?.let { extractUrlFromText(it) }?.let { SharedContent.Url(it) }
                     }
                     intent.type?.startsWith("audio/") == true -> {
-                        val uri = intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+                        val uri = intent.getParcelableExtraProvider<Uri>(Intent.EXTRA_STREAM)
                         uri?.let { SharedContent.AudioFile(it) }
                     }
                     else -> null
