@@ -84,10 +84,11 @@ class PracticeViewModel @Inject constructor(
     private fun loadPlaylist() {
         viewModelScope.launch {
             libraryRepository.getItemsByPlaylist(playlistId)
-                .first()
-                .let { loadedItems ->
+                .collect { loadedItems ->
                     _items.value = loadedItems
-                    if (loadedItems.isNotEmpty()) {
+                    // Always set to Ready so UI can show appropriate message
+                    // (either "No items" or actual items list)
+                    if (_state.value == PracticeState.Loading) {
                         _state.value = PracticeState.Ready
                     }
                 }
