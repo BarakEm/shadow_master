@@ -1,6 +1,5 @@
 package com.shadowmaster.service
 
-import android.annotation.SuppressLint
 import android.app.*
 import android.content.Context
 import android.content.Intent
@@ -91,18 +90,13 @@ class AudioCaptureService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
-    @SuppressLint("MissingPermission") // False positive: RECORD_AUDIO is not needed for playback capture
     private fun startCapturing(resultCode: Int, resultData: Intent) {
         try {
             // Start foreground service with notification
             startForeground(
                 NOTIFICATION_ID,
                 createNotification("Preparing to capture audio..."),
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
-                } else {
-                    0
-                }
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
             )
 
             // Get media projection
