@@ -569,6 +569,83 @@ class AudioImporter @Inject constructor(
     }
 
     /**
+     * Save a captured audio segment to the library.
+     * Creates a "Captured Audio" playlist if it doesn't exist.
+     * @param segment The audio segment to save
+     * @return The created ShadowItem, or null if save failed
+     */
+    suspend fun saveCapturedSegment(segment: AudioSegment): ShadowItem? = withContext(Dispatchers.IO) {
+        try {
+            // Get or create "Captured Audio" playlist
+            val playlistId = getOrCreateCapturedAudioPlaylist()
+
+            // Get current item count for ordering
+            val itemCount = shadowItemDao.getItemCountByPlaylist(playlistId)
+
+            // Save segment audio to file
+            val segmentFile = File(segmentsDir, "${UUID.randomUUID()}.pcm")
+            FileOutputStream(segmentFile).use { output ->
+                val byteBuffer = ByteArray(segment.samples.size * 2)
+                for (i in segment.samples.indices) {
+                    val sample = segment.samples[i]
+                    byteBuffer[i * 2] = (sample.toInt() and 0xFF).toByte()
+                    byteBuffer[i * 2 + 1] = ((sample.toInt() shr 8) and 0xFF).toByte()
+                }
+                output.write(byteBuffer)
+            }
+
+            // Create ShadowItem
+            val item = ShadowItem(
+                sourceFileUri = "captured://audio",
+                sourceFileName = "Captured Audio",
+                sourceStartMs = 0L,
+                sourceEndMs = segment.durationMs,
+                audioFilePath = segmentFile.absolutePath,
+                durationMs = segment.durationMs,
+                language = "unknown",
+                playlistId = playlistId,
+                orderInPlaylist = itemCount
+            )
+
+            // Save to database
+            shadowItemDao.insert(item)
+            Log.i(TAG, "Saved captured segment: ${segment.durationMs}ms, ${segment.samples.size} samples")
+
+            item
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to save captured segment", e)
+            null
+        }
+    }
+
+    /**
+     * Get or create the "Captured Audio" playlist for saving captured segments.
+     * @return The playlist ID
+     */
+    private suspend fun getOrCreateCapturedAudioPlaylist(): String {
+        // Check if playlist already exists
+        val allPlaylists = shadowPlaylistDao.getAllPlaylists().first()
+        val existingPlaylist = allPlaylists.find { 
+            it.sourceType == SourceType.RECORDED 
+        }
+
+        return if (existingPlaylist != null) {
+            existingPlaylist.id
+        } else {
+            // Create new playlist
+            val playlist = ShadowPlaylist(
+                name = "Captured Audio",
+                description = "Audio segments captured from other apps",
+                language = "unknown",
+                sourceType = SourceType.RECORDED,
+                sourceUri = null
+            )
+            shadowPlaylistDao.insert(playlist)
+            playlist.id
+        }
+    }
+
+    /**
      * Split a segment into two parts at the given timestamp.
      * @param item The item to split
      * @param splitPointMs The position within the segment to split (relative to segment start)
