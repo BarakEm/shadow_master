@@ -125,7 +125,7 @@ class AudioImporter @Inject constructor(
             val minBytes = (TARGET_SAMPLE_RATE * 2 * 0.5).toLong() // 0.5 seconds at 16kHz mono 16-bit
             if (pcmFile.length() < minBytes) {
                 val durationSec = pcmFile.length() / (TARGET_SAMPLE_RATE * 2.0)
-                val errorMsg = "Audio file too short (${pcmFile.length()} bytes, %.2fs)".format(durationSec)
+                val errorMsg = String.format("Audio file too short (%d bytes, %.2fs)", pcmFile.length(), durationSec)
                 Log.e(TAG, errorMsg)
                 importJobDao.markFailed(jobId, errorMsg)
                 pcmFile.delete()
@@ -137,7 +137,7 @@ class AudioImporter @Inject constructor(
 
             // Log PCM file info
             val durationSec = pcmFile.length() / (TARGET_SAMPLE_RATE * 2.0)
-            Log.i(TAG, "PCM file size: ${pcmFile.length()} bytes, duration: %.2fs".format(durationSec))
+            Log.i(TAG, String.format("PCM file size: %d bytes, duration: %.2fs", pcmFile.length(), durationSec))
 
             // Initialize VAD with retry and delays
             var vadInitialized = false
