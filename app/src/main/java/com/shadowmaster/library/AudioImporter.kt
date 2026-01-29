@@ -449,8 +449,7 @@ class AudioImporter @Inject constructor(
         var lastSpeechMs = 0L
         var currentMs = 0L
 
-        try {
-            val inputStream = DataInputStream(BufferedInputStream(FileInputStream(pcmFile)))
+        DataInputStream(BufferedInputStream(FileInputStream(pcmFile))).use { inputStream ->
             val frameBuffer = ShortArray(frameSize)
             val byteBuffer = ByteArray(frameSize * 2)
 
@@ -506,11 +505,6 @@ class AudioImporter @Inject constructor(
                     endMs = lastSpeechMs + 100
                 ))
             }
-
-            inputStream.close()
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Error detecting segments", e)
         }
 
         return segments
