@@ -124,37 +124,52 @@ class AudioImporter @Inject constructor(
             // Update status
             importJobDao.updateProgress(jobId, ImportStatus.DETECTING_SEGMENTS, 30)
 
-            // Initialize VAD with retry
+            // Log PCM file info
+            Log.i(TAG, "PCM file size: ${pcmFile.length()} bytes, duration: ${pcmFile.length() / (TARGET_SAMPLE_RATE * 2)}s")
+
+            // Initialize VAD with retry and delays
             var vadInitialized = false
-            repeat(3) { attempt ->
+            repeat(5) { attempt ->
                 try {
                     if (vadDetector.initialize()) {
                         vadInitialized = true
+                        Log.i(TAG, "VAD initialized successfully on attempt ${attempt + 1}")
                         return@repeat
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "VAD initialization attempt ${attempt + 1} failed", e)
                 }
+                // Add delay before next retry, increasing with each attempt
+                if (attempt < 4) {
+                    val delayMs = (attempt + 1) * 500L // 500ms, 1000ms, 1500ms, 2000ms
+                    Log.d(TAG, "Waiting ${delayMs}ms before retry...")
+                    delay(delayMs)
+                }
             }
 
             if (!vadInitialized) {
-                importJobDao.markFailed(jobId, "Failed to initialize voice detection")
+                val errorMsg = "Failed to initialize voice detection after 5 attempts"
+                Log.e(TAG, errorMsg)
+                importJobDao.markFailed(jobId, errorMsg)
                 pcmFile.delete()
                 return
             }
 
             // Detect speech segments
             val segments = try {
+                Log.d(TAG, "Starting speech segment detection...")
                 detectSpeechSegments(pcmFile)
             } catch (e: Exception) {
-                Log.e(TAG, "Failed to detect speech segments", e)
+                Log.e(TAG, "Failed to detect speech segments: ${e.message}", e)
                 emptyList()
             }
 
-            Log.i(TAG, "Detected ${segments.size} speech segments")
+            Log.i(TAG, "Detected ${segments.size} speech segments from ${pcmFile.length()} byte PCM file")
 
             if (segments.isEmpty()) {
-                importJobDao.markFailed(jobId, "No speech segments detected in audio")
+                val errorMsg = "No speech segments detected in audio - file may be silent or corrupted"
+                Log.w(TAG, errorMsg)
+                importJobDao.markFailed(jobId, errorMsg)
                 pcmFile.delete()
                 return
             }
