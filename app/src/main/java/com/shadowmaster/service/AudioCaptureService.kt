@@ -19,7 +19,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import com.shadowmaster.core.getParcelableExtraProvider
+import com.shadowmaster.core.getParcelableExtraCompat
 import java.io.File
 import java.io.FileOutputStream
 import java.io.RandomAccessFile
@@ -74,7 +74,7 @@ class AudioCaptureService : Service() {
         when (intent?.action) {
             ACTION_START -> {
                 val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, Activity.RESULT_CANCELED)
-                val resultData = intent.getParcelableExtraProvider<Intent>(EXTRA_RESULT_DATA)
+                val resultData = intent.getParcelableExtraCompat<Intent>(EXTRA_RESULT_DATA)
                 if (resultData != null) {
                     startCapturing(resultCode, resultData)
                 } else {

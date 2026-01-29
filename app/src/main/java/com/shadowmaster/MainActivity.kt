@@ -32,7 +32,7 @@ import com.shadowmaster.ui.navigation.NavGraph
 import com.shadowmaster.ui.theme.ShadowMasterTheme
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
-import com.shadowmaster.core.getParcelableExtraProvider
+import com.shadowmaster.core.getParcelableExtraCompat
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -123,21 +123,21 @@ class MainActivity : ComponentActivity() {
         if (intent == null) return null
 
         return when (intent.action) {
-            Intent.ACTION_SEND -> {
-                when {
-                    intent.type == "text/plain" -> {
-                        val text = intent.getStringExtra(Intent.EXTRA_TEXT)
-                        text?.let { extractUrlFromText(it) }?.let { SharedContent.Url(it) }
-                    }
-                    intent.type?.startsWith("audio/") == true -> {
-                        val uri = intent.getParcelableExtraProvider<Uri>(Intent.EXTRA_STREAM)
-                        uri?.let { SharedContent.AudioFile(it) }
-                    }
-                    else -> null
-                }
+            Intent.ACTION_SEND -> handleSendIntent(intent)
+            Intent.ACTION_VIEW -> intent.data?.let { SharedContent.Url(it.toString()) }
+            else -> null
+        }
+    }
+
+    private fun handleSendIntent(intent: Intent): SharedContent? {
+        return when {
+            intent.type == "text/plain" -> {
+                val text = intent.getStringExtra(Intent.EXTRA_TEXT)
+                text?.let { extractUrlFromText(it) }?.let { SharedContent.Url(it) }
             }
-            Intent.ACTION_VIEW -> {
-                intent.data?.let { SharedContent.Url(it.toString()) }
+            intent.type?.startsWith("audio/") == true -> {
+                val uri = intent.getParcelableExtraCompat<Uri>(Intent.EXTRA_STREAM)
+                uri?.let { SharedContent.AudioFile(it) }
             }
             else -> null
         }
