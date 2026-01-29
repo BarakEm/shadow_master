@@ -37,6 +37,13 @@ class LibraryViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    val recentFailedImports: StateFlow<List<ImportJob>> = libraryRepository.getRecentFailedImports()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
     val urlImportProgress: StateFlow<UrlImportProgress?> = libraryRepository.getUrlImportProgress()
         .stateIn(
             scope = viewModelScope,
@@ -272,5 +279,11 @@ class LibraryViewModel @Inject constructor(
 
     fun cancelExport() {
         libraryRepository.cancelExport()
+    }
+
+    fun dismissFailedImport(jobId: String) {
+        viewModelScope.launch {
+            libraryRepository.deleteImportJob(jobId)
+        }
     }
 }

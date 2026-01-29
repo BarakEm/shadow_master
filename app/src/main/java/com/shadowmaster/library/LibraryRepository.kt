@@ -86,6 +86,17 @@ class LibraryRepository @Inject constructor(
 
     fun getAllImports(): Flow<List<ImportJob>> = importJobDao.getAllJobs()
 
+    fun getRecentFailedImports(): Flow<List<ImportJob>> = importJobDao.getRecentFailedJobs()
+
+    suspend fun getImportJobForPlaylist(playlistId: String): ImportJob? =
+        importJobDao.getJobByPlaylistId(playlistId)
+
+    suspend fun deleteImportJob(jobId: String) {
+        importJobDao.getJobById(jobId)?.let { job ->
+            importJobDao.delete(job)
+        }
+    }
+
     // URL Import
     suspend fun importFromUrl(
         url: String,

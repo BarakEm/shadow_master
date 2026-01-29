@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.shadowmaster.data.model.ShadowItem
+import com.shadowmaster.ui.practice.ImportJobStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -29,6 +30,7 @@ fun PracticeScreen(
     val items by viewModel.items.collectAsState()
     val currentIndex by viewModel.currentItemIndex.collectAsState()
     val progress by viewModel.progress.collectAsState()
+    val importJobStatus by viewModel.importJobStatus.collectAsState()
 
     val currentItem = items.getOrNull(currentIndex)
 
@@ -95,22 +97,49 @@ fun PracticeScreen(
                         modifier = Modifier.padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        val emptyState = when (importJobStatus) {
+                            ImportJobStatus.FAILED -> {
+                                EmptyStateConfig(
+                                    icon = Icons.Default.Error,
+                                    iconTint = MaterialTheme.colorScheme.error,
+                                    title = "Import Failed",
+                                    message = "The audio import failed. Please go back to the library to see the error details and try importing again."
+                                )
+                            }
+                            ImportJobStatus.ACTIVE -> {
+                                EmptyStateConfig(
+                                    icon = Icons.Default.Info,
+                                    iconTint = MaterialTheme.colorScheme.primary,
+                                    title = "Import in Progress",
+                                    message = "The audio is still being imported and segmented. Please wait a moment, then try again."
+                                )
+                            }
+                            else -> {
+                                EmptyStateConfig(
+                                    icon = Icons.Default.Info,
+                                    iconTint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    title = "No Items in Playlist",
+                                    message = "This playlist is empty. Go back to the library to add audio segments."
+                                )
+                            }
+                        }
+
                         Icon(
-                            imageVector = Icons.Default.Info,
+                            imageVector = emptyState.icon,
                             contentDescription = null,
                             modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = emptyState.iconTint
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "No items in this playlist",
+                            text = emptyState.title,
                             style = MaterialTheme.typography.titleMedium,
                             textAlign = TextAlign.Center,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = emptyState.iconTint
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "The import may still be processing. Please wait or go back and check the library.",
+                            text = emptyState.message,
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -360,3 +389,13 @@ private fun formatDuration(ms: Long): String {
     val minutes = (ms / 60000) % 60
     return "%d:%02d".format(minutes, seconds)
 }
+
+/**
+ * Configuration for empty state display in practice screen
+ */
+private data class EmptyStateConfig(
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val iconTint: androidx.compose.ui.graphics.Color,
+    val title: String,
+    val message: String
+)
