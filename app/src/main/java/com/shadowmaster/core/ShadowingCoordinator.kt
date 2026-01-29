@@ -78,7 +78,11 @@ class ShadowingCoordinator @Inject constructor(
                 _feedbackEvents.emit(FeedbackEvent.SegmentDetected)
                 // Save the captured segment to library
                 scope.launch {
-                    audioImporter.saveCapturedSegment(state.audioSegment)
+                    try {
+                        audioImporter.saveCapturedSegment(state.audioSegment)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to save captured segment", e)
+                    }
                 }
                 mediaControlManager.pauseOtherApps()
                 delay(200)

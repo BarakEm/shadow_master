@@ -43,6 +43,9 @@ class AudioImporter @Inject constructor(
     private val segmentsDir: File by lazy {
         File(context.filesDir, "shadow_segments").also { it.mkdirs() }
     }
+    
+    // Lock for playlist creation to prevent race conditions
+    private val playlistCreationLock = Any()
 
     /**
      * Import an audio file and create a playlist with segmented items.
@@ -575,7 +578,13 @@ class AudioImporter @Inject constructor(
      * @return The created ShadowItem, or null if save failed
      */
     suspend fun saveCapturedSegment(segment: AudioSegment): ShadowItem? = withContext(Dispatchers.IO) {
+        var segmentFile: File? = null
         try {
+            // Validate sample rate
+            if (segment.sampleRate != TARGET_SAMPLE_RATE) {
+                Log.w(TAG, "Segment sample rate ${segment.sampleRate} doesn't match target $TARGET_SAMPLE_RATE")
+            }
+
             // Get or create "Captured Audio" playlist
             val playlistId = getOrCreateCapturedAudioPlaylist()
 
@@ -583,7 +592,7 @@ class AudioImporter @Inject constructor(
             val itemCount = shadowItemDao.getItemCountByPlaylist(playlistId)
 
             // Save segment audio to file
-            val segmentFile = File(segmentsDir, "${UUID.randomUUID()}.pcm")
+            segmentFile = File(segmentsDir, "${UUID.randomUUID()}.pcm")
             FileOutputStream(segmentFile).use { output ->
                 val byteBuffer = ByteArray(segment.samples.size * 2)
                 for (i in segment.samples.indices) {
@@ -614,34 +623,40 @@ class AudioImporter @Inject constructor(
             item
         } catch (e: Exception) {
             Log.e(TAG, "Failed to save captured segment", e)
+            // Clean up orphaned file on failure
+            segmentFile?.delete()
             null
         }
     }
 
     /**
      * Get or create the "Captured Audio" playlist for saving captured segments.
+     * Uses synchronization to prevent race conditions when multiple segments
+     * are detected simultaneously.
      * @return The playlist ID
      */
-    private suspend fun getOrCreateCapturedAudioPlaylist(): String {
-        // Check if playlist already exists
-        val allPlaylists = shadowPlaylistDao.getAllPlaylists().first()
-        val existingPlaylist = allPlaylists.find { 
-            it.sourceType == SourceType.RECORDED 
-        }
+    private suspend fun getOrCreateCapturedAudioPlaylist(): String = withContext(Dispatchers.IO) {
+        synchronized(playlistCreationLock) {
+            // Check if playlist already exists
+            val allPlaylists = shadowPlaylistDao.getAllPlaylists().first()
+            val existingPlaylist = allPlaylists.find { 
+                it.sourceType == SourceType.RECORDED 
+            }
 
-        return if (existingPlaylist != null) {
-            existingPlaylist.id
-        } else {
-            // Create new playlist
-            val playlist = ShadowPlaylist(
-                name = "Captured Audio",
-                description = "Audio segments captured from other apps",
-                language = "unknown",
-                sourceType = SourceType.RECORDED,
-                sourceUri = null
-            )
-            shadowPlaylistDao.insert(playlist)
-            playlist.id
+            if (existingPlaylist != null) {
+                existingPlaylist.id
+            } else {
+                // Create new playlist
+                val playlist = ShadowPlaylist(
+                    name = "Captured Audio",
+                    description = "Audio segments captured from other apps",
+                    language = "unknown",
+                    sourceType = SourceType.RECORDED,
+                    sourceUri = null
+                )
+                shadowPlaylistDao.insert(playlist)
+                playlist.id
+            }
         }
     }
 
