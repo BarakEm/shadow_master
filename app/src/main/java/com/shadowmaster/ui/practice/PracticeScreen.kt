@@ -84,9 +84,44 @@ fun PracticeScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Current segment info
-            currentItem?.let { item ->
-                SegmentInfo(item = item)
+            // Show message when playlist is empty
+            if (items.isEmpty() && state is PracticeState.Ready) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 32.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = "No items in this playlist",
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "The import may still be processing. Please wait or go back and check the library.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                // Current segment info
+                currentItem?.let { item ->
+                    SegmentInfo(item = item)
+                }
             }
 
             Spacer(modifier = Modifier.weight(0.3f))
@@ -94,6 +129,7 @@ fun PracticeScreen(
             // Control buttons
             PracticeControls(
                 state = state,
+                items = items,
                 onStart = { viewModel.startPractice() },
                 onPauseResume = { viewModel.pauseResume() },
                 onSkip = { viewModel.skip() },
@@ -235,6 +271,7 @@ private fun SegmentInfo(item: ShadowItem) {
 @Composable
 private fun PracticeControls(
     state: PracticeState,
+    items: List<ShadowItem>,
     onStart: () -> Unit,
     onPauseResume: () -> Unit,
     onSkip: () -> Unit,
@@ -245,7 +282,8 @@ private fun PracticeControls(
             Button(
                 onClick = onStart,
                 modifier = Modifier.size(160.dp),
-                shape = CircleShape
+                shape = CircleShape,
+                enabled = items.isNotEmpty()
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Icon(
