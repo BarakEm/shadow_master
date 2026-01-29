@@ -11,6 +11,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shadowmaster.feedback.AudioFeedbackSystem
+import com.shadowmaster.data.model.ImportStatus
 import com.shadowmaster.data.model.PracticeMode
 import com.shadowmaster.data.model.ShadowItem
 import com.shadowmaster.data.repository.SettingsRepository
@@ -65,6 +66,9 @@ class PracticeViewModel @Inject constructor(
     private val _progress = MutableStateFlow(0f)
     val progress: StateFlow<Float> = _progress.asStateFlow()
 
+    private val _importJobStatus = MutableStateFlow<ImportJobStatus?>(null)
+    val importJobStatus: StateFlow<ImportJobStatus?> = _importJobStatus.asStateFlow()
+
     private var audioTrack: AudioTrack? = null
     private var practiceJob: Job? = null
     private var isPaused = false
@@ -83,6 +87,17 @@ class PracticeViewModel @Inject constructor(
 
     private fun loadPlaylist() {
         viewModelScope.launch {
+            // Check import job status for this playlist
+            launch {
+                val job = libraryRepository.getImportJobForPlaylist(playlistId)
+                _importJobStatus.value = when {
+                    job == null -> ImportJobStatus.UNKNOWN
+                    job.status == ImportStatus.FAILED -> ImportJobStatus.FAILED
+                    job.status == ImportStatus.COMPLETED -> ImportJobStatus.COMPLETED
+                    else -> ImportJobStatus.ACTIVE
+                }
+            }
+
             // Continuously observe items to update UI when background import adds new items.
             // This is especially important for playlists that are still being processed.
             // The collection will be cancelled when the ViewModel is cleared.
@@ -541,4 +556,14 @@ class PracticeViewModel @Inject constructor(
         }
         audioTrack = null
     }
+}
+
+/**
+ * Status of import job for a playlist
+ */
+enum class ImportJobStatus {
+    ACTIVE,      // Import is in progress
+    FAILED,      // Import failed
+    COMPLETED,   // Import completed successfully
+    UNKNOWN      // No import job found (playlist created manually or job deleted)
 }

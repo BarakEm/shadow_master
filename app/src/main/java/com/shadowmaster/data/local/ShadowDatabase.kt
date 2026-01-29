@@ -85,6 +85,12 @@ interface ImportJobDao {
     @Query("SELECT * FROM import_jobs WHERE status IN ('PENDING', 'EXTRACTING_AUDIO', 'DETECTING_SEGMENTS', 'TRANSCRIBING')")
     fun getActiveJobs(): Flow<List<ImportJob>>
 
+    @Query("SELECT * FROM import_jobs WHERE status = 'FAILED' ORDER BY createdAt DESC LIMIT 5")
+    fun getRecentFailedJobs(): Flow<List<ImportJob>>
+
+    @Query("SELECT * FROM import_jobs WHERE targetPlaylistId = :playlistId")
+    suspend fun getJobByPlaylistId(playlistId: String): ImportJob?
+
     @Query("SELECT * FROM import_jobs WHERE id = :id")
     suspend fun getJobById(id: String): ImportJob?
 

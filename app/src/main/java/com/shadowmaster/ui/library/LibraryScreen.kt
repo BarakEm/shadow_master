@@ -37,6 +37,7 @@ fun LibraryScreen(
 ) {
     val playlists by viewModel.playlists.collectAsState()
     val activeImports by viewModel.activeImports.collectAsState()
+    val recentFailedImports by viewModel.recentFailedImports.collectAsState()
     val selectedPlaylist by viewModel.selectedPlaylist.collectAsState()
     val playlistItems by viewModel.playlistItems.collectAsState()
     val importError by viewModel.importError.collectAsState()
@@ -216,11 +217,13 @@ fun LibraryScreen(
                 PlaylistsContent(
                     playlists = playlists,
                     activeImports = activeImports,
+                    failedImports = recentFailedImports,
                     onPlaylistClick = { viewModel.selectPlaylist(it) },
                     onDeleteClick = { showDeleteDialog = it },
                     onRenameClick = { showRenamePlaylistDialog = it },
                     onExportClick = { showExportDialog = it },
-                    onStartPractice = onStartPractice
+                    onStartPractice = onStartPractice,
+                    onDismissFailedImport = { viewModel.dismissFailedImport(it) }
                 )
             }
 
@@ -652,11 +655,13 @@ fun LibraryScreen(
 private fun PlaylistsContent(
     playlists: List<ShadowPlaylist>,
     activeImports: List<ImportJob>,
+    failedImports: List<ImportJob>,
     onPlaylistClick: (ShadowPlaylist) -> Unit,
     onDeleteClick: (ShadowPlaylist) -> Unit,
     onRenameClick: (ShadowPlaylist) -> Unit,
     onExportClick: (ShadowPlaylist) -> Unit,
-    onStartPractice: (String) -> Unit
+    onStartPractice: (String) -> Unit,
+    onDismissFailedImport: (String) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -675,6 +680,28 @@ private fun PlaylistsContent(
             }
             items(activeImports, key = { it.id }) { job ->
                 ImportJobCard(job = job)
+            }
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+
+        // Failed imports section
+        if (failedImports.isNotEmpty()) {
+            item {
+                Text(
+                    text = "Import Errors",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+            items(failedImports, key = { it.id }) { job ->
+                FailedImportCard(
+                    job = job,
+                    onDismiss = { onDismissFailedImport(job.id) }
+                )
             }
             item {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -751,6 +778,53 @@ private fun ImportJobCard(job: ImportJob) {
                 progress = { job.progress / 100f },
                 modifier = Modifier.fillMaxWidth()
             )
+        }
+    }
+}
+
+@Composable
+private fun FailedImportCard(job: ImportJob, onDismiss: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.Top
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Error,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = MaterialTheme.colorScheme.error
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = job.fileName,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = job.errorMessage ?: "Import failed",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+                IconButton(onClick = onDismiss) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Dismiss",
+                        tint = MaterialTheme.colorScheme.onErrorContainer
+                    )
+                }
+            }
         }
     }
 }
