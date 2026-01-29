@@ -77,6 +77,27 @@ Shadow Master is an Android app for language learning through "shadowing" - a te
 ./gradlew clean assembleDebug
 ```
 
+## Gemini CLI Agent
+
+This project is being developed using the Gemini CLI. The CLI provides a set of tools and agents to assist with software development.
+
+### Quota Limits
+Gemini CLI offers different quota limits based on your authentication method:
+*   **Free Usage:** Varies by authentication (Google account for Gemini Code Assist, unpaid Gemini API Key, or Vertex AI Express Mode). For instance, individual Google account users get 1000 requests/day, and unpaid API key users get 250 requests/day.
+*   **Paid Tier:** Offers higher limits through subscriptions like Google AI Pro/Ultra or Gemini Code Assist subscriptions (Standard/Enterprise editions with increased daily and minute limits).
+*   **Pay-As-You-Go:** Provides the most flexibility via a Gemini API key or Vertex AI (Regular Mode), where costs are based on token/model usage, bypassing fixed daily limits.
+
+### `/stats` Command
+The `/stats` command provides a summary of your model usage. This summary is also automatically displayed when you exit a session.
+
+To avoid hitting limits, especially in Pay-As-You-Go models, it's recommended to be mindful of your usage and be intentional with prompts and commands.
+
+### `delegate_to_agent` Tool
+The `delegate_to_agent` tool can be used to delegate tasks to specialized agents.
+
+#### `cli_help` Agent
+The `cli_help` agent is specialized in answering questions about the Gemini CLI's features, documentation, and current runtime configuration.
+
 ## Known Limitations / TODOs
 
 1. **Azure Assessment**: Currently returns mock scores. Real Azure Speech integration pending.
