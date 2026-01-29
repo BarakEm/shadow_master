@@ -121,6 +121,15 @@ class AudioImporter @Inject constructor(
                 return
             }
 
+            // Check if PCM file has sufficient data
+            if (pcmFile.length() < TARGET_SAMPLE_RATE * 2 / 2) { // Less than 0.5 seconds
+                val errorMsg = "Audio file too short (${pcmFile.length()} bytes, ${pcmFile.length() / (TARGET_SAMPLE_RATE * 2)}s)"
+                Log.e(TAG, errorMsg)
+                importJobDao.markFailed(jobId, errorMsg)
+                pcmFile.delete()
+                return
+            }
+
             // Update status
             importJobDao.updateProgress(jobId, ImportStatus.DETECTING_SEGMENTS, 30)
 
