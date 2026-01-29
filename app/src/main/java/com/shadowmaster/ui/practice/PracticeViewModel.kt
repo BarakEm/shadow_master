@@ -83,6 +83,9 @@ class PracticeViewModel @Inject constructor(
 
     private fun loadPlaylist() {
         viewModelScope.launch {
+            // Continuously observe items to update UI when background import adds new items.
+            // This is especially important for playlists that are still being processed.
+            // The collection will be cancelled when the ViewModel is cleared.
             libraryRepository.getItemsByPlaylist(playlistId)
                 .collect { loadedItems ->
                     _items.value = loadedItems
