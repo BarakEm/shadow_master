@@ -87,15 +87,13 @@ class PracticeViewModel @Inject constructor(
 
     private fun loadPlaylist() {
         viewModelScope.launch {
-            // Check import job status for this playlist
-            launch {
-                val job = libraryRepository.getImportJobForPlaylist(playlistId)
-                _importJobStatus.value = when {
-                    job == null -> ImportJobStatus.UNKNOWN
-                    job.status == ImportStatus.FAILED -> ImportJobStatus.FAILED
-                    job.status == ImportStatus.COMPLETED -> ImportJobStatus.COMPLETED
-                    else -> ImportJobStatus.ACTIVE
-                }
+            // Check import job status for this playlist first
+            val job = libraryRepository.getImportJobForPlaylist(playlistId)
+            _importJobStatus.value = when {
+                job == null -> ImportJobStatus.UNKNOWN
+                job.status == ImportStatus.FAILED -> ImportJobStatus.FAILED
+                job.status == ImportStatus.COMPLETED -> ImportJobStatus.COMPLETED
+                else -> ImportJobStatus.ACTIVE
             }
 
             // Continuously observe items to update UI when background import adds new items.

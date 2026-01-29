@@ -97,49 +97,49 @@ fun PracticeScreen(
                         modifier = Modifier.padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        val (icon, iconTint, title, message) = when (importJobStatus) {
+                        val emptyState = when (importJobStatus) {
                             ImportJobStatus.FAILED -> {
-                                Quadruple(
-                                    Icons.Default.Error,
-                                    MaterialTheme.colorScheme.error,
-                                    "Import Failed",
-                                    "The audio import failed. Please go back to the library to see the error details and try importing again."
+                                EmptyStateConfig(
+                                    icon = Icons.Default.Error,
+                                    iconTint = MaterialTheme.colorScheme.error,
+                                    title = "Import Failed",
+                                    message = "The audio import failed. Please go back to the library to see the error details and try importing again."
                                 )
                             }
                             ImportJobStatus.ACTIVE -> {
-                                Quadruple(
-                                    Icons.Default.Info,
-                                    MaterialTheme.colorScheme.primary,
-                                    "Import in Progress",
-                                    "The audio is still being imported and segmented. Please wait a moment, then try again."
+                                EmptyStateConfig(
+                                    icon = Icons.Default.Info,
+                                    iconTint = MaterialTheme.colorScheme.primary,
+                                    title = "Import in Progress",
+                                    message = "The audio is still being imported and segmented. Please wait a moment, then try again."
                                 )
                             }
                             else -> {
-                                Quadruple(
-                                    Icons.Default.Info,
-                                    MaterialTheme.colorScheme.onSurfaceVariant,
-                                    "No Items in Playlist",
-                                    "This playlist is empty. Go back to the library to add audio segments."
+                                EmptyStateConfig(
+                                    icon = Icons.Default.Info,
+                                    iconTint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    title = "No Items in Playlist",
+                                    message = "This playlist is empty. Go back to the library to add audio segments."
                                 )
                             }
                         }
 
                         Icon(
-                            imageVector = icon,
+                            imageVector = emptyState.icon,
                             contentDescription = null,
                             modifier = Modifier.size(48.dp),
-                            tint = iconTint
+                            tint = emptyState.iconTint
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = title,
+                            text = emptyState.title,
                             style = MaterialTheme.typography.titleMedium,
                             textAlign = TextAlign.Center,
-                            color = iconTint
+                            color = emptyState.iconTint
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = message,
+                            text = emptyState.message,
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -391,11 +391,11 @@ private fun formatDuration(ms: Long): String {
 }
 
 /**
- * Helper data class for holding four values
+ * Configuration for empty state display in practice screen
  */
-private data class Quadruple<A, B, C, D>(
-    val first: A,
-    val second: B,
-    val third: C,
-    val fourth: D
+private data class EmptyStateConfig(
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val iconTint: androidx.compose.ui.graphics.Color,
+    val title: String,
+    val message: String
 )

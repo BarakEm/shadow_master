@@ -709,7 +709,7 @@ private fun PlaylistsContent(
         }
 
         // Playlists section
-        if (playlists.isEmpty() && activeImports.isEmpty()) {
+        if (playlists.isEmpty() && activeImports.isEmpty() && failedImports.isEmpty()) {
             item {
                 EmptyLibraryMessage()
             }
