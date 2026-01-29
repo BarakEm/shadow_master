@@ -188,6 +188,30 @@ com.shadowmaster/
 - [ ] Waveform visualization
 - [ ] A/B comparison (original vs your recording)
 
+## Web App Conversion Analysis
+
+Wondering about converting Shadow Master to a web app for cross-platform use? We've prepared a comprehensive analysis:
+
+📊 **[Web Conversion Feasibility Analysis](docs/WEB_CONVERSION_FEASIBILITY.md)** - Complete technical analysis (25+ pages)
+- Component-by-component conversion assessment
+- Technology recommendations
+- Cost and timeline estimates
+- Trade-offs and limitations
+
+📋 **[Executive Summary](docs/WEB_CONVERSION_SUMMARY.md)** - Quick overview (10 pages)
+- TL;DR: Difficulty 7/10, 6-9 months, $150K-$250K
+- Major limitation: Cannot capture live audio from other apps
+- Recommended approach: Hybrid strategy
+- Four conversion options compared
+
+🚀 **[Quick Start Guide](docs/WEB_CONVERSION_QUICKSTART.md)** - Implementation roadmap (20+ pages)
+- Pre-decision checklist
+- Week-by-week development plan
+- Code examples and best practices
+- Deployment instructions
+
+**Bottom Line:** Web conversion is feasible but challenging. The main limitation is that browsers cannot capture audio from other applications, so the "Live Shadow" feature would need to be replaced with URL-based import. Recommended approach is a hybrid strategy: keep the Android app for its unique live capture capability while building a complementary web app for cross-platform access.
+
 ## License
 
 MIT
