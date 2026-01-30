@@ -464,7 +464,7 @@ class AudioImporter @Inject constructor(
                     Log.d(TAG, "Set data source via file descriptor")
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to set data source via file descriptor", e)
-                    pfd.close()
+                    pfd?.close()
                     return Pair(null, "Cannot read audio file: ${e.message}")
                 }
             }
