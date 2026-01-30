@@ -4,13 +4,16 @@
 - **master** branch is always release-ready
 - All work done in feature branches (`feature/`, `fix/`, `improve/`)
 - PRs required for merging to master
+- Current PR: #19 (devel branch)
 
 ---
 
 ## Quick Wins (Fast/Easy)
 
 - [ ] **Logo rework** - Use nano banana or similar concept
-- [ ] **Verify import audio works** - Confirm segmentation is functional after recent fixes
+- [x] **Verify import audio works** - Fixed URI handling, improved error messages
+  - Added context/URI method for better content:// compatibility
+  - Better error messages with actionable suggestions
 - [x] **Reduce play button confusion** - Too many play buttons, improve UX clarity
   - Removed redundant app bar play button
   - Added labeled "Practice" button on playlist cards
@@ -18,7 +21,7 @@
 
 ## Medium Priority
 
-- [ ] **Practice mode gradual builder not working** - Investigate and fix
+- [ ] **Practice mode gradual builder not working** - Investigated, code looks correct, needs device testing
 - [ ] **Separate import and segment steps** - Allow re-segmenting same audio with different settings
 - [ ] **Persistent audio library** - Survive app reinstalls (external storage or backup/restore)
 - [ ] **Playback location controls** - Skip to arbitrary locations, scroll timeline
