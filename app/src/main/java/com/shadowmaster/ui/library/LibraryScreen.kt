@@ -559,28 +559,15 @@ fun LibraryScreen(
     // Re-segment dialog
     showResegmentDialog?.let { playlist ->
         var selectedPreset by remember { mutableStateOf<SegmentationConfig?>(null) }
-        var isProcessing by remember { mutableStateOf(false) }
         var importedAudioId by remember { mutableStateOf<String?>(null) }
         
-        // Load items for this playlist to get importedAudioId
+        // Load importedAudioId for this playlist without changing selected state
         LaunchedEffect(playlist.id) {
-            viewModel.selectPlaylist(playlist)
-        }
-        
-        // Update importedAudioId when items are loaded
-        LaunchedEffect(playlistItems) {
-            if (selectedPlaylist?.id == playlist.id && playlistItems.isNotEmpty()) {
-                importedAudioId = playlistItems.firstOrNull()?.importedAudioId
-            }
+            importedAudioId = viewModel.getImportedAudioIdForPlaylist(playlist.id)
         }
         
         AlertDialog(
-            onDismissRequest = { 
-                if (!isProcessing) {
-                    showResegmentDialog = null
-                    viewModel.clearSelection()
-                }
-            },
+            onDismissRequest = { showResegmentDialog = null },
             title = { Text("Re-segment Playlist") },
             text = {
                 Column {
@@ -601,14 +588,13 @@ fun LibraryScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable(enabled = !isProcessing) { selectedPreset = preset }
+                                    .clickable { selectedPreset = preset }
                                     .padding(vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 RadioButton(
                                     selected = preset == selectedPreset,
-                                    onClick = { selectedPreset = preset },
-                                    enabled = !isProcessing
+                                    onClick = { selectedPreset = preset }
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Column {
@@ -624,24 +610,6 @@ fun LibraryScreen(
                                 }
                             }
                         }
-                        
-                        if (isProcessing) {
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Text(
-                                    text = "Re-segmenting...",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                        }
                     }
                 }
             },
@@ -650,17 +618,18 @@ fun LibraryScreen(
                     TextButton(
                         onClick = {
                             selectedPreset?.let { preset ->
-                                isProcessing = true
+                                // Use non-null assertion here because we already checked importedAudioId != null
+                                val audioId = importedAudioId!!
                                 val newPlaylistName = "${playlist.name} (${preset.name})"
                                 viewModel.resegmentImportedAudio(
-                                    importedAudioId = importedAudioId,
+                                    importedAudioId = audioId,
                                     preset = preset,
                                     playlistName = newPlaylistName
                                 )
                                 showResegmentDialog = null
                             }
                         },
-                        enabled = selectedPreset != null && !isProcessing
+                        enabled = selectedPreset != null
                     ) {
                         Text("Re-segment")
                     }
@@ -668,8 +637,7 @@ fun LibraryScreen(
             },
             dismissButton = {
                 TextButton(
-                    onClick = { showResegmentDialog = null },
-                    enabled = !isProcessing
+                    onClick = { showResegmentDialog = null }
                 ) {
                     Text("Cancel")
                 }

@@ -316,4 +316,15 @@ class LibraryViewModel @Inject constructor(
             }
         }
     }
+
+    /**
+     * Get the importedAudioId for a playlist without changing selected state.
+     * Used for checking if re-segmentation is available.
+     */
+    suspend fun getImportedAudioIdForPlaylist(playlistId: String): String? {
+        return libraryRepository.getItemsByPlaylist(playlistId)
+            .firstOrNull()
+            ?.firstOrNull()
+            ?.importedAudioId
+    }
 }

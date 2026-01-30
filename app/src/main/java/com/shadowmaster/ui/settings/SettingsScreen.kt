@@ -376,13 +376,23 @@ private fun SegmentationModeSelector(
                     onClick = { onModeSelected(mode) }
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = when (mode) {
-                        SegmentMode.SENTENCE -> "Sentence"
-                        SegmentMode.WORD -> "Word"
-                    },
-                    style = MaterialTheme.typography.bodyLarge
-                )
+                Column {
+                    Text(
+                        text = when (mode) {
+                            SegmentMode.SENTENCE -> "Sentence"
+                            SegmentMode.WORD -> "Word"
+                        },
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = when (mode) {
+                            SegmentMode.SENTENCE -> "Detect natural sentence boundaries"
+                            SegmentMode.WORD -> "Split longer segments into words"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
