@@ -269,19 +269,36 @@ class AudioImporter @Inject constructor(
         try {
             extractor = MediaExtractor()
 
-            // Try to set data source - first try direct context/URI, then fallback to file descriptor
+            // Handle different URI schemes
             var dataSourceSet = false
-            try {
-                // This method works better with content:// URIs from various apps
-                extractor.setDataSource(context, uri, null)
-                dataSourceSet = true
-                Log.d(TAG, "Set data source via context/URI")
-            } catch (e: Exception) {
-                Log.d(TAG, "Context/URI method failed, trying file descriptor: ${e.message}")
+
+            // For file:// URIs, use the path directly
+            if (uri.scheme == "file") {
+                val filePath = uri.path
+                if (filePath != null && File(filePath).exists()) {
+                    try {
+                        extractor.setDataSource(filePath)
+                        dataSourceSet = true
+                        Log.d(TAG, "Set data source via file path: $filePath")
+                    } catch (e: Exception) {
+                        Log.d(TAG, "File path method failed: ${e.message}")
+                    }
+                }
             }
 
+            // Try context/URI method (works well with content:// URIs)
             if (!dataSourceSet) {
-                // Fallback to file descriptor method
+                try {
+                    extractor.setDataSource(context, uri, null)
+                    dataSourceSet = true
+                    Log.d(TAG, "Set data source via context/URI")
+                } catch (e: Exception) {
+                    Log.d(TAG, "Context/URI method failed, trying file descriptor: ${e.message}")
+                }
+            }
+
+            // Fallback to file descriptor method
+            if (!dataSourceSet) {
                 pfd = context.contentResolver.openFileDescriptor(uri, "r")
                 if (pfd == null) {
                     Log.e(TAG, "Failed to open file descriptor for URI: $uri")
@@ -301,9 +318,11 @@ class AudioImporter @Inject constructor(
             // Find audio track
             var audioTrackIndex = -1
             var inputFormat: MediaFormat? = null
+            val foundMimeTypes = mutableListOf<String>()
             for (i in 0 until extractor.trackCount) {
                 val format = extractor.getTrackFormat(i)
                 val mime = format.getString(MediaFormat.KEY_MIME) ?: ""
+                foundMimeTypes.add(mime)
                 Log.d(TAG, "Track $i: $mime")
                 if (mime.startsWith("audio/")) {
                     audioTrackIndex = i
@@ -313,9 +332,14 @@ class AudioImporter @Inject constructor(
             }
 
             if (audioTrackIndex < 0 || inputFormat == null) {
-                Log.e(TAG, "No audio track found in file with ${extractor.trackCount} tracks")
-                pfd.close()
-                return Pair(null, "No audio track found - file may be video-only or not a media file")
+                val trackInfo = if (extractor.trackCount == 0) {
+                    "File not recognized as media"
+                } else {
+                    "Found tracks: ${foundMimeTypes.joinToString()}"
+                }
+                Log.e(TAG, "No audio track found. $trackInfo")
+                pfd?.close()
+                return Pair(null, "No audio track found. $trackInfo")
             }
 
             extractor.selectTrack(audioTrackIndex)
@@ -332,7 +356,7 @@ class AudioImporter @Inject constructor(
                 codec.start()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to create decoder for $mime", e)
-                pfd.close()
+                pfd?.close()
                 extractor.release()
                 return Pair(null, "Cannot decode audio format: $mime - try converting to MP3 or WAV first")
             }
