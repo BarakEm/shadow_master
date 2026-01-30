@@ -125,16 +125,26 @@ class LibraryViewModel @Inject constructor(
             }
 
             val uri = Uri.parse(decodedUri)
-            val result = libraryRepository.importAudioFile(
-                uri = uri,
-                language = language,
-                enableTranscription = false
-            )
-            result.onSuccess {
-                _importSuccess.value = "Audio import started"
-            }
-            result.onFailure { error ->
-                _importError.value = error.message ?: "Import failed"
+            
+            // Check if this is a URL (http/https) and handle accordingly
+            // Use safe call and case-insensitive comparison per RFC 3986
+            if (uri.scheme?.lowercase() == "http" || uri.scheme?.lowercase() == "https") {
+                // This is a URL, not a local file URI - delegate to URL import method
+                // Pass original uriString to avoid double decoding
+                importFromUrl(uriString, language)
+            } else {
+                // This is a local file URI (content://, file://, etc.)
+                val result = libraryRepository.importAudioFile(
+                    uri = uri,
+                    language = language,
+                    enableTranscription = false
+                )
+                result.onSuccess {
+                    _importSuccess.value = "Audio import started"
+                }
+                result.onFailure { error ->
+                    _importError.value = error.message ?: "Import failed"
+                }
             }
         }
     }
