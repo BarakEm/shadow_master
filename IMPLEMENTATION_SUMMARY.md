@@ -240,3 +240,129 @@ To use this feature, you'll need to:
 4. Test with real audio files to verify segmentation quality
 
 The implementation is complete and ready for integration!
+
+---
+
+# User-Facing Segmentation Controls Implementation
+
+## Overview
+
+Added user interface controls for segmentation settings and a quick re-segmentation action in the Library. Users can now easily change segmentation behavior and re-process imported audio with different presets.
+
+## What Was Implemented
+
+### 1. Settings Screen: Segment Mode Selector
+
+**File**: `app/src/main/java/com/shadowmaster/ui/settings/SettingsScreen.kt`
+
+- Added `SegmentModeSelector` composable with radio buttons for WORD/SENTENCE modes
+- Placed after the Silence Threshold setting
+- Connected to `SettingsViewModel.updateSegmentMode()`
+- Provides descriptive text for each mode:
+  - **Sentence**: "Break audio into complete sentences"
+  - **Word**: "Break audio into individual words or short phrases"
+- Persists selection via SettingsRepository
+- Affects future segmentation operations
+
+### 2. Library ViewModel: Re-segmentation Function
+
+**File**: `app/src/main/java/com/shadowmaster/ui/library/LibraryViewModel.kt`
+
+Added `resegmentImportedAudio()` function:
+- Accepts importedAudioId, preset (SegmentationConfig), and optional playlistName
+- Calls `libraryRepository.resegmentAudio()` in viewModelScope
+- Handles success/error via existing `_importSuccess` and `_importError` flows
+- Shows user-friendly messages:
+  - Success: "Re-segmentation completed successfully"
+  - Error: Displays error message
+
+### 3. Library Screen: Re-segment Action
+
+**File**: `app/src/main/java/com/shadowmaster/ui/library/LibraryScreen.kt`
+
+#### Re-segment Button
+- Added "Re-segment with Different Settings" button in playlist detail view
+- Shows only when playlist has `importedAudioId` (source audio available)
+- Hidden during merge mode
+- Placed above the segment list for easy access
+
+#### Re-segmentation Dialog
+- Displays all 4 built-in presets from `SegmentationPresets.getAllPresets()`:
+  1. Standard Sentences (default)
+  2. Short Phrases
+  3. Long Sentences
+  4. Word by Word
+- Radio button selection with preset details (name, mode, duration range)
+- Generates new playlist name: `"${originalName} (${presetName})"`
+- Non-destructive: Creates new playlist, keeps existing data
+- Shows error if source audio not found
+- Disables controls during processing
+
+## User Experience
+
+### Settings Flow
+1. User opens Settings
+2. Scrolls to "Segmentation" section (after Silence Threshold)
+3. Selects between "Sentence" or "Word" mode
+4. Selection is saved automatically
+5. Future imports use the selected mode
+
+### Re-segmentation Flow
+1. User opens Library and selects a playlist from imported audio
+2. Sees "Re-segment with Different Settings" button
+3. Taps button to open preset selection dialog
+4. Reviews 4 preset options with descriptions
+5. Selects desired preset and confirms
+6. New playlist is created with name indicating the preset used
+7. Original playlist remains unchanged
+8. Success message appears when complete
+
+## Key Features
+
+1. **User-Friendly**: Clear labels and descriptions for all options
+2. **Non-Destructive**: Original playlists preserved, new playlists created
+3. **Conditional Display**: Re-segment button only shows when applicable
+4. **Progress Feedback**: Success/error messages via snackbar
+5. **Preset-Based**: Uses proven configurations from SegmentationPresets
+6. **Named Output**: New playlists clearly labeled with preset name
+
+## Technical Details
+
+- All changes are UI/ViewModel-level only
+- No database or core algorithm modifications
+- Backward compatible with existing playlists
+- Uses existing repository APIs (`resegmentAudio()`)
+- Follows existing UI patterns (dialogs, radio buttons)
+- Proper error handling with user-friendly messages
+
+## Testing Notes
+
+Manual verification recommended:
+1. **Settings**: Toggle Segment Mode and verify persistence
+2. **Library**: 
+   - Import audio file
+   - Verify Re-segment button appears
+   - Test each preset creates new playlist
+   - Verify original playlist unchanged
+   - Test with playlist without importedAudioId (button should not appear)
+
+## Files Modified
+
+1. `app/src/main/java/com/shadowmaster/ui/settings/SettingsScreen.kt`
+   - Added SegmentModeSelector composable
+   - Added segment mode UI after Silence Threshold
+
+2. `app/src/main/java/com/shadowmaster/ui/library/LibraryViewModel.kt`
+   - Added resegmentImportedAudio() function
+
+3. `app/src/main/java/com/shadowmaster/ui/library/LibraryScreen.kt`
+   - Added showResegmentDialog state
+   - Modified PlaylistDetailContent to include Re-segment button
+   - Added Re-segmentation dialog with preset selection
+   - Added import for SegmentationPresets
+
+## Commit
+
+Committed as: `3e37c64 - Add segmentation controls and re-segment UI`
+
+Branch: `copilot/add-segmentation-controls-ui`
