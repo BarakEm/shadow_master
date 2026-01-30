@@ -38,4 +38,14 @@ object DatabaseModule {
     fun providePracticeSessionDao(database: ShadowDatabase): PracticeSessionDao {
         return database.practiceSessionDao()
     }
+
+    @Provides
+    fun provideImportedAudioDao(database: ShadowDatabase): ImportedAudioDao {
+        return database.importedAudioDao()
+    }
+
+    @Provides
+    fun provideSegmentationConfigDao(database: ShadowDatabase): SegmentationConfigDao {
+        return database.segmentationConfigDao()
+    }
 }

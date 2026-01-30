@@ -35,7 +35,11 @@ data class ShadowItem(
 
     // Playlist membership
     val playlistId: String? = null,
-    val orderInPlaylist: Int = 0
+    val orderInPlaylist: Int = 0,
+
+    // Provenance tracking (NEW)
+    val importedAudioId: String? = null,        // Reference to ImportedAudio
+    val segmentationConfigId: String? = null    // Which config was used
 )
 
 /**
@@ -116,6 +120,57 @@ data class PracticeSession(
     val totalDurationMs: Long = 0
 )
 
+/**
+ * Tracks imported raw audio before segmentation.
+ * Allows re-segmentation without re-importing.
+ */
+@Entity(tableName = "imported_audio")
+data class ImportedAudio(
+    @PrimaryKey
+    val id: String = UUID.randomUUID().toString(),
+
+    // Source metadata
+    val sourceUri: String,              // Original file URI
+    val sourceFileName: String,
+    val originalFormat: String,         // "mp3", "wav", etc.
+
+    // Processed audio storage
+    val pcmFilePath: String,            // Path to processed 16kHz mono PCM
+    val durationMs: Long,               // Total duration
+    val sampleRate: Int = 16000,
+    val channels: Int = 1,
+    val fileSizeBytes: Long,
+
+    // Metadata
+    val language: String = "unknown",
+    val createdAt: Long = System.currentTimeMillis(),
+
+    // Segmentation tracking
+    val segmentationCount: Int = 0,
+    val lastSegmentedAt: Long? = null
+)
+
+/**
+ * Configurable segmentation parameters.
+ * Allows creating presets for different use cases.
+ */
+@Entity(tableName = "segmentation_configs")
+data class SegmentationConfig(
+    @PrimaryKey
+    val id: String = UUID.randomUUID().toString(),
+
+    // Segmentation parameters (currently hardcoded in AudioImporter)
+    val minSegmentDurationMs: Long = 500,
+    val maxSegmentDurationMs: Long = 8000,
+    val silenceThresholdMs: Long = 700,
+    val preSpeechBufferMs: Long = 200,
+    val segmentMode: SegmentMode = SegmentMode.SENTENCE,
+
+    // User-friendly name
+    val name: String = "Default",
+    val createdAt: Long = System.currentTimeMillis()
+)
+
 // Room type converters
 class Converters {
     @TypeConverter
@@ -129,4 +184,10 @@ class Converters {
 
     @TypeConverter
     fun toImportStatus(value: String): ImportStatus = ImportStatus.valueOf(value)
+
+    @TypeConverter
+    fun fromSegmentMode(value: SegmentMode): String = value.name
+
+    @TypeConverter
+    fun toSegmentMode(value: String): SegmentMode = SegmentMode.valueOf(value)
 }

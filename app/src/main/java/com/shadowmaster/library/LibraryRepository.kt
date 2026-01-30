@@ -5,6 +5,7 @@ import com.shadowmaster.data.local.*
 import com.shadowmaster.data.model.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -19,7 +20,9 @@ class LibraryRepository @Inject constructor(
     private val practiceSessionDao: PracticeSessionDao,
     private val audioImporter: AudioImporter,
     private val urlAudioImporter: UrlAudioImporter,
-    private val audioExporter: AudioExporter
+    private val audioExporter: AudioExporter,
+    private val importedAudioDao: com.shadowmaster.data.local.ImportedAudioDao,
+    private val segmentationConfigDao: com.shadowmaster.data.local.SegmentationConfigDao
 ) {
     // Playlists
     fun getAllPlaylists(): Flow<List<ShadowPlaylist>> = shadowPlaylistDao.getAllPlaylists()
@@ -152,4 +155,58 @@ class LibraryRepository @Inject constructor(
     fun clearExportProgress() = audioExporter.clearProgress()
 
     fun cancelExport() = audioExporter.cancelExport()
+
+    // Two-phase import API
+    suspend fun importAudioOnly(uri: Uri, language: String = "auto"): Result<ImportedAudio> =
+        audioImporter.importAudioOnly(uri, language)
+
+    suspend fun segmentImportedAudio(
+        importedAudioId: String,
+        playlistName: String? = null,
+        config: SegmentationConfig,
+        enableTranscription: Boolean = false
+    ): Result<String> = audioImporter.segmentImportedAudio(
+        importedAudioId, playlistName, config, enableTranscription
+    )
+
+    // Convenience method for re-segmentation
+    suspend fun resegmentAudio(
+        importedAudioId: String,
+        newConfig: SegmentationConfig,
+        playlistName: String? = null
+    ): Result<String> = segmentImportedAudio(
+        importedAudioId = importedAudioId,
+        playlistName = playlistName,
+        config = newConfig,
+        enableTranscription = false
+    )
+
+    // Imported audio management
+    fun getAllImportedAudio(): Flow<List<ImportedAudio>> =
+        importedAudioDao.getAllImportedAudio()
+
+    suspend fun getImportedAudio(id: String): ImportedAudio? =
+        importedAudioDao.getById(id)
+
+    suspend fun deleteImportedAudio(audio: ImportedAudio) {
+        File(audio.pcmFilePath).delete()
+        importedAudioDao.delete(audio)
+    }
+
+    // Segmentation config management
+    fun getAllSegmentationConfigs(): Flow<List<SegmentationConfig>> =
+        segmentationConfigDao.getAllConfigs()
+
+    suspend fun getSegmentationConfig(id: String): SegmentationConfig? =
+        segmentationConfigDao.getById(id)
+
+    suspend fun saveSegmentationConfig(config: SegmentationConfig) =
+        segmentationConfigDao.insert(config)
+
+    suspend fun deleteSegmentationConfig(config: SegmentationConfig) =
+        segmentationConfigDao.delete(config)
+
+    // Storage tracking
+    suspend fun getTotalImportedAudioStorage(): Long =
+        importedAudioDao.getTotalStorageUsed() ?: 0L
 }
