@@ -101,6 +101,12 @@ fun SettingsScreen(
                 onValueChange = { viewModel.updateSilenceThreshold(it) }
             )
 
+            // Segmentation Mode
+            SegmentationModeSelector(
+                selectedMode = config.segmentMode,
+                onModeSelected = { viewModel.updateSegmentMode(it) }
+            )
+
             HorizontalDivider()
 
             // Bus Mode Toggle (most prominent - at the top of modes)
@@ -336,6 +342,47 @@ private fun PracticeModeSelector(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SegmentationModeSelector(
+    selectedMode: SegmentMode,
+    onModeSelected: (SegmentMode) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Segmentation Mode",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        SegmentMode.entries.forEach { mode ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onModeSelected(mode) }
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = mode == selectedMode,
+                    onClick = { onModeSelected(mode) }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = when (mode) {
+                        SegmentMode.SENTENCE -> "Sentence"
+                        SegmentMode.WORD -> "Word"
+                    },
+                    style = MaterialTheme.typography.bodyLarge
+                )
             }
         }
     }

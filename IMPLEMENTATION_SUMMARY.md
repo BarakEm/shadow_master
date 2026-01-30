@@ -231,11 +231,58 @@ Committed as: `dac3119 - Implement two-phase audio import architecture`
 
 Branch: `fix/null-safety-audioImporter`
 
+## User-Facing UI Updates
+
+### Settings UI: Segmentation Mode Selector
+
+Added a new "Segmentation Mode" radio group control in `SettingsScreen.kt`:
+- Located near Silence Threshold setting
+- Options: "Sentence" and "Word"
+- Persists selection via `SettingsRepository.updateSegmentMode()`
+- Reads current value from `SettingsViewModel.config.segmentMode`
+- Follows existing `PracticeModeSelector` pattern for consistency
+
+**Files Modified:**
+- `app/src/main/java/com/shadowmaster/ui/settings/SettingsScreen.kt`
+  - Added `SegmentationModeSelector` composable
+  - Integrated into main settings column
+
+### Library UI: Re-segment Quick Action
+
+Added "Re-segment" functionality to the Library screen:
+
+**Re-segment Button:**
+- Icon button in playlist card action area (scissors icon)
+- Visible for all playlists (dialog handles validation)
+- Located between Export and Rename buttons
+
+**Re-segment Dialog:**
+- Shows list of all available `SegmentationPresets` with radio buttons
+- Displays preset names and duration ranges
+- Validates that playlist has imported audio (checks `importedAudioId`)
+- Shows error message if playlist cannot be re-segmented
+- Creates new playlist with name format: "Original Name (Preset Name)"
+- Displays progress indicator during re-segmentation
+- Uses existing `_importSuccess`/`_importError` feedback mechanism
+
+**Files Modified:**
+- `app/src/main/java/com/shadowmaster/ui/library/LibraryScreen.kt`
+  - Added import for `SegmentationPresets`
+  - Added `showResegmentDialog` state
+  - Added re-segment dialog with preset selection
+  - Added `onResegmentClick` callback to `PlaylistsContent` and `PlaylistCard`
+  - Added re-segment icon button to `PlaylistCard`
+  
+- `app/src/main/java/com/shadowmaster/ui/library/LibraryViewModel.kt`
+  - Added `resegmentImportedAudio()` function
+  - Calls `libraryRepository.resegmentAudio()` with preset and playlist name
+  - Updates success/error states for UI feedback
+
 ## Next Steps
 
 To use this feature, you'll need to:
 1. Build and install the app to trigger database migration
-2. Optionally create UI to expose the new functionality
+2. ~~Optionally create UI to expose the new functionality~~ ✅ **UI completed**
 3. Consider adding storage management UI
 4. Test with real audio files to verify segmentation quality
 

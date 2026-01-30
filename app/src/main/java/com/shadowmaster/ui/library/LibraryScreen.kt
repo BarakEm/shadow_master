@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.shadowmaster.data.model.*
 import com.shadowmaster.library.ExportStatus
+import com.shadowmaster.library.SegmentationPresets
 import com.shadowmaster.library.UrlImportStatus
 import java.text.SimpleDateFormat
 import java.util.*
@@ -51,6 +52,7 @@ fun LibraryScreen(
     var showEditItemDialog by remember { mutableStateOf<ShadowItem?>(null) }
     var showSplitDialog by remember { mutableStateOf<ShadowItem?>(null) }
     var showExportDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
+    var showResegmentDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
     var mergeMode by remember { mutableStateOf(false) }
     var showUrlImportDialog by remember { mutableStateOf(false) }
     var urlToImport by remember { mutableStateOf("") }
@@ -231,6 +233,7 @@ fun LibraryScreen(
                     onDeleteClick = { showDeleteDialog = it },
                     onRenameClick = { showRenamePlaylistDialog = it },
                     onExportClick = { showExportDialog = it },
+                    onResegmentClick = { showResegmentDialog = it },
                     onStartPractice = onStartPractice,
                     onDismissFailedImport = { viewModel.dismissFailedImport(it) }
                 )
@@ -553,6 +556,127 @@ fun LibraryScreen(
         )
     }
 
+    // Re-segment dialog
+    showResegmentDialog?.let { playlist ->
+        var selectedPreset by remember { mutableStateOf<SegmentationConfig?>(null) }
+        var isProcessing by remember { mutableStateOf(false) }
+        var importedAudioId by remember { mutableStateOf<String?>(null) }
+        
+        // Load items for this playlist to get importedAudioId
+        LaunchedEffect(playlist.id) {
+            viewModel.selectPlaylist(playlist)
+        }
+        
+        // Update importedAudioId when items are loaded
+        LaunchedEffect(playlistItems) {
+            if (selectedPlaylist?.id == playlist.id && playlistItems.isNotEmpty()) {
+                importedAudioId = playlistItems.firstOrNull()?.importedAudioId
+            }
+        }
+        
+        AlertDialog(
+            onDismissRequest = { 
+                if (!isProcessing) {
+                    showResegmentDialog = null
+                    viewModel.clearSelection()
+                }
+            },
+            title = { Text("Re-segment Playlist") },
+            text = {
+                Column {
+                    if (importedAudioId == null) {
+                        Text(
+                            text = "This playlist cannot be re-segmented because it was not imported from audio.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    } else {
+                        Text(
+                            text = "Choose a segmentation preset to create a new playlist with different segment lengths:",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        SegmentationPresets.getAllPresets().forEach { preset ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable(enabled = !isProcessing) { selectedPreset = preset }
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = preset == selectedPreset,
+                                    onClick = { selectedPreset = preset },
+                                    enabled = !isProcessing
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = preset.name,
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                    Text(
+                                        text = "${preset.minSegmentDurationMs}-${preset.maxSegmentDurationMs}ms segments",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                        
+                        if (isProcessing) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    strokeWidth = 2.dp
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Text(
+                                    text = "Re-segmenting...",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                if (importedAudioId != null) {
+                    TextButton(
+                        onClick = {
+                            selectedPreset?.let { preset ->
+                                isProcessing = true
+                                val newPlaylistName = "${playlist.name} (${preset.name})"
+                                viewModel.resegmentImportedAudio(
+                                    importedAudioId = importedAudioId,
+                                    preset = preset,
+                                    playlistName = newPlaylistName
+                                )
+                                showResegmentDialog = null
+                            }
+                        },
+                        enabled = selectedPreset != null && !isProcessing
+                    ) {
+                        Text("Re-segment")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showResegmentDialog = null },
+                    enabled = !isProcessing
+                ) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     // URL import dialog
     if (showUrlImportDialog) {
         AlertDialog(
@@ -669,6 +793,7 @@ private fun PlaylistsContent(
     onDeleteClick: (ShadowPlaylist) -> Unit,
     onRenameClick: (ShadowPlaylist) -> Unit,
     onExportClick: (ShadowPlaylist) -> Unit,
+    onResegmentClick: (ShadowPlaylist) -> Unit,
     onStartPractice: (String) -> Unit,
     onDismissFailedImport: (String) -> Unit
 ) {
@@ -738,6 +863,7 @@ private fun PlaylistsContent(
                     onDeleteClick = { onDeleteClick(playlist) },
                     onRenameClick = { onRenameClick(playlist) },
                     onExportClick = { onExportClick(playlist) },
+                    onResegmentClick = { onResegmentClick(playlist) },
                     onPlayClick = { onStartPractice(playlist.id) }
                 )
             }
@@ -845,6 +971,7 @@ private fun PlaylistCard(
     onDeleteClick: () -> Unit,
     onRenameClick: () -> Unit,
     onExportClick: () -> Unit,
+    onResegmentClick: () -> Unit,
     onPlayClick: () -> Unit
 ) {
     Card(
@@ -915,6 +1042,15 @@ private fun PlaylistCard(
                 Icon(
                     imageVector = Icons.Default.Share,
                     contentDescription = "Export",
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            // Re-segment button
+            IconButton(onClick = onResegmentClick, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    imageVector = Icons.Default.ContentCut,
+                    contentDescription = "Re-segment",
                     modifier = Modifier.size(20.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
