@@ -560,14 +560,19 @@ fun LibraryScreen(
     // Re-segment dialog
     if (showResegmentDialog && selectedPlaylist != null && playlistItems.isNotEmpty()) {
         val importedAudioId = playlistItems.firstOrNull()?.importedAudioId
+        val currentPlaylist = selectedPlaylist // Capture to avoid force unwrap
         var selectedPreset by remember { mutableStateOf<SegmentationConfig?>(null) }
-        var isResegmenting by remember { mutableStateOf(false) }
+        
+        // Reset dialog state when opened
+        LaunchedEffect(showResegmentDialog) {
+            if (showResegmentDialog) {
+                selectedPreset = null
+            }
+        }
         
         AlertDialog(
             onDismissRequest = { 
-                if (!isResegmenting) {
-                    showResegmentDialog = false
-                }
+                showResegmentDialog = false
             },
             title = { Text("Re-segment Audio") },
             text = {
@@ -614,7 +619,7 @@ fun LibraryScreen(
                         Text(
                             text = "Note: Original audio not found. This playlist cannot be re-segmented.",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -624,22 +629,20 @@ fun LibraryScreen(
                     onClick = {
                         selectedPreset?.let { preset ->
                             importedAudioId?.let { audioId ->
-                                isResegmenting = true
-                                val newPlaylistName = "${selectedPlaylist!!.name} (${preset.name})"
+                                val newPlaylistName = "${currentPlaylist?.name ?: "Playlist"} (${preset.name})"
                                 viewModel.resegmentImportedAudio(audioId, preset, newPlaylistName)
                                 showResegmentDialog = false
                             }
                         }
                     },
-                    enabled = selectedPreset != null && importedAudioId != null && !isResegmenting
+                    enabled = selectedPreset != null && importedAudioId != null
                 ) {
-                    Text(if (isResegmenting) "Processing..." else "Re-segment")
+                    Text("Re-segment")
                 }
             },
             dismissButton = {
                 TextButton(
-                    onClick = { showResegmentDialog = false },
-                    enabled = !isResegmenting
+                    onClick = { showResegmentDialog = false }
                 ) {
                     Text("Cancel")
                 }
