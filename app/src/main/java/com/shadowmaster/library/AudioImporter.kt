@@ -115,15 +115,14 @@ class AudioImporter @Inject constructor(
             importJobDao.updateProgress(jobId, ImportStatus.EXTRACTING_AUDIO, 10)
 
             // Extract audio to PCM
-            pcmFile = try {
-                extractAudioToPcm(uri)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to extract audio to PCM", e)
-                null
-            }
+            val extractResult = extractAudioToPcmWithError(uri)
+            pcmFile = extractResult.first
+            val extractError = extractResult.second
 
             if (pcmFile == null) {
-                importJobDao.markFailed(jobId, "Failed to extract audio - unsupported format or corrupted file")
+                val errorMsg = extractError ?: "Failed to extract audio - unsupported format or corrupted file"
+                Log.e(TAG, errorMsg)
+                importJobDao.markFailed(jobId, errorMsg)
                 return
             }
 
@@ -259,9 +258,9 @@ class AudioImporter @Inject constructor(
 
     /**
      * Extract and decode audio from any format to mono 16kHz PCM.
-     * Uses MediaCodec for proper audio decoding.
+     * Returns Pair(file, errorMessage) - file is null on failure with error message.
      */
-    private fun extractAudioToPcm(uri: Uri): File? {
+    private fun extractAudioToPcmWithError(uri: Uri): Pair<File?, String?> {
         val tempFile = File(context.cacheDir, "temp_pcm_${System.currentTimeMillis()}.pcm")
         var extractor: MediaExtractor? = null
         var codec: MediaCodec? = null
@@ -274,10 +273,16 @@ class AudioImporter @Inject constructor(
             pfd = context.contentResolver.openFileDescriptor(uri, "r")
             if (pfd == null) {
                 Log.e(TAG, "Failed to open file descriptor for URI: $uri")
-                return null
+                return Pair(null, "Cannot read file - permission denied or file not found")
             }
 
-            extractor.setDataSource(pfd.fileDescriptor)
+            try {
+                extractor.setDataSource(pfd.fileDescriptor)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set data source", e)
+                pfd.close()
+                return Pair(null, "Cannot read audio file: ${e.message}")
+            }
 
             // Find audio track
             var audioTrackIndex = -1
@@ -285,6 +290,7 @@ class AudioImporter @Inject constructor(
             for (i in 0 until extractor.trackCount) {
                 val format = extractor.getTrackFormat(i)
                 val mime = format.getString(MediaFormat.KEY_MIME) ?: ""
+                Log.d(TAG, "Track $i: $mime")
                 if (mime.startsWith("audio/")) {
                     audioTrackIndex = i
                     inputFormat = format
@@ -293,9 +299,9 @@ class AudioImporter @Inject constructor(
             }
 
             if (audioTrackIndex < 0 || inputFormat == null) {
-                Log.e(TAG, "No audio track found")
+                Log.e(TAG, "No audio track found in file with ${extractor.trackCount} tracks")
                 pfd.close()
-                return null
+                return Pair(null, "No audio track found - file may be video-only or not a media file")
             }
 
             extractor.selectTrack(audioTrackIndex)
@@ -306,9 +312,16 @@ class AudioImporter @Inject constructor(
             Log.i(TAG, "Audio: $mime, ${sampleRate}Hz, $channels channels")
 
             // Create and configure the decoder
-            codec = MediaCodec.createDecoderByType(mime)
-            codec.configure(inputFormat, null, null, 0)
-            codec.start()
+            try {
+                codec = MediaCodec.createDecoderByType(mime)
+                codec.configure(inputFormat, null, null, 0)
+                codec.start()
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to create decoder for $mime", e)
+                pfd.close()
+                extractor.release()
+                return Pair(null, "Cannot decode audio format: $mime - try converting to MP3 or WAV first")
+            }
 
             val outputStream = FileOutputStream(tempFile)
             val bufferInfo = MediaCodec.BufferInfo()
@@ -376,7 +389,7 @@ class AudioImporter @Inject constructor(
             pfd.close()
 
             Log.i(TAG, "Decoded ${tempFile.length()} bytes of PCM audio")
-            return tempFile
+            return Pair(tempFile, null)
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to decode audio", e)
@@ -384,7 +397,14 @@ class AudioImporter @Inject constructor(
             try { codec?.release() } catch (ignored: Exception) {}
             try { extractor?.release() } catch (ignored: Exception) {}
             try { pfd?.close() } catch (ignored: Exception) {}
-            return null
+            val errorMsg = when {
+                e.message?.contains("codec", ignoreCase = true) == true ->
+                    "Audio format not supported: ${e.message}"
+                e.message?.contains("mime", ignoreCase = true) == true ->
+                    "Unknown audio format"
+                else -> "Failed to decode audio: ${e.message}"
+            }
+            return Pair(null, errorMsg)
         }
     }
 
