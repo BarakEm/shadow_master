@@ -609,11 +609,11 @@ fun LibraryScreen(
         
         AlertDialog(
             onDismissRequest = { showResegmentDialog = null },
-            title = { Text("Re-segment Audio") },
+            title = { Text(stringResource(R.string.resegment_audio_title)) },
             text = {
                 Column {
                     Text(
-                        text = "Choose a segmentation preset for \"${playlist.name}\"",
+                        text = stringResource(R.string.resegment_audio_prompt, playlist.name),
                         style = MaterialTheme.typography.bodyMedium
                     )
                     Spacer(modifier = Modifier.height(16.dp))
@@ -637,7 +637,7 @@ fun LibraryScreen(
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                                 Text(
-                                    text = "${preset.segmentMode.name.lowercase()} • " +
+                                    text = "${preset.segmentMode.name.replaceFirstChar { it.uppercase() }} • " +
                                            "${preset.minSegmentDurationMs}-${preset.maxSegmentDurationMs}ms",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -648,7 +648,7 @@ fun LibraryScreen(
                     
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "A new playlist will be created with the re-segmented audio.",
+                        text = stringResource(R.string.resegment_audio_info),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -668,12 +668,12 @@ fun LibraryScreen(
                     },
                     enabled = selectedPreset != null
                 ) {
-                    Text("Re-segment")
+                    Text(stringResource(R.string.resegment_button))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showResegmentDialog = null }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.cancel_button))
                 }
             }
         )

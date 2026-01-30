@@ -360,7 +360,7 @@ private fun SegmentModeSelector(
             .padding(16.dp)
     ) {
         Text(
-            text = "Segment Mode",
+            text = stringResource(R.string.segment_mode),
             style = MaterialTheme.typography.titleMedium
         )
         Spacer(modifier = Modifier.height(8.dp))
@@ -381,15 +381,15 @@ private fun SegmentModeSelector(
                 Column {
                     Text(
                         text = when (mode) {
-                            SegmentMode.SENTENCE -> "Sentence"
-                            SegmentMode.WORD -> "Word"
+                            SegmentMode.SENTENCE -> stringResource(R.string.segment_mode_sentence)
+                            SegmentMode.WORD -> stringResource(R.string.segment_mode_word)
                         },
                         style = MaterialTheme.typography.bodyLarge
                     )
                     Text(
                         text = when (mode) {
-                            SegmentMode.SENTENCE -> "Longer segments for full sentences"
-                            SegmentMode.WORD -> "Shorter segments for individual words"
+                            SegmentMode.SENTENCE -> stringResource(R.string.segment_mode_sentence_desc)
+                            SegmentMode.WORD -> stringResource(R.string.segment_mode_word_desc)
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant

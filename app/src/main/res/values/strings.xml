@@ -21,6 +21,11 @@
     <string name="playback_repeats">Playback Repeats</string>
     <string name="user_repeats">Your Repeats</string>
     <string name="silence_threshold">Silence Threshold (ms)</string>
+    <string name="segment_mode">Segment Mode</string>
+    <string name="segment_mode_sentence">Sentence</string>
+    <string name="segment_mode_sentence_desc">Longer segments for full sentences</string>
+    <string name="segment_mode_word">Word</string>
+    <string name="segment_mode_word_desc">Shorter segments for individual words</string>
     <string name="assessment_enabled">Pronunciation Assessment</string>
     <string name="pause_for_navigation">Pause for Navigation</string>
     <string name="bus_mode">Bus/Passive Mode</string>
@@ -57,4 +62,11 @@
     <!-- Android Auto -->
     <string name="auto_browse_root">Shadow Master</string>
     <string name="auto_start_session">Start Session</string>
+
+    <!-- Library -->
+    <string name="resegment_audio_title">Re-segment Audio</string>
+    <string name="resegment_audio_prompt">Choose a segmentation preset for \"%1$s\"</string>
+    <string name="resegment_audio_info">A new playlist will be created with the re-segmented audio.</string>
+    <string name="resegment_button">Re-segment</string>
+    <string name="cancel_button">Cancel</string>
 </resources>
