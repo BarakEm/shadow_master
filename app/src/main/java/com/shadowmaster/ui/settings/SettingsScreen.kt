@@ -63,6 +63,14 @@ fun SettingsScreen(
 
             HorizontalDivider()
 
+            // Segment Mode Selection
+            SegmentModeSelector(
+                selectedMode = config.segmentMode,
+                onModeSelected = { viewModel.updateSegmentMode(it) }
+            )
+
+            HorizontalDivider()
+
             // Playback Speed
             SliderSetting(
                 title = stringResource(R.string.playback_speed),
@@ -287,6 +295,57 @@ private fun IntSliderSetting(
             steps = steps,
             modifier = Modifier.fillMaxWidth()
         )
+    }
+}
+
+@Composable
+private fun SegmentModeSelector(
+    selectedMode: SegmentMode,
+    onModeSelected: (SegmentMode) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Segment Mode",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        SegmentMode.entries.forEach { mode ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onModeSelected(mode) }
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = mode == selectedMode,
+                    onClick = { onModeSelected(mode) }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = when (mode) {
+                            SegmentMode.WORD -> "Word"
+                            SegmentMode.SENTENCE -> "Sentence"
+                        },
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = when (mode) {
+                            SegmentMode.WORD -> "Short segments for individual words"
+                            SegmentMode.SENTENCE -> "Longer segments for complete sentences"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
     }
 }
 
