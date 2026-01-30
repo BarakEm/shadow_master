@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.dp
 fun HomeScreen(
     onNavigateToLibrary: () -> Unit,
     onNavigateToCapture: () -> Unit,
+    onNavigateToMicCapture: () -> Unit,
     onNavigateToSettings: () -> Unit
 ) {
     Scaffold(
@@ -72,6 +73,17 @@ fun HomeScreen(
                 icon = Icons.Default.GraphicEq,
                 isRecommended = false,
                 onClick = onNavigateToCapture
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Mic Capture Card
+            ModeCard(
+                title = "Record from Mic",
+                description = "Record audio using your microphone. Great for capturing from external speakers or practicing pronunciation.",
+                icon = Icons.Default.Mic,
+                isRecommended = false,
+                onClick = onNavigateToMicCapture
             )
         }
     }
