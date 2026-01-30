@@ -231,11 +231,75 @@ Committed as: `dac3119 - Implement two-phase audio import architecture`
 
 Branch: `fix/null-safety-audioImporter`
 
+## User-Facing Segmentation Controls (v1.1)
+
+### Overview
+Implemented user-facing UI controls to expose the existing segmentation features:
+1. **Settings UI**: Added Segment Mode selector (WORD/SENTENCE)
+2. **Library UI**: Added Re-segment action for imported playlists
+
+### What Was Added
+
+#### 1. Settings Screen Enhancement
+**File**: `app/src/main/java/com/shadowmaster/ui/settings/SettingsScreen.kt`
+- Added `SegmentModeSelector` composable following existing PracticeModeSelector pattern
+- Radio button group for WORD vs SENTENCE mode selection
+- Positioned between Silence Threshold and Bus Mode sections
+- Bound to `SettingsViewModel.updateSegmentMode()`
+- Persists to DataStore via existing SettingsRepository infrastructure
+
+#### 2. LibraryViewModel Enhancement
+**File**: `app/src/main/java/com/shadowmaster/ui/library/LibraryViewModel.kt`
+- Added `resegmentPlaylist(playlistId, preset, playlistName)` function
+- Fetches playlist items to obtain `importedAudioId`
+- Delegates to `LibraryRepository.resegmentAudio()`
+- Handles success/error via existing `_importSuccess`/`_importError` flows
+- Non-destructive: creates new playlist, preserves original
+
+#### 3. LibraryScreen Enhancement
+**File**: `app/src/main/java/com/shadowmaster/ui/library/LibraryScreen.kt`
+- Added Re-segment IconButton (ContentCut icon) to `PlaylistCard`
+- Button visible only for `SourceType.IMPORTED` playlists
+- Created `ResegmentDialog` with preset picker:
+  - Lists all 4 presets from `SegmentationPresets.getAllPresets()`
+  - Shows preset name, mode, and duration range
+  - Radio button selection UI
+  - Informational text about non-destructive behavior
+- Integrated with existing success/error snackbar patterns
+
+### Design Decisions
+- **Minimal changes**: Only UI/ViewModel layer, no database or core logic changes
+- **Consistent patterns**: Reused existing composables (RadioButton, AlertDialog) and state management
+- **Backward compatible**: All changes are additive, no breaking changes
+- **Non-destructive**: Re-segmentation creates new playlists with descriptive names
+- **Conditional visibility**: Re-segment button only shown for imported audio to avoid confusion
+
+### User Flow
+1. **Settings**: User selects preferred Segment Mode (affects future imports)
+2. **Library**: User clicks Re-segment button on imported playlist
+3. **Dialog**: User selects from 4 preset configurations:
+   - Standard Sentences (default)
+   - Short Phrases
+   - Long Sentences
+   - Word by Word
+4. **Result**: New playlist created with pattern `"{Original Name} ({Preset Name})"`
+
+### Testing Notes
+- Build verification: Code changes compile successfully
+- Manual testing required:
+  - Settings: Toggle Segment Mode persists to DataStore
+  - Library: Re-segment creates new playlist without modifying original
+  - Error handling: Graceful failure for non-imported playlists
+
+Committed as: `e9aa5e8 - Implement segmentation controls UI - Settings, ViewModel, and Library`
+
+Branch: `copilot/add-segmentation-controls-ui-again`
+
 ## Next Steps
 
 To use this feature, you'll need to:
 1. Build and install the app to trigger database migration
-2. Optionally create UI to expose the new functionality
+2. Optionally create UI to expose the new functionality ✅ **COMPLETED**
 3. Consider adding storage management UI
 4. Test with real audio files to verify segmentation quality
 
