@@ -11,6 +11,7 @@ import com.shadowmaster.SharedContent
 import com.shadowmaster.ui.driving.CaptureScreen
 import com.shadowmaster.ui.home.HomeScreen
 import com.shadowmaster.ui.library.LibraryScreen
+import com.shadowmaster.ui.mic.MicCaptureScreen
 import com.shadowmaster.ui.practice.PracticeScreen
 import com.shadowmaster.ui.settings.SettingsScreen
 import java.net.URLEncoder
@@ -18,6 +19,7 @@ import java.net.URLEncoder
 sealed class Screen(val route: String) {
     data object Home : Screen("home")
     data object Capture : Screen("capture")
+    data object MicCapture : Screen("mic_capture")
     data object Settings : Screen("settings")
     data object Library : Screen("library")
     data object LibraryImport : Screen("library?importUrl={url}&importUri={uri}") {
@@ -62,6 +64,9 @@ fun NavGraph(
                 onNavigateToCapture = {
                     navController.navigate(Screen.Capture.route)
                 },
+                onNavigateToMicCapture = {
+                    navController.navigate(Screen.MicCapture.route)
+                },
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
                 }
@@ -75,6 +80,19 @@ fun NavGraph(
                 },
                 onNavigateToSettings = {
                     navController.navigate(Screen.Settings.route)
+                },
+                onNavigateToLibrary = {
+                    navController.navigate(Screen.Library.route) {
+                        popUpTo(Screen.Home.route) { inclusive = false }
+                    }
+                }
+            )
+        }
+
+        composable(Screen.MicCapture.route) {
+            MicCaptureScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
                 },
                 onNavigateToLibrary = {
                     navController.navigate(Screen.Library.route) {
