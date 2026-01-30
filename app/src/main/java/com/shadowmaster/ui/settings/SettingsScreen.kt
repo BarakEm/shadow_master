@@ -101,6 +101,12 @@ fun SettingsScreen(
                 onValueChange = { viewModel.updateSilenceThreshold(it) }
             )
 
+            // Segment Mode Selector
+            SegmentModeSelector(
+                selectedMode = config.segmentMode,
+                onModeSelected = { viewModel.updateSegmentMode(it) }
+            )
+
             HorizontalDivider()
 
             // Bus Mode Toggle (most prominent - at the top of modes)
@@ -331,6 +337,57 @@ private fun PracticeModeSelector(
                         text = when (mode) {
                             PracticeMode.STANDARD -> "Play full segment, then repeat"
                             PracticeMode.BUILDUP -> "Build from end of phrase to full sentence"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SegmentModeSelector(
+    selectedMode: SegmentMode,
+    onModeSelected: (SegmentMode) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Segmentation",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        SegmentMode.entries.forEach { mode ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onModeSelected(mode) }
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = mode == selectedMode,
+                    onClick = { onModeSelected(mode) }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = when (mode) {
+                            SegmentMode.SENTENCE -> "Sentence"
+                            SegmentMode.WORD -> "Word"
+                        },
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = when (mode) {
+                            SegmentMode.SENTENCE -> "Break audio into complete sentences"
+                            SegmentMode.WORD -> "Break audio into individual words or short phrases"
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant

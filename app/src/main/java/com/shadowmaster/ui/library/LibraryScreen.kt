@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.shadowmaster.data.model.*
 import com.shadowmaster.library.ExportStatus
+import com.shadowmaster.library.SegmentationPresets
 import com.shadowmaster.library.UrlImportStatus
 import java.text.SimpleDateFormat
 import java.util.*
@@ -51,6 +52,7 @@ fun LibraryScreen(
     var showEditItemDialog by remember { mutableStateOf<ShadowItem?>(null) }
     var showSplitDialog by remember { mutableStateOf<ShadowItem?>(null) }
     var showExportDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
+    var showResegmentDialog by remember { mutableStateOf(false) }
     var mergeMode by remember { mutableStateOf(false) }
     var showUrlImportDialog by remember { mutableStateOf(false) }
     var urlToImport by remember { mutableStateOf("") }
@@ -213,10 +215,12 @@ fun LibraryScreen(
             if (selectedPlaylist != null) {
                 // Show playlist items
                 PlaylistDetailContent(
+                    playlist = selectedPlaylist!!,
                     items = playlistItems,
                     onToggleFavorite = { viewModel.toggleFavorite(it) },
                     onEditItem = { showEditItemDialog = it },
                     onSplitItem = { showSplitDialog = it },
+                    onResegmentClick = { showResegmentDialog = true },
                     mergeMode = mergeMode,
                     selectedForMerge = selectedForMerge,
                     onToggleMergeSelection = { viewModel.toggleMergeSelection(it.id) }
@@ -548,6 +552,96 @@ fun LibraryScreen(
                     TextButton(onClick = { viewModel.cancelExport() }) {
                         Text("Cancel")
                     }
+                }
+            }
+        )
+    }
+
+    // Re-segment dialog
+    if (showResegmentDialog && selectedPlaylist != null && playlistItems.isNotEmpty()) {
+        val importedAudioId = playlistItems.firstOrNull()?.importedAudioId
+        var selectedPreset by remember { mutableStateOf<SegmentationConfig?>(null) }
+        var isResegmenting by remember { mutableStateOf(false) }
+        
+        AlertDialog(
+            onDismissRequest = { 
+                if (!isResegmenting) {
+                    showResegmentDialog = false
+                }
+            },
+            title = { Text("Re-segment Audio") },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Choose a segmentation preset to create a new playlist from the original audio:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    SegmentationPresets.getAllPresets().forEach { preset ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedPreset = preset }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = preset == selectedPreset,
+                                onClick = { selectedPreset = preset }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = preset.name,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Text(
+                                    text = when (preset.segmentMode) {
+                                        SegmentMode.SENTENCE -> "Sentence mode, ${preset.minSegmentDurationMs}-${preset.maxSegmentDurationMs}ms"
+                                        SegmentMode.WORD -> "Word mode, ${preset.minSegmentDurationMs}-${preset.maxSegmentDurationMs}ms"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                    
+                    if (importedAudioId == null) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Note: Original audio not found. This playlist cannot be re-segmented.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        selectedPreset?.let { preset ->
+                            importedAudioId?.let { audioId ->
+                                isResegmenting = true
+                                val newPlaylistName = "${selectedPlaylist!!.name} (${preset.name})"
+                                viewModel.resegmentImportedAudio(audioId, preset, newPlaylistName)
+                                showResegmentDialog = false
+                            }
+                        }
+                    },
+                    enabled = selectedPreset != null && importedAudioId != null && !isResegmenting
+                ) {
+                    Text(if (isResegmenting) "Processing..." else "Re-segment")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showResegmentDialog = false },
+                    enabled = !isResegmenting
+                ) {
+                    Text("Cancel")
                 }
             }
         )
@@ -941,10 +1035,12 @@ private fun PlaylistCard(
 
 @Composable
 private fun PlaylistDetailContent(
+    playlist: ShadowPlaylist,
     items: List<ShadowItem>,
     onToggleFavorite: (ShadowItem) -> Unit,
     onEditItem: (ShadowItem) -> Unit,
     onSplitItem: (ShadowItem) -> Unit,
+    onResegmentClick: () -> Unit,
     mergeMode: Boolean,
     selectedForMerge: Set<String>,
     onToggleMergeSelection: (ShadowItem) -> Unit
@@ -961,30 +1057,53 @@ private fun PlaylistDetailContent(
             )
         }
     } else {
+        // Check if playlist items have importedAudioId
+        val hasImportedAudio = items.firstOrNull()?.importedAudioId != null
+        
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "${items.size} segments",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    if (mergeMode) {
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Text(
-                            text = "${selectedForMerge.size} selected",
+                            text = "${items.size} segments",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        if (mergeMode) {
+                            Text(
+                                text = "${selectedForMerge.size} selected",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                    
+                    // Re-segment button (only show if playlist has imported audio)
+                    if (hasImportedAudio && !mergeMode) {
+                        OutlinedButton(
+                            onClick = onResegmentClick,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Re-segment with Different Settings")
+                        }
                     }
                 }
             }
