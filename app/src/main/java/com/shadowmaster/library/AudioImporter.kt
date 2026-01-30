@@ -14,6 +14,8 @@ import com.shadowmaster.data.model.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.*
 import java.util.UUID
 import javax.inject.Inject
@@ -44,8 +46,9 @@ class AudioImporter @Inject constructor(
         File(context.filesDir, "shadow_segments").also { it.mkdirs() }
     }
     
-    // Lock for playlist creation to prevent race conditions
-    private val playlistCreationLock = Any()
+    private val playlistCreationMutex = Mutex()
+    
+    
 
     /**
      * Import an audio file and create a playlist with segmented items.
@@ -635,16 +638,18 @@ class AudioImporter @Inject constructor(
      * are detected simultaneously.
      * @return The playlist ID
      */
-    private suspend fun getOrCreateCapturedAudioPlaylist(): String = withContext(Dispatchers.IO) {
-        synchronized(playlistCreationLock) {
+    private suspend fun getOrCreateCapturedAudioPlaylist(): String {
+        // Use explicit lock/unlock instead of withLock to allow suspension inside
+        playlistCreationMutex.lock()
+        try {
             // Check if playlist already exists
             val allPlaylists = shadowPlaylistDao.getAllPlaylists().first()
-            val existingPlaylist = allPlaylists.find { 
-                it.sourceType == SourceType.RECORDED 
+            val existingPlaylist = allPlaylists.find {
+                it.sourceType == SourceType.RECORDED
             }
 
             if (existingPlaylist != null) {
-                existingPlaylist.id
+                return existingPlaylist.id
             } else {
                 // Create new playlist
                 val playlist = ShadowPlaylist(
@@ -655,8 +660,10 @@ class AudioImporter @Inject constructor(
                     sourceUri = null
                 )
                 shadowPlaylistDao.insert(playlist)
-                playlist.id
+                return playlist.id
             }
+        } finally {
+            playlistCreationMutex.unlock()
         }
     }
 
