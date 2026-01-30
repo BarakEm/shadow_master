@@ -138,12 +138,6 @@ fun LibraryScreen(
                                     contentDescription = "Merge Mode"
                                 )
                             }
-                            IconButton(onClick = { onStartPractice(selectedPlaylist!!.id) }) {
-                                Icon(
-                                    imageVector = Icons.Default.PlayArrow,
-                                    contentDescription = "Start Practice"
-                                )
-                            }
                         }
                     }
                 },
@@ -156,7 +150,22 @@ fun LibraryScreen(
             )
         },
         floatingActionButton = {
-            if (selectedPlaylist == null) {
+            if (selectedPlaylist != null && !mergeMode) {
+                // Show Practice FAB when viewing playlist details
+                ExtendedFloatingActionButton(
+                    onClick = { onStartPractice(selectedPlaylist!!.id) },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.PlayArrow,
+                        contentDescription = null
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text("Start Practice")
+                }
+            } else if (selectedPlaylist == null) {
+                // Show Import FAB when viewing playlist list
                 var showMenu by remember { mutableStateOf(false) }
                 Box {
                     FloatingActionButton(
@@ -886,30 +895,44 @@ private fun PlaylistCard(
                 }
             }
 
-            // Action buttons
-            IconButton(onClick = onPlayClick) {
+            // Primary action - Practice button
+            FilledTonalButton(
+                onClick = onPlayClick,
+                modifier = Modifier.padding(end = 8.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+            ) {
                 Icon(
                     imageVector = Icons.Default.PlayArrow,
-                    contentDescription = "Practice"
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
                 )
+                Spacer(Modifier.width(4.dp))
+                Text("Practice", style = MaterialTheme.typography.labelMedium)
             }
-            IconButton(onClick = onExportClick) {
+
+            // Secondary actions - less prominent
+            IconButton(onClick = onExportClick, modifier = Modifier.size(36.dp)) {
                 Icon(
                     imageVector = Icons.Default.Share,
-                    contentDescription = "Export"
+                    contentDescription = "Export",
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            IconButton(onClick = onRenameClick) {
+            IconButton(onClick = onRenameClick, modifier = Modifier.size(36.dp)) {
                 Icon(
                     imageVector = Icons.Default.Edit,
-                    contentDescription = "Rename"
+                    contentDescription = "Rename",
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            IconButton(onClick = onDeleteClick) {
+            IconButton(onClick = onDeleteClick, modifier = Modifier.size(36.dp)) {
                 Icon(
                     imageVector = Icons.Default.Delete,
                     contentDescription = "Delete",
-                    tint = MaterialTheme.colorScheme.error
+                    modifier = Modifier.size(20.dp),
+                    tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
                 )
             }
         }
