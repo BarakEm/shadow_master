@@ -269,19 +269,33 @@ class AudioImporter @Inject constructor(
         try {
             extractor = MediaExtractor()
 
-            // Keep file descriptor open throughout extraction
-            pfd = context.contentResolver.openFileDescriptor(uri, "r")
-            if (pfd == null) {
-                Log.e(TAG, "Failed to open file descriptor for URI: $uri")
-                return Pair(null, "Cannot read file - permission denied or file not found")
+            // Try to set data source - first try direct context/URI, then fallback to file descriptor
+            var dataSourceSet = false
+            try {
+                // This method works better with content:// URIs from various apps
+                extractor.setDataSource(context, uri, null)
+                dataSourceSet = true
+                Log.d(TAG, "Set data source via context/URI")
+            } catch (e: Exception) {
+                Log.d(TAG, "Context/URI method failed, trying file descriptor: ${e.message}")
             }
 
-            try {
-                extractor.setDataSource(pfd.fileDescriptor)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set data source", e)
-                pfd.close()
-                return Pair(null, "Cannot read audio file: ${e.message}")
+            if (!dataSourceSet) {
+                // Fallback to file descriptor method
+                pfd = context.contentResolver.openFileDescriptor(uri, "r")
+                if (pfd == null) {
+                    Log.e(TAG, "Failed to open file descriptor for URI: $uri")
+                    return Pair(null, "Cannot read file - permission denied or file not found")
+                }
+
+                try {
+                    extractor.setDataSource(pfd.fileDescriptor)
+                    Log.d(TAG, "Set data source via file descriptor")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to set data source via file descriptor", e)
+                    pfd.close()
+                    return Pair(null, "Cannot read audio file: ${e.message}")
+                }
             }
 
             // Find audio track
@@ -386,7 +400,7 @@ class AudioImporter @Inject constructor(
             codec.stop()
             codec.release()
             extractor.release()
-            pfd.close()
+            pfd?.close()
 
             Log.i(TAG, "Decoded ${tempFile.length()} bytes of PCM audio")
             return Pair(tempFile, null)
