@@ -2,6 +2,8 @@ package com.shadowmaster.data.local
 
 import android.content.Context
 import androidx.room.*
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.shadowmaster.data.model.*
 import kotlinx.coroutines.flow.Flow
 
@@ -131,14 +133,61 @@ interface PracticeSessionDao {
     suspend fun getTotalItemsPracticed(): Int?
 }
 
+@Dao
+interface ImportedAudioDao {
+    @Query("SELECT * FROM imported_audio ORDER BY createdAt DESC")
+    fun getAllImportedAudio(): Flow<List<ImportedAudio>>
+
+    @Query("SELECT * FROM imported_audio WHERE id = :id")
+    suspend fun getById(id: String): ImportedAudio?
+
+    @Query("SELECT * FROM imported_audio WHERE sourceUri = :uri")
+    suspend fun getBySourceUri(uri: String): ImportedAudio?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(audio: ImportedAudio)
+
+    @Update
+    suspend fun update(audio: ImportedAudio)
+
+    @Delete
+    suspend fun delete(audio: ImportedAudio)
+
+    @Query("UPDATE imported_audio SET segmentationCount = segmentationCount + 1, lastSegmentedAt = :timestamp WHERE id = :id")
+    suspend fun markSegmented(id: String, timestamp: Long = System.currentTimeMillis())
+
+    @Query("SELECT SUM(fileSizeBytes) FROM imported_audio")
+    suspend fun getTotalStorageUsed(): Long?
+}
+
+@Dao
+interface SegmentationConfigDao {
+    @Query("SELECT * FROM segmentation_configs ORDER BY createdAt DESC")
+    fun getAllConfigs(): Flow<List<SegmentationConfig>>
+
+    @Query("SELECT * FROM segmentation_configs WHERE id = :id")
+    suspend fun getById(id: String): SegmentationConfig?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(config: SegmentationConfig)
+
+    @Update
+    suspend fun update(config: SegmentationConfig)
+
+    @Delete
+    suspend fun delete(config: SegmentationConfig)
+}
+
 @Database(
     entities = [
         ShadowItem::class,
         ShadowPlaylist::class,
         ImportJob::class,
-        PracticeSession::class
+        PracticeSession::class,
+        ImportedAudio::class,
+        SegmentationConfig::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -147,10 +196,63 @@ abstract class ShadowDatabase : RoomDatabase() {
     abstract fun shadowPlaylistDao(): ShadowPlaylistDao
     abstract fun importJobDao(): ImportJobDao
     abstract fun practiceSessionDao(): PracticeSessionDao
+    abstract fun importedAudioDao(): ImportedAudioDao
+    abstract fun segmentationConfigDao(): SegmentationConfigDao
 
     companion object {
         @Volatile
         private var INSTANCE: ShadowDatabase? = null
+
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Create imported_audio table
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS imported_audio (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        sourceUri TEXT NOT NULL,
+                        sourceFileName TEXT NOT NULL,
+                        originalFormat TEXT NOT NULL,
+                        pcmFilePath TEXT NOT NULL,
+                        durationMs INTEGER NOT NULL,
+                        sampleRate INTEGER NOT NULL,
+                        channels INTEGER NOT NULL,
+                        fileSizeBytes INTEGER NOT NULL,
+                        language TEXT NOT NULL,
+                        createdAt INTEGER NOT NULL,
+                        segmentationCount INTEGER NOT NULL,
+                        lastSegmentedAt INTEGER
+                    )
+                """.trimIndent())
+
+                // Create segmentation_configs table
+                database.execSQL("""
+                    CREATE TABLE IF NOT EXISTS segmentation_configs (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        minSegmentDurationMs INTEGER NOT NULL,
+                        maxSegmentDurationMs INTEGER NOT NULL,
+                        silenceThresholdMs INTEGER NOT NULL,
+                        preSpeechBufferMs INTEGER NOT NULL,
+                        segmentMode TEXT NOT NULL,
+                        name TEXT NOT NULL,
+                        createdAt INTEGER NOT NULL
+                    )
+                """.trimIndent())
+
+                // Add new columns to shadow_items (nullable for existing data)
+                database.execSQL("ALTER TABLE shadow_items ADD COLUMN importedAudioId TEXT")
+                database.execSQL("ALTER TABLE shadow_items ADD COLUMN segmentationConfigId TEXT")
+
+                // Insert default segmentation config
+                database.execSQL("""
+                    INSERT INTO segmentation_configs
+                    (id, minSegmentDurationMs, maxSegmentDurationMs, silenceThresholdMs,
+                     preSpeechBufferMs, segmentMode, name, createdAt)
+                    VALUES
+                    ('default-config', 500, 8000, 700, 200, 'SENTENCE', 'Default',
+                     ${System.currentTimeMillis()})
+                """.trimIndent())
+            }
+        }
 
         fun getDatabase(context: Context): ShadowDatabase {
             return INSTANCE ?: synchronized(this) {
@@ -159,7 +261,7 @@ abstract class ShadowDatabase : RoomDatabase() {
                     ShadowDatabase::class.java,
                     "shadow_library_db"
                 )
-                    .fallbackToDestructiveMigration()
+                    .addMigrations(MIGRATION_1_2)
                     .build()
                 INSTANCE = instance
                 instance

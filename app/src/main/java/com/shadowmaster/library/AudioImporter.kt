@@ -30,7 +30,9 @@ class AudioImporter @Inject constructor(
     private val shadowItemDao: ShadowItemDao,
     private val shadowPlaylistDao: ShadowPlaylistDao,
     private val importJobDao: ImportJobDao,
-    private val vadDetector: SileroVadDetector
+    private val vadDetector: SileroVadDetector,
+    private val importedAudioDao: com.shadowmaster.data.local.ImportedAudioDao,
+    private val segmentationConfigDao: com.shadowmaster.data.local.SegmentationConfigDao
 ) {
     companion object {
         private const val TAG = "AudioImporter"
@@ -45,13 +47,330 @@ class AudioImporter @Inject constructor(
     private val segmentsDir: File by lazy {
         File(context.filesDir, "shadow_segments").also { it.mkdirs() }
     }
-    
+
+    private val importedAudioDir: File by lazy {
+        File(context.filesDir, "imported_audio").also { it.mkdirs() }
+    }
+
     private val playlistCreationMutex = Mutex()
     
-    
+
+
+    /**
+     * Import audio file and store PCM without segmentation.
+     * Returns ImportedAudio entity for later segmentation.
+     */
+    suspend fun importAudioOnly(
+        uri: Uri,
+        language: String = "auto"
+    ): Result<ImportedAudio> = withContext(Dispatchers.IO) {
+        var tempPcmFile: File? = null
+        try {
+            // Extract audio to PCM
+            val extractResult = extractAudioToPcmWithError(uri)
+            tempPcmFile = extractResult.first
+            val extractError = extractResult.second
+
+            if (tempPcmFile == null) {
+                return@withContext Result.failure(
+                    Exception(extractError ?: "Failed to extract audio")
+                )
+            }
+
+            // Move PCM from cache to persistent storage
+            val persistentPcmFile = File(importedAudioDir, "${UUID.randomUUID()}.pcm")
+            tempPcmFile.copyTo(persistentPcmFile, overwrite = false)
+            tempPcmFile.delete()
+
+            // Calculate duration
+            val bytesPerMs = (TARGET_SAMPLE_RATE * 2) / 1000 // 16-bit mono
+            val durationMs = persistentPcmFile.length() / bytesPerMs
+
+            // Create ImportedAudio entity
+            val importedAudio = ImportedAudio(
+                sourceUri = uri.toString(),
+                sourceFileName = getFileName(uri) ?: "Unknown",
+                originalFormat = detectFormat(uri),
+                pcmFilePath = persistentPcmFile.absolutePath,
+                durationMs = durationMs,
+                sampleRate = TARGET_SAMPLE_RATE,
+                channels = 1,
+                fileSizeBytes = persistentPcmFile.length(),
+                language = language
+            )
+
+            // Save to database
+            importedAudioDao.insert(importedAudio)
+
+            Log.i(TAG, "Imported audio: ${importedAudio.id}, ${importedAudio.durationMs}ms")
+            Result.success(importedAudio)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Import failed", e)
+            tempPcmFile?.delete()
+            Result.failure(e)
+        }
+    }
+
+    private fun detectFormat(uri: Uri): String {
+        val fileName = getFileName(uri) ?: ""
+        return when {
+            fileName.endsWith(".mp3", ignoreCase = true) -> "mp3"
+            fileName.endsWith(".wav", ignoreCase = true) -> "wav"
+            fileName.endsWith(".m4a", ignoreCase = true) -> "m4a"
+            fileName.endsWith(".aac", ignoreCase = true) -> "aac"
+            fileName.endsWith(".ogg", ignoreCase = true) -> "ogg"
+            fileName.endsWith(".flac", ignoreCase = true) -> "flac"
+            else -> "unknown"
+        }
+    }
+
+    /**
+     * Apply segmentation to imported audio with specified configuration.
+     * Creates a new playlist with segmented items.
+     */
+    suspend fun segmentImportedAudio(
+        importedAudioId: String,
+        playlistName: String? = null,
+        config: SegmentationConfig,
+        enableTranscription: Boolean = false
+    ): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            // Get imported audio
+            val importedAudio = importedAudioDao.getById(importedAudioId)
+                ?: return@withContext Result.failure(Exception("Imported audio not found"))
+
+            val pcmFile = File(importedAudio.pcmFilePath)
+            if (!pcmFile.exists()) {
+                return@withContext Result.failure(Exception("PCM file not found"))
+            }
+
+            // Create playlist
+            val playlistId = UUID.randomUUID().toString()
+            val playlist = ShadowPlaylist(
+                id = playlistId,
+                name = playlistName ?: "${importedAudio.sourceFileName} (${config.name})",
+                language = importedAudio.language,
+                sourceType = SourceType.IMPORTED,
+                sourceUri = importedAudio.sourceUri
+            )
+            shadowPlaylistDao.insert(playlist)
+
+            // Initialize VAD (with retry logic)
+            if (!initializeVad()) {
+                shadowPlaylistDao.delete(playlist)
+                return@withContext Result.failure(Exception("Failed to initialize VAD"))
+            }
+
+            // Detect speech segments with config parameters
+            val segments = detectSpeechSegmentsWithConfig(pcmFile, config)
+
+            if (segments.isEmpty()) {
+                shadowPlaylistDao.delete(playlist)
+                return@withContext Result.failure(Exception("No speech segments detected"))
+            }
+
+            // Extract and save each segment
+            val shadowItems = mutableListOf<ShadowItem>()
+            segments.forEachIndexed { index, segment ->
+                val segmentFile = extractSegment(pcmFile, segment)
+                if (segmentFile != null) {
+                    val item = ShadowItem(
+                        sourceFileUri = importedAudio.sourceUri,
+                        sourceFileName = importedAudio.sourceFileName,
+                        sourceStartMs = segment.startMs,
+                        sourceEndMs = segment.endMs,
+                        audioFilePath = segmentFile.absolutePath,
+                        durationMs = segment.endMs - segment.startMs,
+                        language = importedAudio.language,
+                        playlistId = playlistId,
+                        orderInPlaylist = index,
+                        importedAudioId = importedAudioId,
+                        segmentationConfigId = config.id
+                    )
+                    shadowItems.add(item)
+                }
+            }
+
+            // Save all items
+            shadowItemDao.insertAll(shadowItems)
+
+            // Update ImportedAudio tracking
+            importedAudioDao.markSegmented(importedAudioId)
+
+            Log.i(TAG, "Segmentation complete: ${shadowItems.size} segments created")
+            Result.success(playlistId)
+
+        } catch (e: Exception) {
+            Log.e(TAG, "Segmentation failed", e)
+            Result.failure(e)
+        }
+    }
+
+    private suspend fun initializeVad(): Boolean {
+        var vadInitialized = false
+        repeat(5) { attempt ->
+            try {
+                if (vadDetector.initialize()) {
+                    vadInitialized = true
+                    return@repeat
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "VAD initialization attempt ${attempt + 1} failed", e)
+            }
+            if (attempt < 4) {
+                delay((attempt + 1) * 500L)
+            }
+        }
+        return vadInitialized
+    }
+
+    /**
+     * Detect speech segments using configurable parameters.
+     * Replaces hardcoded constants with config values.
+     */
+    private fun detectSpeechSegmentsWithConfig(
+        pcmFile: File,
+        config: SegmentationConfig
+    ): List<AudioSegmentBounds> {
+        val rawSegments = detectSpeechSegmentsWithParams(
+            pcmFile,
+            config.minSegmentDurationMs,
+            config.maxSegmentDurationMs,
+            config.silenceThresholdMs,
+            config.preSpeechBufferMs
+        )
+
+        // Apply segment mode (WORD vs SENTENCE)
+        return applySegmentMode(rawSegments, config.segmentMode)
+    }
+
+    private fun detectSpeechSegmentsWithParams(
+        pcmFile: File,
+        minSegmentDurationMs: Long,
+        maxSegmentDurationMs: Long,
+        silenceThresholdMs: Long,
+        preSpeechBufferMs: Long
+    ): List<AudioSegmentBounds> {
+        val segments = mutableListOf<AudioSegmentBounds>()
+        val frameSize = SileroVadDetector.FRAME_SIZE_SAMPLES
+        val frameDurationMs = (frameSize * 1000L) / TARGET_SAMPLE_RATE
+
+        var isSpeaking = false
+        var speechStartMs = 0L
+        var lastSpeechMs = 0L
+        var currentMs = 0L
+
+        DataInputStream(BufferedInputStream(FileInputStream(pcmFile))).use { inputStream ->
+            val frameBuffer = ShortArray(frameSize)
+            val byteBuffer = ByteArray(frameSize * 2)
+
+            while (inputStream.available() >= byteBuffer.size) {
+                inputStream.readFully(byteBuffer)
+
+                // Convert bytes to shorts
+                for (i in 0 until frameSize) {
+                    frameBuffer[i] = ((byteBuffer[i * 2 + 1].toInt() shl 8) or
+                            (byteBuffer[i * 2].toInt() and 0xFF)).toShort()
+                }
+
+                val hasSpeech = vadDetector.isSpeech(frameBuffer)
+
+                if (hasSpeech) {
+                    if (!isSpeaking) {
+                        isSpeaking = true
+                        speechStartMs = maxOf(0, currentMs - preSpeechBufferMs)
+                    }
+                    lastSpeechMs = currentMs
+                } else if (isSpeaking) {
+                    val silenceDuration = currentMs - lastSpeechMs
+
+                    if (silenceDuration >= silenceThresholdMs) {
+                        val segmentDuration = lastSpeechMs - speechStartMs + silenceThresholdMs
+
+                        if (segmentDuration >= minSegmentDurationMs) {
+                            segments.add(AudioSegmentBounds(
+                                startMs = speechStartMs,
+                                endMs = minOf(lastSpeechMs + silenceThresholdMs, currentMs)
+                            ))
+                        }
+                        isSpeaking = false
+                    }
+                }
+
+                // Force segment break if too long
+                if (isSpeaking && (currentMs - speechStartMs) >= maxSegmentDurationMs) {
+                    segments.add(AudioSegmentBounds(
+                        startMs = speechStartMs,
+                        endMs = currentMs
+                    ))
+                    isSpeaking = false
+                }
+
+                currentMs += frameDurationMs
+            }
+
+            // Handle final segment
+            if (isSpeaking && (lastSpeechMs - speechStartMs) >= minSegmentDurationMs) {
+                segments.add(AudioSegmentBounds(
+                    startMs = speechStartMs,
+                    endMs = lastSpeechMs + 100
+                ))
+            }
+        }
+
+        return segments
+    }
+
+    /**
+     * Apply segment mode to adjust boundaries.
+     * WORD mode: Split longer segments into shorter chunks
+     * SENTENCE mode: Keep VAD-detected boundaries as-is
+     */
+    private fun applySegmentMode(
+        segments: List<AudioSegmentBounds>,
+        mode: SegmentMode
+    ): List<AudioSegmentBounds> {
+        return when (mode) {
+            SegmentMode.SENTENCE -> segments  // Use VAD boundaries as-is
+
+            SegmentMode.WORD -> {
+                // Split longer segments into word-sized chunks (~1-2 seconds)
+                val wordSegments = mutableListOf<AudioSegmentBounds>()
+                val targetWordDurationMs = 1500L
+
+                segments.forEach { segment ->
+                    val duration = segment.endMs - segment.startMs
+
+                    if (duration <= targetWordDurationMs * 1.5) {
+                        // Already word-sized or close enough
+                        wordSegments.add(segment)
+                    } else {
+                        // Split into smaller chunks
+                        val numChunks = ((duration / targetWordDurationMs).toInt()).coerceAtLeast(2)
+                        val chunkSize = duration / numChunks
+
+                        for (i in 0 until numChunks) {
+                            val start = segment.startMs + (i * chunkSize)
+                            val end = if (i == numChunks - 1) {
+                                segment.endMs
+                            } else {
+                                segment.startMs + ((i + 1) * chunkSize)
+                            }
+
+                            wordSegments.add(AudioSegmentBounds(start, end))
+                        }
+                    }
+                }
+
+                wordSegments
+            }
+        }
+    }
 
     /**
      * Import an audio file and create a playlist with segmented items.
+     * Maintains backward compatibility - imports and immediately segments with default config.
      */
     suspend fun importAudioFile(
         uri: Uri,
@@ -60,201 +379,36 @@ class AudioImporter @Inject constructor(
         enableTranscription: Boolean = false
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
-            // Get file metadata
-            val fileName = getFileName(uri) ?: "Unknown"
-            val displayName = playlistName ?: fileName.substringBeforeLast(".")
-
-            // Create import job for tracking
-            val jobId = UUID.randomUUID().toString()
-            val job = ImportJob(
-                id = jobId,
-                sourceUri = uri.toString(),
-                fileName = fileName,
-                status = ImportStatus.PENDING,
-                language = language,
-                enableTranscription = enableTranscription
-            )
-            importJobDao.insert(job)
-
-            // Create playlist
-            val playlistId = UUID.randomUUID().toString()
-            val playlist = ShadowPlaylist(
-                id = playlistId,
-                name = displayName,
-                language = language,
-                sourceType = SourceType.IMPORTED,
-                sourceUri = uri.toString()
-            )
-            shadowPlaylistDao.insert(playlist)
-
-            // Update job with playlist ID
-            importJobDao.update(job.copy(targetPlaylistId = playlistId))
-
-            // Start processing in background
-            scope.launch {
-                processAudioFile(jobId, uri, playlistId, language, enableTranscription)
+            // Phase 1: Import audio
+            val importResult = importAudioOnly(uri, language)
+            if (importResult.isFailure) {
+                return@withContext Result.failure(
+                    importResult.exceptionOrNull() ?: Exception("Import failed")
+                )
             }
 
-            Result.success(playlistId)
+            val importedAudio = importResult.getOrThrow()
+
+            // Phase 2: Segment with default config
+            val defaultConfig = segmentationConfigDao.getById("default-config")
+                ?: SegmentationConfig(
+                    id = "default-config",
+                    name = "Default"
+                ).also { segmentationConfigDao.insert(it) }
+
+            return@withContext segmentImportedAudio(
+                importedAudioId = importedAudio.id,
+                playlistName = playlistName,
+                config = defaultConfig,
+                enableTranscription = enableTranscription
+            )
+
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to start import", e)
+            Log.e(TAG, "Import and segment failed", e)
             Result.failure(e)
         }
     }
 
-    private suspend fun processAudioFile(
-        jobId: String,
-        uri: Uri,
-        playlistId: String,
-        language: String,
-        enableTranscription: Boolean
-    ) {
-        var pcmFile: File? = null
-        try {
-            // Update status
-            importJobDao.updateProgress(jobId, ImportStatus.EXTRACTING_AUDIO, 10)
-
-            // Extract audio to PCM
-            val extractResult = extractAudioToPcmWithError(uri)
-            pcmFile = extractResult.first
-            val extractError = extractResult.second
-
-            if (pcmFile == null) {
-                val errorMsg = extractError ?: "Failed to extract audio - unsupported format or corrupted file"
-                Log.e(TAG, errorMsg)
-                importJobDao.markFailed(jobId, errorMsg)
-                return
-            }
-
-            // Check if PCM file has sufficient data (minimum 0.5 seconds)
-            val minBytes = (TARGET_SAMPLE_RATE * 2 * 0.5).toLong() // 0.5 seconds at 16kHz mono 16-bit
-            if (pcmFile.length() < minBytes) {
-                val durationSec = pcmFile.length() / (TARGET_SAMPLE_RATE * 2.0)
-                val errorMsg = String.format("Audio file too short (%d bytes, %.2fs)", pcmFile.length(), durationSec)
-                Log.e(TAG, errorMsg)
-                importJobDao.markFailed(jobId, errorMsg)
-                pcmFile.delete()
-                return
-            }
-
-            // Update status
-            importJobDao.updateProgress(jobId, ImportStatus.DETECTING_SEGMENTS, 30)
-
-            // Log PCM file info
-            val durationSec = pcmFile.length() / (TARGET_SAMPLE_RATE * 2.0)
-            Log.i(TAG, String.format("PCM file size: %d bytes, duration: %.2fs", pcmFile.length(), durationSec))
-
-            // Initialize VAD with retry and delays
-            var vadInitialized = false
-            repeat(5) { attempt ->
-                try {
-                    if (vadDetector.initialize()) {
-                        vadInitialized = true
-                        Log.i(TAG, "VAD initialized successfully on attempt ${attempt + 1}")
-                        return@repeat
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "VAD initialization attempt ${attempt + 1} failed", e)
-                }
-                // Add delay before next retry, increasing with each attempt
-                if (attempt < 4) {
-                    val delayMs = (attempt + 1) * 500L // 500ms, 1000ms, 1500ms, 2000ms
-                    Log.d(TAG, "Waiting ${delayMs}ms before retry...")
-                    delay(delayMs)
-                }
-            }
-
-            if (!vadInitialized) {
-                val errorMsg = "Failed to initialize voice detection after 5 attempts"
-                Log.e(TAG, errorMsg)
-                importJobDao.markFailed(jobId, errorMsg)
-                pcmFile.delete()
-                return
-            }
-
-            // Detect speech segments
-            val segments = try {
-                Log.d(TAG, "Starting speech segment detection...")
-                detectSpeechSegments(pcmFile)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to detect speech segments: ${e.message}", e)
-                emptyList()
-            }
-
-            Log.i(TAG, "Detected ${segments.size} speech segments from ${pcmFile.length()} byte PCM file")
-
-            if (segments.isEmpty()) {
-                val errorMsg = "No speech segments detected in audio - file may be silent or corrupted"
-                Log.w(TAG, errorMsg)
-                importJobDao.markFailed(jobId, errorMsg)
-                pcmFile.delete()
-                return
-            }
-
-            // Update status
-            importJobDao.updateProgress(jobId, ImportStatus.DETECTING_SEGMENTS, 60)
-
-            // Extract and save each segment
-            val shadowItems = mutableListOf<ShadowItem>()
-            val fileName = getFileName(uri) ?: "audio"
-            val totalSegments = segments.size
-
-            segments.forEachIndexed { index, segment ->
-                try {
-                    val segmentFile = extractSegment(pcmFile, segment)
-                    if (segmentFile != null) {
-                        val item = ShadowItem(
-                            sourceFileUri = uri.toString(),
-                            sourceFileName = fileName,
-                            sourceStartMs = segment.startMs,
-                            sourceEndMs = segment.endMs,
-                            audioFilePath = segmentFile.absolutePath,
-                            durationMs = segment.endMs - segment.startMs,
-                            language = language,
-                            playlistId = playlistId,
-                            orderInPlaylist = index
-                        )
-                        shadowItems.add(item)
-                    }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to extract segment $index", e)
-                }
-
-                // Update progress (avoid division by zero)
-                if (totalSegments > 0) {
-                    val progress = 60 + (index * 30 / totalSegments)
-                    importJobDao.updateProgress(jobId, ImportStatus.DETECTING_SEGMENTS, progress)
-                }
-            }
-
-            if (shadowItems.isEmpty()) {
-                importJobDao.markFailed(jobId, "Failed to extract any segments")
-                pcmFile.delete()
-                return
-            }
-
-            // Save all items
-            shadowItemDao.insertAll(shadowItems)
-
-            // Clean up temp PCM file
-            pcmFile.delete()
-
-            // Mark complete
-            importJobDao.markCompleted(jobId, shadowItems.size)
-            Log.i(TAG, "Import complete: ${shadowItems.size} segments created")
-
-        } catch (e: Exception) {
-            Log.e(TAG, "Import failed with exception", e)
-            try {
-                importJobDao.markFailed(jobId, e.message ?: "Unknown error")
-            } catch (dbError: Exception) {
-                Log.e(TAG, "Failed to update job status", dbError)
-            }
-            try {
-                pcmFile?.delete()
-            } catch (ignored: Exception) {}
-        }
-    }
 
     /**
      * Extract and decode audio from any format to mono 16kHz PCM.
