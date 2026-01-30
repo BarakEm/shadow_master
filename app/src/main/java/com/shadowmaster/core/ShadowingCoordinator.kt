@@ -8,6 +8,7 @@ import com.shadowmaster.audio.processing.AudioProcessingPipeline
 import com.shadowmaster.audio.recording.UserRecordingManager
 import com.shadowmaster.data.model.*
 import com.shadowmaster.data.repository.SettingsRepository
+import com.shadowmaster.library.AudioImporter
 import com.shadowmaster.media.MediaControlManager
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -22,7 +23,8 @@ class ShadowingCoordinator @Inject constructor(
     private val playbackEngine: PlaybackEngine,
     private val userRecordingManager: UserRecordingManager,
     private val mediaControlManager: MediaControlManager,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val audioImporter: AudioImporter
 ) {
     companion object {
         private const val TAG = "ShadowingCoordinator"
@@ -74,6 +76,14 @@ class ShadowingCoordinator @Inject constructor(
 
             is ShadowingState.SegmentDetected -> {
                 _feedbackEvents.emit(FeedbackEvent.SegmentDetected)
+                // Save the captured segment to library
+                scope.launch {
+                    try {
+                        audioImporter.saveCapturedSegment(state.audioSegment)
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to save captured segment", e)
+                    }
+                }
                 mediaControlManager.pauseOtherApps()
                 delay(200)
                 startPlayback(state.audioSegment)
