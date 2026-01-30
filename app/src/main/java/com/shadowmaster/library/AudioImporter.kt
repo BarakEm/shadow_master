@@ -269,19 +269,36 @@ class AudioImporter @Inject constructor(
         try {
             extractor = MediaExtractor()
 
-            // Try to set data source - first try direct context/URI, then fallback to file descriptor
+            // Handle different URI schemes
             var dataSourceSet = false
-            try {
-                // This method works better with content:// URIs from various apps
-                extractor.setDataSource(context, uri, null)
-                dataSourceSet = true
-                Log.d(TAG, "Set data source via context/URI")
-            } catch (e: Exception) {
-                Log.d(TAG, "Context/URI method failed, trying file descriptor: ${e.message}")
+
+            // For file:// URIs, use the path directly
+            if (uri.scheme == "file") {
+                val filePath = uri.path
+                if (filePath != null && File(filePath).exists()) {
+                    try {
+                        extractor.setDataSource(filePath)
+                        dataSourceSet = true
+                        Log.d(TAG, "Set data source via file path: $filePath")
+                    } catch (e: Exception) {
+                        Log.d(TAG, "File path method failed: ${e.message}")
+                    }
+                }
             }
 
+            // Try context/URI method (works well with content:// URIs)
             if (!dataSourceSet) {
-                // Fallback to file descriptor method
+                try {
+                    extractor.setDataSource(context, uri, null)
+                    dataSourceSet = true
+                    Log.d(TAG, "Set data source via context/URI")
+                } catch (e: Exception) {
+                    Log.d(TAG, "Context/URI method failed, trying file descriptor: ${e.message}")
+                }
+            }
+
+            // Fallback to file descriptor method
+            if (!dataSourceSet) {
                 pfd = context.contentResolver.openFileDescriptor(uri, "r")
                 if (pfd == null) {
                     Log.e(TAG, "Failed to open file descriptor for URI: $uri")
