@@ -128,17 +128,8 @@ class LibraryViewModel @Inject constructor(
             
             // Check if this is a URL (http/https) and handle accordingly
             if (uri.scheme == "http" || uri.scheme == "https") {
-                // This is a URL, not a local file URI - use URL importer
-                val result = libraryRepository.importFromUrl(
-                    url = decodedUri,
-                    language = language
-                )
-                result.onSuccess {
-                    _importSuccess.value = "Import started successfully"
-                }
-                result.onFailure { error ->
-                    _importError.value = error.message ?: "Import failed"
-                }
+                // This is a URL, not a local file URI - delegate to URL import method
+                importFromUrl(decodedUri, language)
             } else {
                 // This is a local file URI (content://, file://, etc.)
                 val result = libraryRepository.importAudioFile(
