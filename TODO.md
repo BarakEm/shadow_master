@@ -11,10 +11,14 @@
 
 - [ ] **Logo rework** - Use nano banana or similar concept
 - [ ] **Verify import audio works** - Confirm segmentation is functional after recent fixes
-- [ ] **Reduce play button confusion** - Too many play buttons, improve UX clarity
+- [x] **Reduce play button confusion** - Too many play buttons, improve UX clarity
+  - Removed redundant app bar play button
+  - Added labeled "Practice" button on playlist cards
+  - Added "Start Practice" FAB in detail view
 
 ## Medium Priority
 
+- [ ] **Practice mode gradual builder not working** - Investigate and fix
 - [ ] **Separate import and segment steps** - Allow re-segmenting same audio with different settings
 - [ ] **Persistent audio library** - Survive app reinstalls (external storage or backup/restore)
 - [ ] **Playback location controls** - Skip to arbitrary locations, scroll timeline
