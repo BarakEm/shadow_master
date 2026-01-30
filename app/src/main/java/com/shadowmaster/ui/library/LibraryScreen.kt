@@ -51,6 +51,7 @@ fun LibraryScreen(
     var showEditItemDialog by remember { mutableStateOf<ShadowItem?>(null) }
     var showSplitDialog by remember { mutableStateOf<ShadowItem?>(null) }
     var showExportDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
+    var showResegmentDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
     var mergeMode by remember { mutableStateOf(false) }
     var showUrlImportDialog by remember { mutableStateOf(false) }
     var urlToImport by remember { mutableStateOf("") }
@@ -231,6 +232,7 @@ fun LibraryScreen(
                     onDeleteClick = { showDeleteDialog = it },
                     onRenameClick = { showRenamePlaylistDialog = it },
                     onExportClick = { showExportDialog = it },
+                    onResegmentClick = { showResegmentDialog = it },
                     onStartPractice = onStartPractice,
                     onDismissFailedImport = { viewModel.dismissFailedImport(it) }
                 )
@@ -600,6 +602,83 @@ fun LibraryScreen(
         )
     }
 
+    // Re-segmentation Dialog
+    showResegmentDialog?.let { playlist ->
+        var selectedPreset by remember { mutableStateOf<SegmentationConfig?>(null) }
+        val presets = remember { com.shadowmaster.library.SegmentationPresets.getAllPresets() }
+        
+        AlertDialog(
+            onDismissRequest = { showResegmentDialog = null },
+            title = { Text("Re-segment Audio") },
+            text = {
+                Column {
+                    Text(
+                        text = "Choose a segmentation preset for \"${playlist.name}\"",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    presets.forEach { preset ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedPreset = preset }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = preset == selectedPreset,
+                                onClick = { selectedPreset = preset }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = preset.name,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Text(
+                                    text = "${preset.segmentMode.name.lowercase()} • " +
+                                           "${preset.minSegmentDurationMs}-${preset.maxSegmentDurationMs}ms",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "A new playlist will be created with the re-segmented audio.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        selectedPreset?.let { preset ->
+                            viewModel.resegmentPlaylist(
+                                playlistId = playlist.id,
+                                preset = preset,
+                                playlistName = "${playlist.name} (${preset.name})"
+                            )
+                        }
+                        showResegmentDialog = null
+                    },
+                    enabled = selectedPreset != null
+                ) {
+                    Text("Re-segment")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showResegmentDialog = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     // URL import progress dialog
     urlImportProgress?.let { progress ->
         AlertDialog(
@@ -669,6 +748,7 @@ private fun PlaylistsContent(
     onDeleteClick: (ShadowPlaylist) -> Unit,
     onRenameClick: (ShadowPlaylist) -> Unit,
     onExportClick: (ShadowPlaylist) -> Unit,
+    onResegmentClick: (ShadowPlaylist) -> Unit,
     onStartPractice: (String) -> Unit,
     onDismissFailedImport: (String) -> Unit
 ) {
@@ -738,6 +818,7 @@ private fun PlaylistsContent(
                     onDeleteClick = { onDeleteClick(playlist) },
                     onRenameClick = { onRenameClick(playlist) },
                     onExportClick = { onExportClick(playlist) },
+                    onResegmentClick = { onResegmentClick(playlist) },
                     onPlayClick = { onStartPractice(playlist.id) }
                 )
             }
@@ -845,6 +926,7 @@ private fun PlaylistCard(
     onDeleteClick: () -> Unit,
     onRenameClick: () -> Unit,
     onExportClick: () -> Unit,
+    onResegmentClick: () -> Unit,
     onPlayClick: () -> Unit
 ) {
     Card(
@@ -911,6 +993,17 @@ private fun PlaylistCard(
             }
 
             // Secondary actions - less prominent
+            // Re-segment button (only for imported playlists)
+            if (playlist.sourceType == SourceType.IMPORTED) {
+                IconButton(onClick = onResegmentClick, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCut,
+                        contentDescription = "Re-segment",
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
             IconButton(onClick = onExportClick, modifier = Modifier.size(36.dp)) {
                 Icon(
                     imageVector = Icons.Default.Share,

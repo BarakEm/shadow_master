@@ -103,6 +103,14 @@ fun SettingsScreen(
 
             HorizontalDivider()
 
+            // Segment Mode (controls word-level vs sentence-level segmentation)
+            SegmentModeSelector(
+                selectedMode = config.segmentMode,
+                onModeSelected = { viewModel.updateSegmentMode(it) }
+            )
+
+            HorizontalDivider()
+
             // Bus Mode Toggle (most prominent - at the top of modes)
             SwitchSetting(
                 title = stringResource(R.string.bus_mode),
@@ -331,6 +339,57 @@ private fun PracticeModeSelector(
                         text = when (mode) {
                             PracticeMode.STANDARD -> "Play full segment, then repeat"
                             PracticeMode.BUILDUP -> "Build from end of phrase to full sentence"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SegmentModeSelector(
+    selectedMode: SegmentMode,
+    onModeSelected: (SegmentMode) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Segment Mode",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        SegmentMode.entries.forEach { mode ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onModeSelected(mode) }
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = mode == selectedMode,
+                    onClick = { onModeSelected(mode) }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = when (mode) {
+                            SegmentMode.SENTENCE -> "Sentence"
+                            SegmentMode.WORD -> "Word"
+                        },
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Text(
+                        text = when (mode) {
+                            SegmentMode.SENTENCE -> "Longer segments for full sentences"
+                            SegmentMode.WORD -> "Shorter segments for individual words"
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant

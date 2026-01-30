@@ -296,4 +296,33 @@ class LibraryViewModel @Inject constructor(
             libraryRepository.deleteImportJob(jobId)
         }
     }
+
+    fun resegmentPlaylist(
+        playlistId: String,
+        preset: SegmentationConfig,
+        playlistName: String? = null
+    ) {
+        viewModelScope.launch {
+            // Get items from the playlist to find importedAudioId
+            val items = libraryRepository.getItemsByPlaylist(playlistId).first()
+            val importedAudioId = items.firstOrNull()?.importedAudioId
+            
+            if (importedAudioId == null) {
+                _importError.value = "Cannot re-segment: playlist was not imported from audio file"
+                return@launch
+            }
+            
+            val result = libraryRepository.resegmentAudio(
+                importedAudioId = importedAudioId,
+                newConfig = preset,
+                playlistName = playlistName
+            )
+            result.onSuccess { playlistId ->
+                _importSuccess.value = "Re-segmentation complete! New playlist created."
+            }
+            result.onFailure { error ->
+                _importError.value = error.message ?: "Re-segmentation failed"
+            }
+        }
+    }
 }
