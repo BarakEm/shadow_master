@@ -301,9 +301,11 @@ class AudioImporter @Inject constructor(
             // Find audio track
             var audioTrackIndex = -1
             var inputFormat: MediaFormat? = null
+            val foundMimeTypes = mutableListOf<String>()
             for (i in 0 until extractor.trackCount) {
                 val format = extractor.getTrackFormat(i)
                 val mime = format.getString(MediaFormat.KEY_MIME) ?: ""
+                foundMimeTypes.add(mime)
                 Log.d(TAG, "Track $i: $mime")
                 if (mime.startsWith("audio/")) {
                     audioTrackIndex = i
@@ -313,9 +315,14 @@ class AudioImporter @Inject constructor(
             }
 
             if (audioTrackIndex < 0 || inputFormat == null) {
-                Log.e(TAG, "No audio track found in file with ${extractor.trackCount} tracks")
+                val trackInfo = if (extractor.trackCount == 0) {
+                    "File not recognized as media"
+                } else {
+                    "Found tracks: ${foundMimeTypes.joinToString()}"
+                }
+                Log.e(TAG, "No audio track found. $trackInfo")
                 pfd?.close()
-                return Pair(null, "No audio track found - file may be video-only or not a media file")
+                return Pair(null, "No audio track found. $trackInfo")
             }
 
             extractor.selectTrack(audioTrackIndex)
