@@ -314,7 +314,7 @@ class AudioImporter @Inject constructor(
 
             if (audioTrackIndex < 0 || inputFormat == null) {
                 Log.e(TAG, "No audio track found in file with ${extractor.trackCount} tracks")
-                pfd.close()
+                pfd?.close()
                 return Pair(null, "No audio track found - file may be video-only or not a media file")
             }
 
@@ -332,7 +332,7 @@ class AudioImporter @Inject constructor(
                 codec.start()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to create decoder for $mime", e)
-                pfd.close()
+                pfd?.close()
                 extractor.release()
                 return Pair(null, "Cannot decode audio format: $mime - try converting to MP3 or WAV first")
             }
