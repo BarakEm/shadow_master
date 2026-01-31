@@ -991,9 +991,13 @@ class AudioImporter @Inject constructor(
             errorMessage = errorMessage,
             totalSegments = totalSegments ?: job.totalSegments,
             processedSegments = processedSegments ?: job.processedSegments,
-            completedAt = if (status == ImportStatus.COMPLETED || status == ImportStatus.FAILED) {
-                System.currentTimeMillis()
-            } else null
+            completedAt = when {
+                // Preserve existing completedAt if already set
+                job.completedAt != null -> job.completedAt
+                // Set completedAt only when transitioning to terminal state
+                status == ImportStatus.COMPLETED || status == ImportStatus.FAILED -> System.currentTimeMillis()
+                else -> null
+            }
         )
         importJobDao.update(updatedJob)
     }
