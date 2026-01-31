@@ -155,11 +155,9 @@ class Logger @Inject constructor(
             LogLevel.ERROR -> Log.e(tag, message, throwable)
         }
         
-        // Store in memory and optionally write to file
-        if (fileLoggingEnabled) {
-            scope.launch {
-                storeLogEntry(formattedMessage, throwable)
-            }
+        // Always store in memory, optionally write to file
+        scope.launch {
+            storeLogEntry(formattedMessage, throwable, fileLoggingEnabled)
         }
     }
 
@@ -171,9 +169,9 @@ class Logger @Inject constructor(
     }
 
     /**
-     * Store log entry in memory and write to file.
+     * Store log entry in memory and optionally write to file.
      */
-    private suspend fun storeLogEntry(formattedMessage: String, throwable: Throwable?) {
+    private suspend fun storeLogEntry(formattedMessage: String, throwable: Throwable?, writeToFile: Boolean) {
         mutex.withLock {
             // Build complete log entry
             val logEntry = buildString {
@@ -184,7 +182,7 @@ class Logger @Inject constructor(
                 }
             }
             
-            // Add to memory
+            // Always add to memory
             logEntries.add(logEntry)
             
             // Limit memory usage
@@ -192,8 +190,10 @@ class Logger @Inject constructor(
                 logEntries.removeAt(0)
             }
             
-            // Write to file
-            writeToFile(logEntry)
+            // Conditionally write to file
+            if (writeToFile) {
+                writeToFile(logEntry)
+            }
         }
     }
 
