@@ -57,7 +57,7 @@ fun LibraryScreen(
     var urlToImport by remember { mutableStateOf("") }
 
     // Stable callbacks to prevent recomposition
-    val onImportAudioFile = remember {
+    val onImportAudioFile = remember(viewModel) {
         { uri: Uri? -> uri?.let { viewModel.importAudioFile(it) } }
     }
     
@@ -103,7 +103,7 @@ fun LibraryScreen(
                     )
                 },
                 navigationIcon = {
-                    val onBackClick = remember(selectedPlaylist) {
+                    val onBackClick = remember(selectedPlaylist, viewModel, onNavigateBack) {
                         {
                             if (selectedPlaylist != null) {
                                 viewModel.clearSelection()
@@ -161,7 +161,7 @@ fun LibraryScreen(
         floatingActionButton = {
             if (selectedPlaylist != null && !mergeMode) {
                 // Show Practice FAB when viewing playlist details
-                val onStartPracticeClick = remember(selectedPlaylist) {
+                val onStartPracticeClick = remember(selectedPlaylist, onStartPractice) {
                     { selectedPlaylist?.let { onStartPractice(it.id) } }
                 }
                 ExtendedFloatingActionButton(
