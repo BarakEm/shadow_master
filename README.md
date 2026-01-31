@@ -229,7 +229,7 @@ gh pr list
 - **[COPILOT_TASKS.md](COPILOT_TASKS.md)** - Task list template
 - **[.github/copilot-instructions.md](.github/copilot-instructions.md)** - Guidelines for Copilot
 
-**Current Status:** 🎉 **20/20 tasks completed (100%)** - 14 PRs merged, ~7,500+ lines added! All Copilot tasks complete!
+**Current Status:** ⚠️ **20/20 tasks completed but CRITICAL BUG** - Audio import broken (Issue #75), playlist appears empty after import. Copilot investigating.
 
 ## License
 

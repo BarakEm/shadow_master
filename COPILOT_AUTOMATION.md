@@ -245,9 +245,17 @@ If Copilot seems stuck or you want to provide more context:
 gh issue comment 33 --body "@copilot Please also ensure thread safety in the implementation."
 ```
 
+## Important Notes
+
+⚠️ **DO NOT run `./gradlew` commands on this machine - it's a weak machine and builds take too long. Use Android Studio or skip build verification.**
+
 ## Current Status (Updated 2026-01-31)
 
-### 🎉 Campaign Complete: 100% Success Rate!
+### ⚠️ CRITICAL BUG: Audio Import Broken (Issue #75)
+
+**Project currently unusable** - audio import creates empty playlists. Copilot is investigating.
+
+### 🎉 Campaign Status: 20/20 Tasks Complete (But App Broken)
 
 **Issues Created:** 20 total
 - ✅ **Completed:** 20 issues (100%)
