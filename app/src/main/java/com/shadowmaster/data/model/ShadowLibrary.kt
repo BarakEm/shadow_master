@@ -7,7 +7,13 @@ import java.util.UUID
  * A shadow item is a single audio segment ready for shadowing practice.
  * Contains the audio data, optional transcription, and metadata.
  */
-@Entity(tableName = "shadow_items")
+@Entity(
+    tableName = "shadow_items",
+    indices = [
+        Index(value = ["playlistId"]),
+        Index(value = ["importedAudioId"])
+    ]
+)
 data class ShadowItem(
     @PrimaryKey
     val id: String = UUID.randomUUID().toString(),
@@ -45,7 +51,12 @@ data class ShadowItem(
 /**
  * A playlist/collection of shadow items for organized practice.
  */
-@Entity(tableName = "shadow_playlists")
+@Entity(
+    tableName = "shadow_playlists",
+    indices = [
+        Index(value = ["createdAt"])
+    ]
+)
 data class ShadowPlaylist(
     @PrimaryKey
     val id: String = UUID.randomUUID().toString(),
@@ -72,7 +83,12 @@ enum class SourceType {
 /**
  * Import job tracking - for processing large files in background.
  */
-@Entity(tableName = "import_jobs")
+@Entity(
+    tableName = "import_jobs",
+    indices = [
+        Index(value = ["status"])
+    ]
+)
 data class ImportJob(
     @PrimaryKey
     val id: String = UUID.randomUUID().toString(),

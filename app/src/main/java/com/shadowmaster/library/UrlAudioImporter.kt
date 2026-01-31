@@ -56,6 +56,17 @@ class UrlAudioImporter @Inject constructor(
         language: String = "auto"
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
+            // Validate URL before processing
+            InputValidator.validateUrl(url).onFailure { error ->
+                _importProgress.value = UrlImportProgress(
+                    url = url,
+                    status = UrlImportStatus.FAILED,
+                    progress = 0,
+                    error = error.message
+                )
+                return@withContext Result.failure(error)
+            }
+
             _importProgress.value = UrlImportProgress(
                 url = url,
                 status = UrlImportStatus.ANALYZING,
