@@ -289,7 +289,16 @@ class AudioImporter @Inject constructor(
                         segmentationConfigId = config.id
                     )
                     shadowItems.add(item)
+                } else {
+                    Log.w(TAG, "Failed to extract segment $index: ${segment.startMs}ms-${segment.endMs}ms")
                 }
+            }
+
+            // Check if all segment extractions failed
+            if (shadowItems.isEmpty()) {
+                shadowPlaylistDao.delete(playlist)
+                Log.e(TAG, "All ${segments.size} segment extractions failed for ${importedAudio.sourceFileName}")
+                return@withContext Result.failure(StorageError("Failed to extract any audio segments from file"))
             }
 
             // Save all items
