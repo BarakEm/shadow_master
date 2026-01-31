@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -62,7 +63,7 @@ fun ConfirmationDialog(
  * @param dismissText The text for the dismiss button (default: "Cancel")
  * @param singleLine Whether the text field is single-line (default: true)
  * @param validator Optional validation function that returns true if input is valid
- * @param onConfirm Callback when the confirm button is clicked with the entered text
+ * @param onConfirm Callback when the confirm button is clicked with the entered text (automatically trimmed)
  * @param onDismiss Callback when the dialog is dismissed
  */
 @Composable
@@ -89,7 +90,9 @@ fun TextInputDialog(
                 value = text,
                 onValueChange = { text = it },
                 label = { Text(label) },
-                placeholder = placeholder?.let { { Text(it) } },
+                placeholder = if (placeholder != null) {
+                    { Text(placeholder) }
+                } else null,
                 singleLine = singleLine,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -242,11 +245,14 @@ fun ProgressDialog(
                             modifier = Modifier.fillMaxWidth()
                         )
                     } else {
-                        CircularProgressIndicator(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .padding(top = 8.dp)
-                        )
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
                     }
                 }
                 additionalContent?.invoke()
