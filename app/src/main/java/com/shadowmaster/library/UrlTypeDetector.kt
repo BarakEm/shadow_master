@@ -17,6 +17,7 @@ object UrlTypeDetector {
         Pattern.compile("(?:https?://)?open\\.spotify\\.com/episode/([\\w]+)")
     private val DIRECT_AUDIO_PATTERN =
         Pattern.compile("(?:https?://).*\\.(mp3|m4a|wav|ogg|aac|flac)(?:\\?.*)?$", Pattern.CASE_INSENSITIVE)
+    private val URL_VALIDATION_REGEX = Regex("https?://[^\\s]+")
 
     /**
      * Detect the type of URL.
@@ -89,7 +90,7 @@ object UrlTypeDetector {
         }
 
         // Basic validation - check if it looks like a URL
-        return if (normalized.matches(Regex("https?://[^\\s]+"))) {
+        return if (normalized.matches(URL_VALIDATION_REGEX)) {
             normalized
         } else {
             null
