@@ -188,6 +188,26 @@ com.shadowmaster/
 - [ ] Waveform visualization
 - [ ] A/B comparison (original vs your recording)
 
+## Development
+
+### Creating GitHub Issues for Copilot Agents
+
+The project includes a script to automatically create GitHub issues from the tasks defined in `COPILOT_TASKS.md`. This enables GitHub Copilot agents to work on these tasks and create pull requests.
+
+```bash
+# Preview what issues would be created (recommended first)
+python scripts/create_issues_from_tasks.py --dry-run
+
+# Create the actual GitHub issues
+python scripts/create_issues_from_tasks.py
+```
+
+**Prerequisites:**
+- [GitHub CLI (gh)](https://cli.github.com/) installed and authenticated
+- Python 3.6 or higher
+
+See [scripts/README.md](scripts/README.md) for detailed documentation.
+
 ## License
 
 MIT
