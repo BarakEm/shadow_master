@@ -6,6 +6,7 @@ import android.util.Log
 import com.shadowmaster.data.local.ImportJobDao
 import com.shadowmaster.data.local.ShadowPlaylistDao
 import com.shadowmaster.data.model.*
+import com.shadowmaster.library.AudioImportError.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -73,7 +74,7 @@ class UrlAudioImporter @Inject constructor(
 
             _importProgress.value = null
             result
-        } catch (e: Exception) {
+        } catch (e: AudioImportError) {
             Log.e(TAG, "Failed to import from URL", e)
             _importProgress.value = UrlImportProgress(
                 url = url,
@@ -82,6 +83,15 @@ class UrlAudioImporter @Inject constructor(
                 error = e.message
             )
             Result.failure(e)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to import from URL - unexpected error", e)
+            _importProgress.value = UrlImportProgress(
+                url = url,
+                status = UrlImportStatus.FAILED,
+                progress = 0,
+                error = e.message
+            )
+            Result.failure(NetworkError(url, e))
         }
     }
 
@@ -98,7 +108,7 @@ class UrlAudioImporter @Inject constructor(
         // YouTube videos require special handling due to their streaming format
         // Guide users to use the Capture feature instead
         return Result.failure(
-            Exception(
+            UnsupportedFormat(
                 "YouTube videos cannot be directly imported. " +
                 "Please use 'Capture Playing Audio' while the video plays, " +
                 "or download the audio separately and import the file."
@@ -119,7 +129,7 @@ class UrlAudioImporter @Inject constructor(
         // Spotify podcasts are DRM-protected and require OAuth
         // We could integrate with spotify-dl or spotdl in the future
         return Result.failure(
-            Exception(
+            PermissionDenied(
                 "Spotify podcasts require authentication. " +
                 "Please download the podcast episode manually and import the audio file, " +
                 "or use the 'Capture Playing Audio' feature while listening."
@@ -147,7 +157,9 @@ class UrlAudioImporter @Inject constructor(
             // Download the file
             val audioFile = downloadAudio(url, title)
             if (audioFile == null) {
-                return@withContext Result.failure(Exception("Failed to download audio"))
+                return@withContext Result.failure(
+                    NetworkError(url, Exception("Failed to download audio from URL"))
+                )
             }
 
             _importProgress.value = _importProgress.value?.copy(
@@ -170,9 +182,15 @@ class UrlAudioImporter @Inject constructor(
             }
 
             result
-        } catch (e: Exception) {
+        } catch (e: AudioImportError) {
             Log.e(TAG, "Direct URL import failed", e)
             Result.failure(e)
+        } catch (e: java.io.IOException) {
+            Log.e(TAG, "Direct URL import failed - network error", e)
+            Result.failure(NetworkError(url, e))
+        } catch (e: Exception) {
+            Log.e(TAG, "Direct URL import failed - unexpected error", e)
+            Result.failure(NetworkError(url, e))
         }
     }
 
@@ -186,7 +204,7 @@ class UrlAudioImporter @Inject constructor(
     ): Result<String> {
         // For unknown URLs, guide users to alternatives
         return Result.failure(
-            Exception(
+            UnsupportedFormat(
                 "This URL type is not supported for direct import. " +
                 "Please use 'Capture Playing Audio' while the content plays, " +
                 "or download the audio file and import it directly."
