@@ -319,12 +319,12 @@ fun LibraryScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        if (validationError == null && newName.isNotBlank()) {
+                        if (validationError == null) {
                             viewModel.renamePlaylist(playlist.id, newName.trim())
                             showRenamePlaylistDialog = null
                         }
                     },
-                    enabled = validationError == null && newName.isNotBlank()
+                    enabled = validationError == null
                 ) {
                     Text("Rename")
                 }
