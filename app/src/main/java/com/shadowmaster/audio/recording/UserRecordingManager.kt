@@ -166,17 +166,19 @@ class UserRecordingManager @Inject constructor(
         }
 
         isRecording = false
-        recordingJob?.cancel()
-        recordingJob = null
-
-        try {
-            audioRecord?.stop()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error stopping AudioRecord", e)
-        }
-
-        // Finish recording and invoke callback with the recorded audio
+        
         scope.launch {
+            // Wait for the recording job to complete before finishing
+            recordingJob?.join()
+            recordingJob = null
+
+            try {
+                audioRecord?.stop()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error stopping AudioRecord", e)
+            }
+
+            // Finish recording and invoke callback with the recorded audio
             finishRecording()
         }
     }
