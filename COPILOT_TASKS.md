@@ -349,30 +349,60 @@ Create utilities to collect performance metrics:
 
 ---
 
-## How to Delegate to Copilot
+## Automated Delegation to Copilot
 
-1. Create a GitHub issue with the task title
-2. Copy the task description into the issue body
-3. Add label `copilot` or mention `@copilot` in the issue
-4. Assign the issue to trigger Copilot workspace
+**This is now fully automated!** You don't need to manually create issues or mention @copilot.
 
-Example issue format:
-```markdown
-Title: Add Unit Tests for ShadowingStateMachine
+### Option 1: Create Issues from This File (Batch)
 
-## Description
-[Paste task description here]
+```bash
+# Preview what would be created
+python scripts/create_issues_from_tasks.py --dry-run
 
-## Acceptance Criteria
-- [ ] All state transitions tested
-- [ ] Edge cases covered
-- [ ] Tests pass in CI
-
-## Labels
-- enhancement
-- testing
-- copilot
+# Create all issues
+python scripts/create_issues_from_tasks.py
 ```
+
+Issues are automatically delegated to @copilot via GitHub Actions.
+
+### Option 2: Create Individual Issues (Recommended)
+
+```bash
+gh issue create \
+  --label copilot \
+  --title "Your task title" \
+  --body "Detailed description"
+```
+
+GitHub Actions automatically mentions @copilot within seconds.
+
+### What Happens Automatically
+
+When you create an issue with the `copilot` label:
+1. ✅ GitHub Actions workflow triggers
+2. ✅ @copilot is automatically mentioned
+3. ✅ Issue gets `copilot-working` label
+4. ✅ Copilot reads `.github/copilot-instructions.md`
+5. ✅ Copilot creates an implementation plan
+6. ✅ Copilot submits a pull request
+
+### Monitor Progress
+
+```bash
+# View active issues
+gh issue list --label copilot-working
+
+# View pull requests from Copilot
+gh pr list
+```
+
+Or visit:
+- Issues: https://github.com/BarakEm/shadow_master/issues?q=is:issue+label:copilot-working
+- Pull Requests: https://github.com/BarakEm/shadow_master/pulls
+
+### Complete Documentation
+
+See **[COPILOT_AUTOMATION.md](COPILOT_AUTOMATION.md)** for the complete automation guide - you don't need to remember any commands!
 
 ---
 

@@ -189,3 +189,222 @@ The script can be modified to:
 
 - `scripts/create_issues_from_tasks.py` - The main script
 - `scripts/README.md` - This documentation
+
+---
+
+## setup_copilot_automation.sh
+
+Complete one-time setup for GitHub Copilot automation.
+
+### Purpose
+
+This script sets up the entire automation infrastructure for delegating issues to GitHub Copilot. It:
+- Creates necessary labels
+- Commits and pushes the auto-delegation GitHub Actions workflow
+- Delegates all existing copilot-labeled issues to @copilot
+- Provides status tracking
+
+**This has already been run and configured. You don't need to run it again.**
+
+### What It Does
+
+1. Creates `copilot-working` label for tracking
+2. Commits `.github/workflows/copilot-auto-assign.yml`
+3. Pushes the workflow to GitHub
+4. Mentions @copilot on all existing copilot-labeled issues
+5. Adds `copilot-working` label to delegated issues
+6. Provides summary and monitoring links
+
+### Usage
+
+```bash
+./scripts/setup_copilot_automation.sh
+```
+
+The script is interactive and will prompt for confirmation before proceeding.
+
+### Output
+
+```
+======================================
+GitHub Copilot Automation Setup
+======================================
+
+This script will:
+  1. Commit and push the Copilot auto-assign workflow
+  2. Delegate all existing copilot-labeled issues to @copilot
+  3. Set up labels for tracking
+
+Continue? (y/n)
+```
+
+---
+
+## delegate_to_copilot.sh
+
+Manually delegate all copilot-labeled issues to GitHub Copilot.
+
+### Purpose
+
+This script mentions @copilot on all issues labeled with `copilot`, triggering GitHub Copilot to work on them. Use this if you need to re-trigger the delegation or if the automatic workflow didn't run.
+
+### Usage
+
+```bash
+./scripts/delegate_to_copilot.sh
+```
+
+### What It Does
+
+1. Finds all issues with the `copilot` label
+2. Adds a comment mentioning @copilot with reference to `.github/copilot-instructions.md`
+3. Displays progress for each issue
+4. Provides monitoring links when complete
+
+### Example Output
+
+```
+Delegating issues to GitHub Copilot...
+
+Processing issue #33...
+  ✓ Delegated issue #33 to @copilot
+Processing issue #34...
+  ✓ Delegated issue #34 to @copilot
+...
+
+======================================
+Delegation complete!
+GitHub Copilot bot has been notified for all issues.
+Monitor progress at: https://github.com/BarakEm/shadow_master/issues
+======================================
+```
+
+---
+
+## automate_copilot_issues.sh
+
+Interactive workflow manager for working through copilot issues.
+
+### Purpose
+
+Provides an interactive menu to browse and work on copilot issues systematically. This script helps organize work by priority and creates feature branches for each issue.
+
+### Usage
+
+```bash
+./scripts/automate_copilot_issues.sh
+```
+
+### Interactive Menu
+
+```
+Select implementation mode:
+  1) Work on all HIGH priority issues (5 issues)
+  2) Work on ALL issues (20 issues)
+  3) Work on a specific issue number
+  4) Exit
+
+Enter choice [1-4]:
+```
+
+### What It Does
+
+- Fetches all copilot-labeled issues sorted by priority
+- Creates feature branches for each issue (`copilot/issue-{number}`)
+- Displays issue details for context
+- Allows step-by-step progression through issues
+
+### Workflow Example
+
+```
+======================================
+Working on Issue #33
+Title: Add Unit Tests for ShadowingStateMachine
+======================================
+
+Created/switched to branch: copilot/issue-33
+
+Ready for implementation...
+Issue details:
+[Issue description displayed here]
+
+Press Enter to continue to next issue, or Ctrl+C to stop...
+```
+
+---
+
+## Monitoring and Commands
+
+### View Active Issues
+
+```bash
+# List all issues Copilot is working on
+gh issue list --label copilot-working
+
+# View specific issue
+gh issue view 33
+
+# Check comments on an issue
+gh issue view 33 --comments
+```
+
+### View Pull Requests
+
+```bash
+# List all open PRs
+gh pr list
+
+# View specific PR
+gh pr view 42
+
+# Review PR diff
+gh pr diff 42
+```
+
+### Create New Copilot Tasks
+
+```bash
+# Create a new issue that Copilot will automatically work on
+gh issue create \
+  --label copilot \
+  --label "priority: high" \
+  --title "Your task title" \
+  --body "Detailed description of what needs to be done"
+```
+
+The GitHub Actions workflow will automatically mention @copilot within seconds.
+
+---
+
+## Complete Documentation
+
+For comprehensive documentation on the automation system, see:
+- **[COPILOT_AUTOMATION.md](../COPILOT_AUTOMATION.md)** - Complete automation guide
+- **[COPILOT_TASKS.md](../COPILOT_TASKS.md)** - Task list template
+- **[.github/copilot-instructions.md](../.github/copilot-instructions.md)** - Instructions for Copilot
+
+---
+
+## Quick Reference
+
+| Script | Purpose | When to Use |
+|--------|---------|-------------|
+| `create_issues_from_tasks.py` | Create issues from COPILOT_TASKS.md | After adding new tasks to the task list |
+| `setup_copilot_automation.sh` | One-time automation setup | Already done - don't run again |
+| `delegate_to_copilot.sh` | Manually delegate issues | If auto-delegation fails or needs retry |
+| `automate_copilot_issues.sh` | Interactive issue browser | To work through issues systematically |
+
+---
+
+## Automation Status
+
+✅ **Setup Complete**
+- GitHub Actions workflow is active
+- Auto-delegation is enabled
+- 20 issues delegated to @copilot
+- All future `copilot`-labeled issues will auto-delegate
+
+**You don't need to remember commands** - everything is automated. Just:
+1. Create issues with the `copilot` label
+2. Monitor pull requests
+3. Review and merge

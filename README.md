@@ -190,23 +190,46 @@ com.shadowmaster/
 
 ## Development
 
-### Creating GitHub Issues for Copilot Agents
+### Automated Task Delegation to GitHub Copilot
 
-The project includes a script to automatically create GitHub issues from the tasks defined in `COPILOT_TASKS.md`. This enables GitHub Copilot agents to work on these tasks and create pull requests.
+This project uses **GitHub Copilot automation** to handle development tasks. When you create an issue with the `copilot` label, GitHub Copilot automatically:
+1. Receives the task notification
+2. Analyzes the requirements
+3. Creates an implementation
+4. Submits a pull request for review
 
+**Everything is already set up and automated!**
+
+#### Quick Start
+
+Create a new task for Copilot:
 ```bash
-# Preview what issues would be created (recommended first)
-python scripts/create_issues_from_tasks.py --dry-run
-
-# Create the actual GitHub issues
-python scripts/create_issues_from_tasks.py
+gh issue create \
+  --label copilot \
+  --title "Your task title" \
+  --body "Detailed description"
 ```
 
-**Prerequisites:**
-- [GitHub CLI (gh)](https://cli.github.com/) installed and authenticated
-- Python 3.6 or higher
+Copilot will be automatically notified and will start working on it.
 
-See [scripts/README.md](scripts/README.md) for detailed documentation.
+#### Monitor Progress
+
+```bash
+# View active issues
+gh issue list --label copilot-working
+
+# View pull requests
+gh pr list
+```
+
+#### Documentation
+
+- **[COPILOT_AUTOMATION.md](COPILOT_AUTOMATION.md)** - Complete automation guide (you don't need to remember commands!)
+- **[scripts/README.md](scripts/README.md)** - Script documentation
+- **[COPILOT_TASKS.md](COPILOT_TASKS.md)** - Task list template
+- **[.github/copilot-instructions.md](.github/copilot-instructions.md)** - Guidelines for Copilot
+
+**Current Status:** 20 tasks delegated and being processed by Copilot.
 
 ## License
 

@@ -10,7 +10,9 @@ Prerequisites:
 - Run from the repository root directory
 
 Usage:
-    python scripts/create_issues_from_tasks.py [--dry-run]
+    ./scripts/create_issues_from_tasks.py [--dry-run]
+    OR
+    python3 scripts/create_issues_from_tasks.py [--dry-run]
 
 Options:
     --dry-run    Show what would be created without actually creating issues
@@ -277,7 +279,7 @@ def main():
     if dry_run:
         print(f"Dry run complete: {success_count}/{len(tasks)} tasks ready to create")
         print("\nTo create issues for real, run:")
-        print("  python scripts/create_issues_from_tasks.py")
+        print("  ./scripts/create_issues_from_tasks.py")
     else:
         print(f"Successfully created {success_count}/{len(tasks)} issues")
     
