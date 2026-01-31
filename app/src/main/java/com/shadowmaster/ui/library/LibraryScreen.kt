@@ -18,11 +18,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.shadowmaster.data.model.*
 import com.shadowmaster.library.ExportStatus
 import com.shadowmaster.library.UrlImportStatus
+import com.shadowmaster.ui.theme.ShadowMasterTheme
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -1288,4 +1290,194 @@ private fun formatDuration(ms: Long): String {
 private fun formatDate(timestamp: Long): String {
     val sdf = SimpleDateFormat("MMM d", Locale.getDefault())
     return sdf.format(Date(timestamp))
+}
+
+// Preview Functions
+
+@Preview(showBackground = true)
+@Composable
+fun EmptyLibraryMessagePreview() {
+    ShadowMasterTheme {
+        Surface {
+            EmptyLibraryMessage()
+        }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 400)
+@Composable
+fun PlaylistCardPreview() {
+    ShadowMasterTheme {
+        Surface {
+            PlaylistCard(
+                playlist = ShadowPlaylist(
+                    id = "1",
+                    name = "Japanese Conversations",
+                    description = "Daily conversation practice",
+                    language = "ja-JP",
+                    lastPracticedAt = System.currentTimeMillis() - 86400000 // 1 day ago
+                ),
+                onClick = {},
+                onDeleteClick = {},
+                onRenameClick = {},
+                onExportClick = {},
+                onResegmentClick = {},
+                onPlayClick = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 400)
+@Composable
+fun PlaylistCardNoLastPracticedPreview() {
+    ShadowMasterTheme {
+        Surface {
+            PlaylistCard(
+                playlist = ShadowPlaylist(
+                    id = "1",
+                    name = "Spanish Phrases",
+                    description = null,
+                    language = "es-ES",
+                    lastPracticedAt = null
+                ),
+                onClick = {},
+                onDeleteClick = {},
+                onRenameClick = {},
+                onExportClick = {},
+                onResegmentClick = {},
+                onPlayClick = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 400)
+@Composable
+fun ShadowItemCardPreview() {
+    ShadowMasterTheme {
+        Surface {
+            ShadowItemCard(
+                item = ShadowItem(
+                    id = "1",
+                    sourceFileUri = "content://test",
+                    sourceFileName = "conversation.mp3",
+                    sourceStartMs = 0,
+                    sourceEndMs = 3500,
+                    audioFilePath = "/path/to/audio",
+                    durationMs = 3500,
+                    transcription = "Hello, how are you?",
+                    translation = "Hola, ¿cómo estás?",
+                    language = "en-US",
+                    practiceCount = 12,
+                    isFavorite = true,
+                    orderInPlaylist = 0
+                ),
+                onToggleFavorite = {},
+                onEditClick = {},
+                onSplitClick = {},
+                mergeMode = false,
+                isSelectedForMerge = false,
+                onToggleMergeSelection = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 400)
+@Composable
+fun ShadowItemCardNoTranscriptionPreview() {
+    ShadowMasterTheme {
+        Surface {
+            ShadowItemCard(
+                item = ShadowItem(
+                    id = "1",
+                    sourceFileUri = "content://test",
+                    sourceFileName = "audio.mp3",
+                    sourceStartMs = 0,
+                    sourceEndMs = 2000,
+                    audioFilePath = "/path/to/audio",
+                    durationMs = 2000,
+                    language = "en-US",
+                    practiceCount = 3,
+                    isFavorite = false,
+                    orderInPlaylist = 5
+                ),
+                onToggleFavorite = {},
+                onEditClick = {},
+                onSplitClick = {},
+                mergeMode = false,
+                isSelectedForMerge = false,
+                onToggleMergeSelection = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 400)
+@Composable
+fun ShadowItemCardMergeModePreview() {
+    ShadowMasterTheme {
+        Surface {
+            ShadowItemCard(
+                item = ShadowItem(
+                    id = "1",
+                    sourceFileUri = "content://test",
+                    sourceFileName = "audio.mp3",
+                    sourceStartMs = 0,
+                    sourceEndMs = 1500,
+                    audioFilePath = "/path/to/audio",
+                    durationMs = 1500,
+                    transcription = "This is a test segment",
+                    language = "en-US",
+                    orderInPlaylist = 2
+                ),
+                onToggleFavorite = {},
+                onEditClick = {},
+                onSplitClick = {},
+                mergeMode = true,
+                isSelectedForMerge = true,
+                onToggleMergeSelection = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 400)
+@Composable
+fun ImportJobCardPreview() {
+    ShadowMasterTheme {
+        Surface {
+            ImportJobCard(
+                job = ImportJob(
+                    id = "1",
+                    sourceUri = "content://test",
+                    fileName = "podcast_episode.mp3",
+                    status = ImportStatus.DETECTING_SEGMENTS,
+                    progress = 65,
+                    totalSegments = 20,
+                    processedSegments = 13
+                )
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 400)
+@Composable
+fun FailedImportCardPreview() {
+    ShadowMasterTheme {
+        Surface {
+            FailedImportCard(
+                job = ImportJob(
+                    id = "1",
+                    sourceUri = "content://test",
+                    fileName = "broken_audio.mp3",
+                    status = ImportStatus.FAILED,
+                    errorMessage = "Failed to decode audio: unsupported format"
+                ),
+                onDismiss = {}
+            )
+        }
+    }
 }
