@@ -6,6 +6,7 @@ import com.shadowmaster.data.model.ShadowItem
 import com.shadowmaster.data.model.ShadowingConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
+import java.io.IOException
 import java.io.OutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -45,6 +46,7 @@ class PlaylistExporter @Inject constructor(
      * @param item The segment to export
      * @param config Shadowing configuration for repeats and mode
      * @param includeYourTurnSilence Whether to include silence for user practice
+     * @throws IOException if segment audio cannot be loaded
      */
     fun writeSegmentAudio(
         output: OutputStream,
@@ -52,7 +54,8 @@ class PlaylistExporter @Inject constructor(
         config: ShadowingConfig,
         includeYourTurnSilence: Boolean
     ) {
-        val segmentAudio = loadSegmentAudio(item.audioFilePath) ?: return
+        val segmentAudio = loadSegmentAudio(item.audioFilePath) 
+            ?: throw IOException("Failed to load segment audio: ${item.audioFilePath}")
 
         // For each playback repeat
         for (repeat in 1..config.playbackRepeats) {
