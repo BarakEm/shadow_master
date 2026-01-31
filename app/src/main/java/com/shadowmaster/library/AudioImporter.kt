@@ -101,7 +101,8 @@ class AudioImporter @Inject constructor(
      */
     suspend fun importAudioOnly(
         uri: Uri,
-        language: String = "auto"
+        language: String = "auto",
+        jobId: String? = null
     ): Result<ImportedAudio> = withContext(Dispatchers.IO) {
         var tempPcmFile: File? = null
         try {
@@ -110,7 +111,9 @@ class AudioImporter @Inject constructor(
                 return@withContext Result.failure(error)
             }
 
-            // Extract audio to PCM
+            // Extract audio to PCM with progress updates
+            jobId?.let { updateImportJob(it, ImportStatus.EXTRACTING_AUDIO, 10) }
+            
             val extractResult = extractAudioToPcmWithError(uri)
             tempPcmFile = extractResult.first
             val extractError = extractResult.second
@@ -121,10 +124,14 @@ class AudioImporter @Inject constructor(
                 )
             }
 
+            jobId?.let { updateImportJob(it, ImportStatus.EXTRACTING_AUDIO, 40) }
+
             // Move PCM from cache to persistent storage
             val persistentPcmFile = File(importedAudioDir, "${UUID.randomUUID()}.pcm")
             tempPcmFile.copyTo(persistentPcmFile, overwrite = false)
             tempPcmFile.delete()
+
+            jobId?.let { updateImportJob(it, ImportStatus.EXTRACTING_AUDIO, 50) }
 
             // Calculate duration
             val bytesPerMs = (TARGET_SAMPLE_RATE * 2) / 1000 // 16-bit mono
@@ -233,7 +240,8 @@ class AudioImporter @Inject constructor(
         importedAudioId: String,
         playlistName: String? = null,
         config: SegmentationConfig,
-        enableTranscription: Boolean = false
+        enableTranscription: Boolean = false,
+        jobId: String? = null
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             // Get imported audio
@@ -256,11 +264,15 @@ class AudioImporter @Inject constructor(
             )
             shadowPlaylistDao.insert(playlist)
 
+            jobId?.let { updateImportJob(it, ImportStatus.DETECTING_SEGMENTS, 55) }
+
             // Initialize VAD (with retry logic)
             if (!initializeVad()) {
                 shadowPlaylistDao.delete(playlist)
                 return@withContext Result.failure(DecodingFailed("Failed to initialize VAD for speech detection"))
             }
+
+            jobId?.let { updateImportJob(it, ImportStatus.DETECTING_SEGMENTS, 60) }
 
             // Detect speech segments with config parameters
             val segments = detectSpeechSegmentsWithConfig(pcmFile, config)
@@ -268,6 +280,11 @@ class AudioImporter @Inject constructor(
             if (segments.isEmpty()) {
                 shadowPlaylistDao.delete(playlist)
                 return@withContext Result.failure(DecodingFailed("No speech segments detected in audio file"))
+            }
+
+            jobId?.let { 
+                updateImportJob(it, ImportStatus.DETECTING_SEGMENTS, 75, 
+                    totalSegments = segments.size, processedSegments = 0)
             }
 
             // Extract and save each segment
@@ -292,6 +309,13 @@ class AudioImporter @Inject constructor(
                 } else {
                     Log.w(TAG, "Failed to extract segment $index: ${segment.startMs}ms-${segment.endMs}ms")
                 }
+                
+                // Update progress for each processed segment
+                jobId?.let {
+                    val progress = 75 + ((index + 1) * 20 / segments.size)
+                    updateImportJob(it, ImportStatus.DETECTING_SEGMENTS, progress,
+                        totalSegments = segments.size, processedSegments = index + 1)
+                }
             }
 
             // Check if all segment extractions failed
@@ -300,6 +324,8 @@ class AudioImporter @Inject constructor(
                 Log.e(TAG, "All ${segments.size} segment extractions failed for ${importedAudio.sourceFileName}")
                 return@withContext Result.failure(StorageError("Failed to extract any audio segments from file"))
             }
+
+            jobId?.let { updateImportJob(it, ImportStatus.DETECTING_SEGMENTS, 95) }
 
             // Save all items
             shadowItemDao.insertAll(shadowItems)
@@ -540,10 +566,25 @@ class AudioImporter @Inject constructor(
         language: String = "auto",
         enableTranscription: Boolean = false
     ): Result<String> = withContext(Dispatchers.IO) {
+        // Create import job for progress tracking
+        val fileName = audioFileUtility.getFileName(uri, context) ?: "Unknown"
+        val job = ImportJob(
+            sourceUri = uri.toString(),
+            fileName = fileName,
+            status = ImportStatus.PENDING,
+            language = language,
+            enableTranscription = enableTranscription
+        )
+        importJobDao.insert(job)
+        
         try {
-            // Phase 1: Import audio
-            val importResult = importAudioOnly(uri, language)
+            // Phase 1: Import audio with progress tracking
+            updateImportJob(job.id, ImportStatus.EXTRACTING_AUDIO, 0)
+            
+            val importResult = importAudioOnly(uri, language, job.id)
             if (importResult.isFailure) {
+                updateImportJob(job.id, ImportStatus.FAILED, 0, 
+                    errorMessage = importResult.exceptionOrNull()?.message ?: "Import failed")
                 return@withContext Result.failure(
                     importResult.exceptionOrNull() ?: Exception("Import failed")
                 )
@@ -551,25 +592,39 @@ class AudioImporter @Inject constructor(
 
             val importedAudio = importResult.getOrThrow()
 
-            // Phase 2: Segment with default config
+            // Phase 2: Segment with default config and progress tracking
+            updateImportJob(job.id, ImportStatus.DETECTING_SEGMENTS, 50)
+            
             val defaultConfig = segmentationConfigDao.getById("default-config")
                 ?: SegmentationConfig(
                     id = "default-config",
                     name = "Default"
                 ).also { segmentationConfigDao.insert(it) }
 
-            return@withContext segmentImportedAudio(
+            val segmentResult = segmentImportedAudio(
                 importedAudioId = importedAudio.id,
                 playlistName = playlistName,
                 config = defaultConfig,
-                enableTranscription = enableTranscription
+                enableTranscription = enableTranscription,
+                jobId = job.id
             )
+            
+            if (segmentResult.isSuccess) {
+                updateImportJob(job.id, ImportStatus.COMPLETED, 100)
+            } else {
+                updateImportJob(job.id, ImportStatus.FAILED, 50,
+                    errorMessage = segmentResult.exceptionOrNull()?.message ?: "Segmentation failed")
+            }
+            
+            return@withContext segmentResult
 
         } catch (e: AudioImportError) {
             Log.e(TAG, "Import and segment failed", e)
+            updateImportJob(job.id, ImportStatus.FAILED, 0, errorMessage = e.message)
             Result.failure(e)
         } catch (e: Exception) {
             Log.e(TAG, "Import and segment failed - unexpected error", e)
+            updateImportJob(job.id, ImportStatus.FAILED, 0, errorMessage = e.message ?: "Unexpected error")
             Result.failure(StorageError("Unexpected error: ${e.message}"))
         }
     }
@@ -916,6 +971,43 @@ class AudioImporter @Inject constructor(
                 delay(500)
             }
         }
+    }
+
+    /**
+     * Helper method to update import job status and progress.
+     */
+    /**
+     * Helper method to update import job status and progress.
+     * 
+     * Note: Once a job reaches a terminal state (COMPLETED or FAILED), the completedAt
+     * timestamp is preserved to prevent it from being overwritten. This is safe because
+     * our import workflow never transitions a job from a terminal state back to a
+     * non-terminal state - once COMPLETED or FAILED, the job's lifecycle is finished.
+     */
+    private suspend fun updateImportJob(
+        jobId: String,
+        status: ImportStatus,
+        progress: Int,
+        errorMessage: String? = null,
+        totalSegments: Int? = null,
+        processedSegments: Int? = null
+    ) {
+        val job = importJobDao.getJobById(jobId) ?: return
+        val updatedJob = job.copy(
+            status = status,
+            progress = progress,
+            errorMessage = errorMessage,
+            totalSegments = totalSegments ?: job.totalSegments,
+            processedSegments = processedSegments ?: job.processedSegments,
+            completedAt = when {
+                // Preserve existing completedAt if already set
+                job.completedAt != null -> job.completedAt
+                // Set completedAt only when transitioning to terminal state
+                status == ImportStatus.COMPLETED || status == ImportStatus.FAILED -> System.currentTimeMillis()
+                else -> null
+            }
+        )
+        importJobDao.update(updatedJob)
     }
 
     /**
