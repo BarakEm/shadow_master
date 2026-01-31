@@ -148,6 +148,40 @@ class AudioFileUtilityTest {
     }
 
     @Test
+    fun `createWavHeader sets correct PCM data size`() {
+        val pcmDataSize = 12345
+        val header = utility.createWavHeader(pcmDataSize = pcmDataSize)
+        // PCM data size at bytes 40-43 (little-endian)
+        val dataSize = (header[40].toInt() and 0xFF) or
+                      ((header[41].toInt() and 0xFF) shl 8) or
+                      ((header[42].toInt() and 0xFF) shl 16) or
+                      ((header[43].toInt() and 0xFF) shl 24)
+        assertEquals(pcmDataSize, dataSize)
+    }
+
+    @Test
+    fun `createWavHeader sets correct byte rate`() {
+        val sampleRate = 44100
+        val channels = 2
+        val bitsPerSample = 16
+        val expectedByteRate = sampleRate * channels * bitsPerSample / 8 // 176400
+        
+        val header = utility.createWavHeader(
+            pcmDataSize = 1000,
+            sampleRate = sampleRate,
+            channels = channels,
+            bitsPerSample = bitsPerSample
+        )
+        
+        // Byte rate at bytes 28-31 (little-endian)
+        val byteRate = (header[28].toInt() and 0xFF) or
+                      ((header[29].toInt() and 0xFF) shl 8) or
+                      ((header[30].toInt() and 0xFF) shl 16) or
+                      ((header[31].toInt() and 0xFF) shl 24)
+        assertEquals(expectedByteRate, byteRate)
+    }
+
+    @Test
     fun `calculateDurationMs calculates correctly`() {
         // 16000 samples/sec, 1 channel, 16-bit (2 bytes per sample)
         // 16000 bytes = 0.5 seconds = 500 ms
