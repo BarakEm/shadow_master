@@ -111,7 +111,7 @@ class LibraryRepository @Inject constructor(
 
     fun getUrlImportProgress() = urlAudioImporter.importProgress
 
-    fun detectUrlType(url: String) = urlAudioImporter.detectUrlType(url)
+    fun detectUrlType(url: String) = UrlTypeDetector.detectUrlType(url)
 
     fun clearUrlImportProgress() = urlAudioImporter.clearProgress()
 
