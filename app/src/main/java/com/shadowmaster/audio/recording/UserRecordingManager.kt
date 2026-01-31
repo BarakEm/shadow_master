@@ -153,8 +153,12 @@ class UserRecordingManager @Inject constructor(
 
         Log.i(TAG, "Recording finished: ${segment?.durationMs ?: 0}ms")
 
-        val callback = onRecordingComplete
-        onRecordingComplete = null  // Clear callback to prevent double invocation
+        // Atomically get and clear the callback to prevent double invocation
+        val callback = synchronized(this) {
+            val cb = onRecordingComplete
+            onRecordingComplete = null
+            cb
+        }
 
         withContext(Dispatchers.Main) {
             callback?.invoke(segment)
@@ -193,7 +197,9 @@ class UserRecordingManager @Inject constructor(
                     finishRecording()
                     
                     // Clear cleanup job to allow future stop operations
-                    cleanupJob = null
+                    synchronized(this@UserRecordingManager) {
+                        cleanupJob = null
+                    }
                 }
             }
         }
