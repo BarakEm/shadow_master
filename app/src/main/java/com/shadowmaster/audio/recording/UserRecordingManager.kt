@@ -158,6 +158,10 @@ class UserRecordingManager @Inject constructor(
     }
 
     fun stopRecording() {
+        if (!isRecording) {
+            return
+        }
+
         isRecording = false
         recordingJob?.cancel()
         recordingJob = null
@@ -166,6 +170,11 @@ class UserRecordingManager @Inject constructor(
             audioRecord?.stop()
         } catch (e: Exception) {
             Log.e(TAG, "Error stopping AudioRecord", e)
+        }
+
+        // Finish recording and invoke callback with the recorded audio
+        scope.launch {
+            finishRecording()
         }
     }
 
