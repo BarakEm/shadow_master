@@ -194,7 +194,9 @@ class UrlAudioImporter @Inject constructor(
             // Download the file
             val audioFile = downloadAudio(url, title)
             if (audioFile == null) {
-                return@withContext Result.failure(NetworkError(url, null))
+                return@withContext Result.failure(
+                    NetworkError(url, Exception("Failed to download audio from URL"))
+                )
             }
 
             _importProgress.value = _importProgress.value?.copy(

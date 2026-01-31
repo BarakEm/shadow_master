@@ -517,7 +517,7 @@ class AudioImporter @Inject constructor(
                 Log.e(TAG, "No audio track found. $trackInfo")
                 pfd?.close()
                 extractor.release()
-                throw UnsupportedFormat(trackInfo)
+                throw UnsupportedFormat("No audio track found in file. $trackInfo")
             }
 
             extractor.selectTrack(audioTrackIndex)
