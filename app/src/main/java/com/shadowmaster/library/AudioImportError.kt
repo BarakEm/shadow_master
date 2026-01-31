@@ -45,7 +45,7 @@ sealed class AudioImportError : Exception() {
      * @param url The URL that failed
      * @param cause The underlying network exception
      */
-    data class NetworkError(val url: String, val cause: Throwable? = null) : AudioImportError() {
+    data class NetworkError(val url: String, override val cause: Throwable? = null) : AudioImportError() {
         override val message: String = "Network error for URL $url: ${cause?.message ?: "Unknown error"}"
     }
     

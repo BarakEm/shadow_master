@@ -44,7 +44,7 @@ Shadow Master is an Android app for language learning through "shadowing" - a te
 
 | Component | Path |
 |-----------|------|
-| Entry point | `app/src/main/kotlin/com/barak/shadowmaster/MainActivity.kt` |
+| Entry point | `app/src/main/java/com/shadowmaster/MainActivity.kt` |
 | Foreground service | `service/ShadowingForegroundService.kt` |
 | Main orchestrator | `core/ShadowingCoordinator.kt` |
 | State machine | `core/ShadowingStateMachine.kt` |
