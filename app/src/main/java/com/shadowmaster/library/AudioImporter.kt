@@ -105,6 +105,11 @@ class AudioImporter @Inject constructor(
     ): Result<ImportedAudio> = withContext(Dispatchers.IO) {
         var tempPcmFile: File? = null
         try {
+            // Validate URI before processing
+            InputValidator.validateUri(uri).onFailure { error ->
+                return@withContext Result.failure(error)
+            }
+
             // Extract audio to PCM
             val extractResult = extractAudioToPcmWithError(uri)
             tempPcmFile = extractResult.first

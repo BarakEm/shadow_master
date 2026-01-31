@@ -23,7 +23,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.shadowmaster.data.model.*
 import com.shadowmaster.library.ExportStatus
+import com.shadowmaster.library.InputValidator
 import com.shadowmaster.library.UrlImportStatus
+import com.shadowmaster.ui.components.TextInputDialog
 import com.shadowmaster.ui.theme.ShadowMasterTheme
 import java.text.SimpleDateFormat
 import java.util.*
@@ -262,39 +264,22 @@ fun LibraryScreen(
         )
     }
 
-    // Rename playlist dialog
+    // Rename playlist dialog with validation
     showRenamePlaylistDialog?.let { playlist ->
-        var newName by remember { mutableStateOf(playlist.name) }
-        AlertDialog(
-            onDismissRequest = { showRenamePlaylistDialog = null },
-            title = { Text("Rename Playlist") },
-            text = {
-                OutlinedTextField(
-                    value = newName,
-                    onValueChange = { newName = it },
-                    label = { Text("Name") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+        TextInputDialog(
+            title = "Rename Playlist",
+            label = "Name",
+            initialValue = playlist.name,
+            confirmText = "Rename",
+            validator = { name ->
+                val result = InputValidator.validateName(name)
+                result.exceptionOrNull()?.message
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (newName.isNotBlank()) {
-                            viewModel.renamePlaylist(playlist.id, newName.trim())
-                            showRenamePlaylistDialog = null
-                        }
-                    },
-                    enabled = newName.isNotBlank()
-                ) {
-                    Text("Rename")
-                }
+            onConfirm = { newName ->
+                viewModel.renamePlaylist(playlist.id, newName)
+                showRenamePlaylistDialog = null
             },
-            dismissButton = {
-                TextButton(onClick = { showRenamePlaylistDialog = null }) {
-                    Text("Cancel")
-                }
-            }
+            onDismiss = { showRenamePlaylistDialog = null }
         )
     }
 

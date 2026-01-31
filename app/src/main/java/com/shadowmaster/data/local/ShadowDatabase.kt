@@ -187,7 +187,7 @@ interface SegmentationConfigDao {
         ImportedAudio::class,
         SegmentationConfig::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -254,6 +254,22 @@ abstract class ShadowDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add index on shadow_items.playlistId for playlist queries
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_shadow_items_playlistId ON shadow_items(playlistId)")
+
+                // Add index on shadow_items.importedAudioId for audio lookups
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_shadow_items_importedAudioId ON shadow_items(importedAudioId)")
+
+                // Add index on shadow_playlists.createdAt for sorting operations
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_shadow_playlists_createdAt ON shadow_playlists(createdAt)")
+
+                // Add index on import_jobs.status for job queries
+                database.execSQL("CREATE INDEX IF NOT EXISTS index_import_jobs_status ON import_jobs(status)")
+            }
+        }
+
         fun getDatabase(context: Context): ShadowDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -261,7 +277,7 @@ abstract class ShadowDatabase : RoomDatabase() {
                     ShadowDatabase::class.java,
                     "shadow_library_db"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     .build()
                 INSTANCE = instance
                 instance
