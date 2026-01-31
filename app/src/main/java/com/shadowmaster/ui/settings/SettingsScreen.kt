@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.shadowmaster.R
@@ -19,6 +20,7 @@ import com.shadowmaster.data.model.PracticeMode
 import com.shadowmaster.data.model.SegmentMode
 import com.shadowmaster.data.model.ShadowingConfig
 import com.shadowmaster.data.model.SupportedLanguage
+import com.shadowmaster.ui.theme.ShadowMasterTheme
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -432,5 +434,93 @@ private fun SwitchSetting(
             checked = checked,
             onCheckedChange = onCheckedChange
         )
+    }
+}
+
+// Preview Functions
+
+@Preview(showBackground = true)
+@Composable
+fun LanguageSelectorPreview() {
+    ShadowMasterTheme {
+        Surface {
+            LanguageSelector(
+                selectedLanguage = SupportedLanguage.ENGLISH,
+                onLanguageSelected = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SliderSettingPreview() {
+    ShadowMasterTheme {
+        Surface {
+            SliderSetting(
+                title = "Playback Speed",
+                value = 0.8f,
+                valueRange = 0.5f..2.0f,
+                steps = 15,
+                valueLabel = { "${String.format("%.1f", it)}x" },
+                onValueChange = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun IntSliderSettingPreview() {
+    ShadowMasterTheme {
+        Surface {
+            IntSliderSetting(
+                title = "Playback Repeats",
+                value = 2,
+                valueRange = 1..5,
+                onValueChange = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SegmentModeSelectorPreview() {
+    ShadowMasterTheme {
+        Surface {
+            SegmentModeSelector(
+                selectedMode = SegmentMode.SENTENCE,
+                onModeSelected = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PracticeModeSelectorPreview() {
+    ShadowMasterTheme {
+        Surface {
+            PracticeModeSelector(
+                selectedMode = PracticeMode.STANDARD,
+                onModeSelected = {}
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SwitchSettingPreview() {
+    ShadowMasterTheme {
+        Surface {
+            SwitchSetting(
+                title = "Bus Mode",
+                subtitle = "Listen-only mode without recording",
+                checked = true,
+                onCheckedChange = {}
+            )
+        }
     }
 }

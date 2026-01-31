@@ -14,11 +14,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.shadowmaster.data.model.ShadowItem
 import com.shadowmaster.ui.practice.ImportJobStatus
+import com.shadowmaster.ui.theme.ShadowMasterTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -399,3 +401,195 @@ private data class EmptyStateConfig(
     val title: String,
     val message: String
 )
+
+// Preview Functions
+
+@Preview(showBackground = true)
+@Composable
+fun PracticeStateIndicatorReadyPreview() {
+    ShadowMasterTheme {
+        Surface {
+            Column(modifier = Modifier.padding(16.dp)) {
+                PracticeStateIndicator(state = PracticeState.Ready)
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PracticeStateIndicatorPlayingPreview() {
+    ShadowMasterTheme {
+        Surface {
+            Column(modifier = Modifier.padding(16.dp)) {
+                PracticeStateIndicator(state = PracticeState.Playing(itemIndex = 0, repeatNumber = 2))
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PracticeStateIndicatorUserRecordingPreview() {
+    ShadowMasterTheme {
+        Surface {
+            Column(modifier = Modifier.padding(16.dp)) {
+                PracticeStateIndicator(state = PracticeState.UserRecording(itemIndex = 0, repeatNumber = 1))
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PracticeStateIndicatorPausedPreview() {
+    ShadowMasterTheme {
+        Surface {
+            Column(modifier = Modifier.padding(16.dp)) {
+                PracticeStateIndicator(state = PracticeState.Paused)
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SegmentInfoPreview() {
+    ShadowMasterTheme {
+        Surface {
+            SegmentInfo(
+                item = ShadowItem(
+                    id = "1",
+                    sourceFileUri = "content://test",
+                    sourceFileName = "example.mp3",
+                    sourceStartMs = 0,
+                    sourceEndMs = 3500,
+                    audioFilePath = "/path/to/audio",
+                    durationMs = 3500,
+                    transcription = "Hello, how are you today?",
+                    translation = "こんにちは、今日はお元気ですか？",
+                    language = "en-US",
+                    practiceCount = 5
+                )
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SegmentInfoNoTranscriptionPreview() {
+    ShadowMasterTheme {
+        Surface {
+            SegmentInfo(
+                item = ShadowItem(
+                    id = "1",
+                    sourceFileUri = "content://test",
+                    sourceFileName = "example.mp3",
+                    sourceStartMs = 0,
+                    sourceEndMs = 2000,
+                    audioFilePath = "/path/to/audio",
+                    durationMs = 2000,
+                    language = "en-US",
+                    practiceCount = 0
+                )
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PracticeControlsReadyPreview() {
+    ShadowMasterTheme {
+        Surface {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                PracticeControls(
+                    state = PracticeState.Ready,
+                    items = listOf(
+                        ShadowItem(
+                            id = "1",
+                            sourceFileUri = "content://test",
+                            sourceFileName = "example.mp3",
+                            sourceStartMs = 0,
+                            sourceEndMs = 3000,
+                            audioFilePath = "/path/to/audio",
+                            durationMs = 3000
+                        )
+                    ),
+                    onStart = {},
+                    onPauseResume = {},
+                    onSkip = {},
+                    onStop = {}
+                )
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PracticeControlsPlayingPreview() {
+    ShadowMasterTheme {
+        Surface {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                PracticeControls(
+                    state = PracticeState.Playing(itemIndex = 0, repeatNumber = 1),
+                    items = listOf(
+                        ShadowItem(
+                            id = "1",
+                            sourceFileUri = "content://test",
+                            sourceFileName = "example.mp3",
+                            sourceStartMs = 0,
+                            sourceEndMs = 3000,
+                            audioFilePath = "/path/to/audio",
+                            durationMs = 3000
+                        )
+                    ),
+                    onStart = {},
+                    onPauseResume = {},
+                    onSkip = {},
+                    onStop = {}
+                )
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun PracticeControlsPausedPreview() {
+    ShadowMasterTheme {
+        Surface {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                PracticeControls(
+                    state = PracticeState.Paused,
+                    items = listOf(
+                        ShadowItem(
+                            id = "1",
+                            sourceFileUri = "content://test",
+                            sourceFileName = "example.mp3",
+                            sourceStartMs = 0,
+                            sourceEndMs = 3000,
+                            audioFilePath = "/path/to/audio",
+                            durationMs = 3000
+                        )
+                    ),
+                    onStart = {},
+                    onPauseResume = {},
+                    onSkip = {},
+                    onStop = {}
+                )
+            }
+        }
+    }
+}

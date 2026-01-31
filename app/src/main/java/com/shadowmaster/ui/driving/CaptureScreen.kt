@@ -21,10 +21,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.shadowmaster.ui.theme.ShadowMasterTheme
 
 @Composable
 fun CaptureScreen(
@@ -392,4 +394,74 @@ enum class CaptureState {
     IMPORTING,
     SAVED,
     ERROR
+}
+
+// Preview Functions
+
+@Preview(showBackground = true)
+@Composable
+fun InstructionsCardPreview() {
+    ShadowMasterTheme {
+        Surface {
+            Box(modifier = Modifier.padding(16.dp)) {
+                InstructionsCard()
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun CaptureStatusIndicatorIdlePreview() {
+    ShadowMasterTheme {
+        Surface {
+            CaptureStatusIndicator(
+                state = CaptureState.IDLE,
+                duration = 0,
+                isCapturing = false
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun CaptureStatusIndicatorCapturingPreview() {
+    ShadowMasterTheme {
+        Surface {
+            CaptureStatusIndicator(
+                state = CaptureState.CAPTURING,
+                duration = 45000,
+                isCapturing = true
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun CaptureStatusIndicatorCapturedPreview() {
+    ShadowMasterTheme {
+        Surface {
+            CaptureStatusIndicator(
+                state = CaptureState.CAPTURED,
+                duration = 120000,
+                isCapturing = false
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun CaptureStatusIndicatorSavedPreview() {
+    ShadowMasterTheme {
+        Surface {
+            CaptureStatusIndicator(
+                state = CaptureState.SAVED,
+                duration = 90000,
+                isCapturing = false
+            )
+        }
+    }
 }

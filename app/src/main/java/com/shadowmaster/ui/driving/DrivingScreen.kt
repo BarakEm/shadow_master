@@ -23,12 +23,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.shadowmaster.R
 import com.shadowmaster.data.model.ShadowingState
+import com.shadowmaster.ui.theme.ShadowMasterTheme
 
 @Composable
 fun DrivingScreen(
@@ -389,4 +391,96 @@ private fun PermissionDialog(
             }
         }
     )
+}
+
+// Preview Functions
+
+@Preview(showBackground = true)
+@Composable
+fun StatusIndicatorIdlePreview() {
+    ShadowMasterTheme {
+        Surface {
+            StatusIndicator(state = ShadowingState.Idle)
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun StatusIndicatorListeningPreview() {
+    ShadowMasterTheme {
+        Surface {
+            StatusIndicator(state = ShadowingState.Listening)
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun StatusIndicatorUserRecordingPreview() {
+    ShadowMasterTheme {
+        Surface {
+            StatusIndicator(state = ShadowingState.UserRecording)
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun StatusIndicatorPausedPreview() {
+    ShadowMasterTheme {
+        Surface {
+            StatusIndicator(state = ShadowingState.Paused)
+        }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 400)
+@Composable
+fun ScoreFeedbackCardGoodPreview() {
+    ShadowMasterTheme {
+        Surface {
+            ScoreFeedbackCard(
+                result = com.shadowmaster.data.model.AssessmentResult(
+                    overallScore = 92f,
+                    pronunciationScore = 90f,
+                    fluencyScore = 95f,
+                    completenessScore = 91f,
+                    isGood = true
+                )
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true, widthDp = 400)
+@Composable
+fun ScoreFeedbackCardNeedsWorkPreview() {
+    ShadowMasterTheme {
+        Surface {
+            ScoreFeedbackCard(
+                result = com.shadowmaster.data.model.AssessmentResult(
+                    overallScore = 65f,
+                    pronunciationScore = 60f,
+                    fluencyScore = 70f,
+                    completenessScore = 65f,
+                    isGood = false
+                )
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ScoreBarPreview() {
+    ShadowMasterTheme {
+        Surface {
+            Column(modifier = Modifier.padding(16.dp)) {
+                ScoreBar(label = "Pronunciation", score = 85f)
+                ScoreBar(label = "Fluency", score = 92f)
+                ScoreBar(label = "Completeness", score = 78f)
+            }
+        }
+    }
 }
