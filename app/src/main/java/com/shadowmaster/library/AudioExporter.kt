@@ -135,7 +135,7 @@ class AudioExporter @Inject constructor(
                     error = e.message ?: "Export failed"
                 )
             )
-            Result.failure(e)
+            return@withContext Result.failure(e)
         }
     }
 
