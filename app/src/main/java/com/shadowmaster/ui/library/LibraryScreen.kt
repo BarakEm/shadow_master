@@ -101,7 +101,7 @@ fun LibraryScreen(
                     )
                 },
                 navigationIcon = {
-                    val onBackClick = remember(selectedPlaylist, viewModel, onNavigateBack) {
+                    val onBackClick = remember(selectedPlaylist) {
                         {
                             if (selectedPlaylist != null) {
                                 viewModel.clearSelection()
@@ -485,16 +485,12 @@ fun LibraryScreen(
         val presets = remember { com.shadowmaster.library.SegmentationPresets.getAllPresets() }
         
         // Check if any item in the playlist has an importedAudioId
-        // Use derivedStateOf to only recompute when playlistItems changes
-        val hasImportedAudio by remember(playlistItems) {
-            derivedStateOf {
-                playlistItems.any { it.importedAudioId != null }
-            }
+        // derivedStateOf automatically tracks playlistItems reads
+        val hasImportedAudio by derivedStateOf {
+            playlistItems.any { it.importedAudioId != null }
         }
-        val firstImportedAudioId by remember(playlistItems) {
-            derivedStateOf {
-                playlistItems.firstOrNull { it.importedAudioId != null }?.importedAudioId
-            }
+        val firstImportedAudioId by derivedStateOf {
+            playlistItems.firstOrNull { it.importedAudioId != null }?.importedAudioId
         }
 
         AlertDialog(
