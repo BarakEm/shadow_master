@@ -11,6 +11,7 @@ import com.shadowmaster.data.local.ImportJobDao
 import com.shadowmaster.data.local.ShadowItemDao
 import com.shadowmaster.data.local.ShadowPlaylistDao
 import com.shadowmaster.data.model.*
+import com.shadowmaster.util.NameValidator
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -147,9 +148,20 @@ class AudioImporter @Inject constructor(
 
             // Create playlist
             val playlistId = UUID.randomUUID().toString()
+            val rawName = playlistName ?: "${importedAudio.sourceFileName} (${config.name})"
+            
+            // Validate and sanitize the playlist name
+            val validatedName = when (val result = NameValidator.validatePlaylistName(rawName)) {
+                is NameValidator.ValidationResult.Valid -> rawName.trim()
+                is NameValidator.ValidationResult.Invalid -> {
+                    // Try to sanitize the name, fallback to a default if sanitization fails
+                    NameValidator.sanitizeName(rawName) ?: "Imported Playlist ${System.currentTimeMillis()}"
+                }
+            }
+            
             val playlist = ShadowPlaylist(
                 id = playlistId,
-                name = playlistName ?: "${importedAudio.sourceFileName} (${config.name})",
+                name = validatedName,
                 language = importedAudio.language,
                 sourceType = SourceType.IMPORTED,
                 sourceUri = importedAudio.sourceUri

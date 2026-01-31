@@ -9,6 +9,7 @@ import com.shadowmaster.data.repository.SettingsRepository
 import com.shadowmaster.library.ExportProgress
 import com.shadowmaster.library.LibraryRepository
 import com.shadowmaster.library.UrlImportProgress
+import com.shadowmaster.util.NameValidator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
@@ -175,11 +176,22 @@ class LibraryViewModel @Inject constructor(
 
     fun renamePlaylist(playlistId: String, newName: String) {
         viewModelScope.launch {
-            libraryRepository.renamePlaylist(playlistId, newName)
-            // Update selected playlist if it's the one being renamed
-            _selectedPlaylist.value?.let { current ->
-                if (current.id == playlistId) {
-                    _selectedPlaylist.value = current.copy(name = newName)
+            // Validate the new name
+            val trimmedName = newName.trim()
+            val validationResult = NameValidator.validatePlaylistName(trimmedName)
+            
+            when (validationResult) {
+                is NameValidator.ValidationResult.Valid -> {
+                    libraryRepository.renamePlaylist(playlistId, trimmedName)
+                    // Update selected playlist if it's the one being renamed
+                    _selectedPlaylist.value?.let { current ->
+                        if (current.id == playlistId) {
+                            _selectedPlaylist.value = current.copy(name = trimmedName)
+                        }
+                    }
+                }
+                is NameValidator.ValidationResult.Invalid -> {
+                    _importError.value = validationResult.reason
                 }
             }
         }

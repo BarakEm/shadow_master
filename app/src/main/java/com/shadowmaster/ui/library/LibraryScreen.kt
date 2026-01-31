@@ -23,6 +23,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.shadowmaster.data.model.*
 import com.shadowmaster.library.ExportStatus
 import com.shadowmaster.library.UrlImportStatus
+import com.shadowmaster.util.NameValidator
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -286,27 +287,44 @@ fun LibraryScreen(
     // Rename playlist dialog
     showRenamePlaylistDialog?.let { playlist ->
         var newName by remember { mutableStateOf(playlist.name) }
+        var validationError by remember { mutableStateOf<String?>(null) }
+        
+        // Validate name on change
+        LaunchedEffect(newName) {
+            val trimmedName = newName.trim()
+            validationError = when (val result = NameValidator.validatePlaylistName(trimmedName)) {
+                is NameValidator.ValidationResult.Valid -> null
+                is NameValidator.ValidationResult.Invalid -> result.reason
+            }
+        }
+        
         AlertDialog(
             onDismissRequest = { showRenamePlaylistDialog = null },
             title = { Text("Rename Playlist") },
             text = {
-                OutlinedTextField(
-                    value = newName,
-                    onValueChange = { newName = it },
-                    label = { Text("Name") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column {
+                    OutlinedTextField(
+                        value = newName,
+                        onValueChange = { newName = it },
+                        label = { Text("Name") },
+                        singleLine = true,
+                        isError = validationError != null,
+                        supportingText = validationError?.let { 
+                            { Text(it, color = MaterialTheme.colorScheme.error) }
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        if (newName.isNotBlank()) {
+                        if (validationError == null && newName.isNotBlank()) {
                             viewModel.renamePlaylist(playlist.id, newName.trim())
                             showRenamePlaylistDialog = null
                         }
                     },
-                    enabled = newName.isNotBlank()
+                    enabled = validationError == null && newName.isNotBlank()
                 ) {
                     Text("Rename")
                 }

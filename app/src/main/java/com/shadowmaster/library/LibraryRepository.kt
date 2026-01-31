@@ -3,6 +3,7 @@ package com.shadowmaster.library
 import android.net.Uri
 import com.shadowmaster.data.local.*
 import com.shadowmaster.data.model.*
+import com.shadowmaster.util.NameValidator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 import java.io.File
@@ -60,8 +61,20 @@ class LibraryRepository @Inject constructor(
     suspend fun updateItemTranslation(itemId: String, translation: String?) =
         shadowItemDao.updateTranslation(itemId, translation)
 
-    suspend fun renamePlaylist(playlistId: String, name: String) =
-        shadowPlaylistDao.updateName(playlistId, name)
+    suspend fun renamePlaylist(playlistId: String, name: String) {
+        // Validate and trim the name
+        val trimmedName = name.trim()
+        val validationResult = NameValidator.validatePlaylistName(trimmedName)
+        
+        when (validationResult) {
+            is NameValidator.ValidationResult.Valid -> {
+                shadowPlaylistDao.updateName(playlistId, trimmedName)
+            }
+            is NameValidator.ValidationResult.Invalid -> {
+                throw IllegalArgumentException(validationResult.reason)
+            }
+        }
+    }
 
     // Segment operations
     suspend fun splitSegment(item: ShadowItem, splitPointMs: Long): List<ShadowItem>? =
