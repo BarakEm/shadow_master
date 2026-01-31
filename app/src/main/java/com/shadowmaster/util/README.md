@@ -1,6 +1,178 @@
-# PerformanceTracker
+# Util Package
 
-## Overview
+This package contains utility classes for the Shadow Master app.
+
+## Logger
+
+### Overview
+
+`Logger` is a structured logging utility that provides consistent logging across the Shadow Master app. It features:
+- **Structured Format**: `[timestamp] [level] [tag] message`
+- **Log Levels**: DEBUG, INFO, WARN, ERROR
+- **File Logging**: Optional file-based logging for debugging
+- **CrashReporter Integration**: Automatic error reporting for critical issues
+- **Performance-conscious**: DEBUG logs are no-op in release builds
+
+### Usage Examples
+
+#### Basic Logging
+
+```kotlin
+@Inject lateinit var logger: Logger
+
+// Debug (no-op in release builds)
+logger.d("AudioImporter", "Starting import of ${file.name}")
+
+// Info
+logger.i("AudioImporter", "Successfully imported ${file.name}")
+
+// Warning
+logger.w("AudioImporter", "File format not optimal", exception)
+
+// Error (also reports to CrashReporter if exception provided)
+logger.e("AudioImporter", "Failed to import ${file.name}", exception)
+```
+
+#### Enable File Logging
+
+```kotlin
+// Enable file logging (useful for debugging)
+logger.setFileLoggingEnabled(true)
+
+// Logs will now be written to app's files directory
+logger.i("MyTag", "This will be written to file")
+
+// Export logs to share with developers
+val logFilePath = logger.exportLogsToFile("debug_session.txt")
+```
+
+#### Configure Log Level
+
+```kotlin
+// Set minimum log level (logs below this level will be ignored)
+logger.setMinLogLevel(LogLevel.WARN) // Only WARN and ERROR will be logged
+
+// Reset to default (DEBUG in debug builds, INFO in release builds)
+logger.setMinLogLevel(if (BuildConfig.DEBUG) LogLevel.DEBUG else LogLevel.INFO)
+```
+
+#### Export and Manage Logs
+
+```kotlin
+// Get all log entries in memory
+val entries = logger.getLogEntries()
+
+// Export logs as string
+val logsString = logger.exportLogs()
+
+// Export to file
+val filePath = logger.exportLogsToFile("my_logs.txt")
+
+// Clear logs from memory (does not delete files)
+logger.clearLogEntries()
+
+// Delete all log files from disk
+logger.clearLogFiles()
+
+// Get current log file
+val currentLogFile = logger.getCurrentLogFile()
+
+// Get archived log files
+val archivedFiles = logger.getArchivedLogFiles()
+```
+
+### Log Format
+
+All logs follow this consistent format:
+```
+[2024-01-31 12:34:56.789] [INFO] [AudioImporter] Starting import of podcast.mp3
+[2024-01-31 12:34:58.123] [ERROR] [AudioImporter] Failed to decode audio
+java.io.IOException: Invalid audio format
+    at com.shadowmaster.library.AudioImporter.decode(AudioImporter.kt:123)
+    ...
+```
+
+### File Logging
+
+When file logging is enabled:
+- Logs are written to `app/files/logs/app_logs.txt`
+- Files are automatically rotated when they exceed 5MB
+- Up to 5 archived log files are kept
+- Archived files are named with timestamps: `app_logs_20240131_123456.txt`
+
+### Integration with CrashReporter
+
+The Logger automatically integrates with CrashReporter:
+- ERROR level logs with exceptions are noted in the logs
+- CrashReporter handles uncaught exceptions separately
+- Both systems work together to provide comprehensive debugging information
+
+### Performance
+
+The Logger is designed to be performant:
+- **DEBUG logs**: Completely no-op in release builds (zero overhead)
+- **File logging**: Asynchronous I/O on background thread
+- **Memory management**: Limited to 1000 log entries in memory
+- **Thread-safe**: Uses Kotlin Mutex for safe concurrent access
+
+### Memory Management
+
+- Maximum 1000 log entries kept in memory
+- Oldest entries are automatically removed when limit is reached
+- Use `clearLogEntries()` to manually free memory
+- Log files are limited to 5MB each with automatic rotation
+- Maximum 5 archived log files are kept
+
+### Thread Safety
+
+All logging operations are thread-safe:
+- Uses Kotlin `Mutex` for synchronization
+- File I/O runs on `Dispatchers.IO` coroutine dispatcher
+- Safe to call from any thread or coroutine context
+
+### Best Practices
+
+1. **Use appropriate log levels**:
+   - DEBUG: Verbose information for development
+   - INFO: Important events and milestones
+   - WARN: Recoverable errors or unexpected conditions
+   - ERROR: Critical errors that may affect functionality
+
+2. **Tag naming**: Use clear, consistent tags (usually class name)
+   ```kotlin
+   companion object {
+       private const val TAG = "AudioImporter"
+   }
+   logger.i(TAG, "Import completed")
+   ```
+
+3. **Structured messages**: Include context in log messages
+   ```kotlin
+   logger.i(TAG, "Imported ${segments.size} segments from ${file.name} in ${duration}ms")
+   ```
+
+4. **Exception logging**: Always include throwables for warnings and errors
+   ```kotlin
+   try {
+       importAudio()
+   } catch (e: Exception) {
+       logger.e(TAG, "Import failed for ${file.name}", e)
+   }
+   ```
+
+5. **File logging**: Enable only when needed for debugging
+   ```kotlin
+   // Enable for debug builds or when troubleshooting
+   if (BuildConfig.DEBUG || debugMode) {
+       logger.setFileLoggingEnabled(true)
+   }
+   ```
+
+---
+
+## PerformanceTracker
+
+### Overview
 
 `PerformanceTracker` is a utility class for collecting performance metrics in the Shadow Master app. It tracks:
 - **Audio Import**: Duration, file size, format, success/failure
