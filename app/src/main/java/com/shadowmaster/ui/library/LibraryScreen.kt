@@ -23,6 +23,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.shadowmaster.data.model.*
 import com.shadowmaster.library.ExportStatus
 import com.shadowmaster.library.UrlImportStatus
+import com.shadowmaster.ui.components.ConfirmationDialog
+import com.shadowmaster.ui.components.TextInputDialog
+import com.shadowmaster.ui.components.SelectionDialog
+import com.shadowmaster.ui.components.ProgressDialog
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -261,61 +265,35 @@ fun LibraryScreen(
 
     // Delete confirmation dialog
     showDeleteDialog?.let { playlist ->
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = null },
-            title = { Text("Delete Playlist") },
-            text = { Text("Delete \"${playlist.name}\" and all its items?") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deletePlaylist(playlist)
-                        showDeleteDialog = null
-                    }
-                ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
-                }
+        ConfirmationDialog(
+            title = "Delete Playlist",
+            message = "Delete \"${playlist.name}\" and all its items?",
+            confirmText = "Delete",
+            dismissText = "Cancel",
+            isDestructive = true,
+            onConfirm = {
+                viewModel.deletePlaylist(playlist)
+                showDeleteDialog = null
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = null }) {
-                    Text("Cancel")
-                }
-            }
+            onDismiss = { showDeleteDialog = null }
         )
     }
 
     // Rename playlist dialog
     showRenamePlaylistDialog?.let { playlist ->
-        var newName by remember { mutableStateOf(playlist.name) }
-        AlertDialog(
-            onDismissRequest = { showRenamePlaylistDialog = null },
-            title = { Text("Rename Playlist") },
-            text = {
-                OutlinedTextField(
-                    value = newName,
-                    onValueChange = { newName = it },
-                    label = { Text("Name") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+        TextInputDialog(
+            title = "Rename Playlist",
+            label = "Name",
+            initialValue = playlist.name,
+            confirmText = "Rename",
+            dismissText = "Cancel",
+            singleLine = true,
+            validator = { it.isNotBlank() },
+            onConfirm = { newName ->
+                viewModel.renamePlaylist(playlist.id, newName)
+                showRenamePlaylistDialog = null
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (newName.isNotBlank()) {
-                            viewModel.renamePlaylist(playlist.id, newName.trim())
-                            showRenamePlaylistDialog = null
-                        }
-                    },
-                    enabled = newName.isNotBlank()
-                ) {
-                    Text("Rename")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRenamePlaylistDialog = null }) {
-                    Text("Cancel")
-                }
-            }
+            onDismiss = { showRenamePlaylistDialog = null }
         )
     }
 
@@ -595,55 +573,39 @@ fun LibraryScreen(
 
     // Export progress dialog
     if (exportProgress.status != ExportStatus.IDLE) {
-        AlertDialog(
-            onDismissRequest = {
-                if (exportProgress.status == ExportStatus.COMPLETED || exportProgress.status == ExportStatus.FAILED) {
-                    viewModel.clearExportProgress()
-                }
+        val isComplete = exportProgress.status == ExportStatus.COMPLETED || exportProgress.status == ExportStatus.FAILED
+        val showProgressIndicator = exportProgress.status == ExportStatus.EXPORTING || exportProgress.status == ExportStatus.ENCODING
+        
+        ProgressDialog(
+            title = "Exporting Audio",
+            message = when (exportProgress.status) {
+                ExportStatus.PREPARING -> "Preparing..."
+                ExportStatus.EXPORTING -> "Exporting segment ${exportProgress.currentSegment}/${exportProgress.totalSegments}"
+                ExportStatus.ENCODING -> "Creating audio file..."
+                ExportStatus.COMPLETED -> "Export complete!"
+                ExportStatus.FAILED -> "Export failed: ${exportProgress.error}"
+                ExportStatus.IDLE -> ""
             },
-            title = { Text("Exporting Audio") },
-            text = {
-                Column(modifier = Modifier.fillMaxWidth()) {
+            progress = if (showProgressIndicator) exportProgress.progress / 100f else null,
+            showProgress = showProgressIndicator,
+            additionalContent = if (exportProgress.status == ExportStatus.COMPLETED && exportProgress.outputPath != null) {
+                {
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = when (exportProgress.status) {
-                            ExportStatus.PREPARING -> "Preparing..."
-                            ExportStatus.EXPORTING -> "Exporting segment ${exportProgress.currentSegment}/${exportProgress.totalSegments}"
-                            ExportStatus.ENCODING -> "Creating audio file..."
-                            ExportStatus.COMPLETED -> "Export complete!"
-                            ExportStatus.FAILED -> "Export failed: ${exportProgress.error}"
-                            ExportStatus.IDLE -> ""
-                        },
-                        style = MaterialTheme.typography.bodyMedium
+                        text = "Saved to: ${exportProgress.outputPath}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
                     )
-                    if (exportProgress.status == ExportStatus.EXPORTING || exportProgress.status == ExportStatus.ENCODING) {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        LinearProgressIndicator(
-                            progress = { exportProgress.progress / 100f },
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-                    if (exportProgress.status == ExportStatus.COMPLETED && exportProgress.outputPath != null) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Saved to: ${exportProgress.outputPath}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                    }
                 }
-            },
-            confirmButton = {
-                if (exportProgress.status == ExportStatus.COMPLETED || exportProgress.status == ExportStatus.FAILED) {
-                    TextButton(onClick = { viewModel.clearExportProgress() }) {
-                        Text("OK")
-                    }
-                }
-            },
-            dismissButton = {
-                if (exportProgress.status != ExportStatus.COMPLETED && exportProgress.status != ExportStatus.FAILED) {
-                    TextButton(onClick = { viewModel.cancelExport() }) {
-                        Text("Cancel")
-                    }
+            } else null,
+            dismissible = isComplete,
+            confirmText = if (isComplete) "OK" else null,
+            cancelText = if (!isComplete) "Cancel" else null,
+            onConfirm = if (isComplete) ({ viewModel.clearExportProgress() }) else null,
+            onCancel = if (!isComplete) ({ viewModel.cancelExport() }) else null,
+            onDismiss = {
+                if (isComplete) {
+                    viewModel.clearExportProgress()
                 }
             }
         )
@@ -651,47 +613,23 @@ fun LibraryScreen(
 
     // URL import dialog
     if (showUrlImportDialog) {
-        AlertDialog(
-            onDismissRequest = { showUrlImportDialog = false },
-            title = { Text("Import from URL") },
-            text = {
-                Column {
-                    Text(
-                        "Paste a YouTube, SoundCloud, or direct audio URL",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = urlToImport,
-                        onValueChange = { urlToImport = it },
-                        label = { Text("URL") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+        TextInputDialog(
+            title = "Import from URL",
+            label = "URL",
+            initialValue = urlToImport,
+            placeholder = "Paste a YouTube, SoundCloud, or direct audio URL",
+            confirmText = "Import",
+            dismissText = "Cancel",
+            singleLine = true,
+            validator = { it.isNotBlank() },
+            onConfirm = { url ->
+                viewModel.importFromUrl(url)
+                showUrlImportDialog = false
+                urlToImport = ""
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (urlToImport.isNotBlank()) {
-                            viewModel.importFromUrl(urlToImport)
-                            showUrlImportDialog = false
-                            urlToImport = ""
-                        }
-                    },
-                    enabled = urlToImport.isNotBlank()
-                ) {
-                    Text("Import")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = {
-                    showUrlImportDialog = false
-                    urlToImport = ""
-                }) {
-                    Text("Cancel")
-                }
+            onDismiss = {
+                showUrlImportDialog = false
+                urlToImport = ""
             }
         )
     }
