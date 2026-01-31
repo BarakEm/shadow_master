@@ -45,6 +45,7 @@ class ExportProgressTracker @Inject constructor() {
 
     /**
      * Update only specific fields of the current progress.
+     * Pass null to keep existing values, pass explicit values (including 0) to update.
      */
     fun updateProgress(
         status: ExportStatus? = null,
@@ -56,9 +57,9 @@ class ExportProgressTracker @Inject constructor() {
     ) {
         _exportProgress.value = _exportProgress.value.copy(
             status = status ?: _exportProgress.value.status,
-            progress = progress ?: _exportProgress.value.progress,
-            currentSegment = currentSegment ?: _exportProgress.value.currentSegment,
-            totalSegments = totalSegments ?: _exportProgress.value.totalSegments,
+            progress = if (progress != null) progress else _exportProgress.value.progress,
+            currentSegment = if (currentSegment != null) currentSegment else _exportProgress.value.currentSegment,
+            totalSegments = if (totalSegments != null) totalSegments else _exportProgress.value.totalSegments,
             outputPath = outputPath ?: _exportProgress.value.outputPath,
             error = error ?: _exportProgress.value.error
         )
