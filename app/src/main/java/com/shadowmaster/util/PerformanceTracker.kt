@@ -337,6 +337,12 @@ class PerformanceTracker @Inject constructor(
 
     /**
      * Track a database query with automatic timing (use for quick queries).
+     * Automatically extracts record count if result is a Collection.
+     * 
+     * @param queryType Type of query (e.g., "SELECT", "INSERT", "UPDATE")
+     * @param tableName Name of the table being queried
+     * @param block The query operation to track
+     * @return The result of the query operation
      */
     suspend fun <T> trackDatabaseQuery(
         queryType: String,
@@ -346,7 +352,15 @@ class PerformanceTracker @Inject constructor(
         val id = startDatabaseQuery(queryType, tableName)
         return try {
             val result = block()
-            endDatabaseQuery(id, success = true)
+            
+            // Automatically extract record count if result is a Collection
+            val recordCount = when (result) {
+                is Collection<*> -> result.size
+                is Array<*> -> result.size
+                else -> 0
+            }
+            
+            endDatabaseQuery(id, success = true, recordCount = recordCount)
             result
         } catch (e: Exception) {
             endDatabaseQuery(id, success = false, error = e.message)
@@ -438,23 +452,34 @@ class PerformanceTracker @Inject constructor(
             json.put("sessionStartTime", sessionStartTime)
             json.put("totalMetrics", metrics.size)
             
-            // Summary
-            val summary = getSummary()
+            // Calculate summary inline to avoid deadlock (getSummary() also acquires mutex)
+            val audioImports = metrics.filterIsInstance<AudioImportMetric>()
+            val segmentations = metrics.filterIsInstance<SegmentationMetric>()
+            val uiRenders = metrics.filterIsInstance<UIRenderMetric>()
+            val dbQueries = metrics.filterIsInstance<DatabaseQueryMetric>()
+            
+            val summary = PerformanceSummary(
+                sessionStartTime = sessionStartTime,
+                totalMetrics = metrics.size,
+                audioImportCount = audioImports.size,
+                audioImportSuccessRate = calculateSuccessRate(audioImports.map { it.success }),
+                audioImportAvgDurationMs = calculateAvgDuration(audioImports),
+                segmentationCount = segmentations.size,
+                segmentationSuccessRate = calculateSuccessRate(segmentations.map { it.success }),
+                segmentationAvgDurationMs = calculateAvgDuration(segmentations),
+                uiRenderCount = uiRenders.size,
+                uiRenderAvgDurationMs = calculateAvgDuration(uiRenders),
+                dbQueryCount = dbQueries.size,
+                dbQuerySuccessRate = calculateSuccessRate(dbQueries.map { it.success }),
+                dbQueryAvgDurationMs = calculateAvgDuration(dbQueries)
+            )
             json.put("summary", summary.toJson())
             
             // Detailed metrics by type
-            json.put("audioImports", metricsToJsonArray(
-                metrics.filterIsInstance<AudioImportMetric>()
-            ))
-            json.put("segmentations", metricsToJsonArray(
-                metrics.filterIsInstance<SegmentationMetric>()
-            ))
-            json.put("uiRenders", metricsToJsonArray(
-                metrics.filterIsInstance<UIRenderMetric>()
-            ))
-            json.put("databaseQueries", metricsToJsonArray(
-                metrics.filterIsInstance<DatabaseQueryMetric>()
-            ))
+            json.put("audioImports", metricsToJsonArray(audioImports))
+            json.put("segmentations", metricsToJsonArray(segmentations))
+            json.put("uiRenders", metricsToJsonArray(uiRenders))
+            json.put("databaseQueries", metricsToJsonArray(dbQueries))
             
             json.toString(2) // Pretty print with 2-space indent
         }
