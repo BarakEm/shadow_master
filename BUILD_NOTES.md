@@ -29,20 +29,28 @@ Use these lightweight alternatives:
 
 ## Critical Issues
 
-### Issue #75: Audio Import Creates Empty Playlist
+### Issue #75: Audio Import Creates Empty Playlist ✅ FIXED
 
-After merging all 20 Copilot PRs, audio import is broken:
-- Import appears to succeed
-- Playlist is created
-- But playlist contains no items
-- App is currently unusable
+**Problem:** After merging all 20 Copilot PRs, audio import was broken:
+- Import appeared to succeed
+- Playlist was created
+- But playlist contained no items
+- App was unusable
 
-**Suspected causes:**
-- VAD initialization failing
-- Segment detection returning empty
-- Database insertion not committing
-- AudioFileUtility injection issue (from PR #62)
-- Error handling changes (from PR #67) swallowing errors
+**Root Cause:** Silent failure in segment extraction
+- `AudioImporter.segmentImportedAudio()` called `extractSegment()` for each detected speech segment
+- If `extractSegment()` returned null (extraction failed), the segment was silently skipped
+- If ALL segments failed to extract, an empty list was inserted into the database
+- The function returned success even with 0 items, creating empty playlists
 
-**Delegated to:** GitHub Copilot (Issue #75)
-**Priority:** CRITICAL - blocks all app functionality
+**Fix Applied:**
+1. Added warning log for each failed segment extraction
+2. Added check after extraction loop - if `shadowItems.isEmpty()`, delete the playlist and return `StorageError`
+3. This ensures the user gets a clear error message instead of an empty playlist
+
+**Files Modified:**
+- `app/src/main/java/com/shadowmaster/library/AudioImporter.kt` (lines 273-305)
+
+**Status:** ✅ FIXED - Proper error handling added
+**Fixed by:** GitHub Copilot
+**Commit:** 58bb3fa
