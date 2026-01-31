@@ -132,11 +132,14 @@ class AudioProcessingPipelineTest {
     }
     
     @Test
-    fun `test circular buffer thread safety with concurrent writes`() = runTest {
+    fun `test circular buffer with rapid sequential writes`() = runTest {
         // Given
         val buffer = CircularAudioBuffer(maxDurationMs = 1000, sampleRate = 16000)
         
-        // When - Multiple writes to simulate concurrent access
+        // When - Multiple rapid writes (simulating real-time audio processing)
+        // Note: True concurrent thread safety testing requires integration tests
+        // with actual threads. This tests rapid sequential access which is
+        // the normal usage pattern in the coroutine-based audio pipeline.
         repeat(10) {
             buffer.write(ShortArray(100) { it.toShort() })
         }
@@ -232,29 +235,44 @@ class AudioProcessingPipelineTest {
     }
 
     /**
-     * Test AudioProcessingPipeline constants and configuration
+     * Test AudioProcessingPipeline constants and configuration.
+     * 
+     * Note: These constants are private in AudioProcessingPipeline, but their values
+     * are critical for proper audio processing. This test documents the expected values.
+     * If the actual constants change, this test will need to be updated to match.
      */
     @Test
-    fun `test pipeline constants are properly defined`() {
-        // These constants are critical for proper audio processing
-        val minSpeechDuration = 500L // MIN_SPEECH_DURATION_MS
-        val maxSpeechDuration = 8000L // MAX_SPEECH_DURATION_MS
-        val preSpeechBuffer = 200L // PRE_SPEECH_BUFFER_MS
+    fun `test pipeline constants are properly defined for audio processing`() {
+        // Expected values based on AudioProcessingPipeline implementation
+        val expectedMinSpeechDuration = 500L // MIN_SPEECH_DURATION_MS
+        val expectedMaxSpeechDuration = 8000L // MAX_SPEECH_DURATION_MS
+        val expectedPreSpeechBuffer = 200L // PRE_SPEECH_BUFFER_MS
         
-        assertTrue("Min speech duration should be reasonable", minSpeechDuration > 0)
+        // Verify the relationships between constants make sense
+        assertTrue("Min speech duration should be reasonable for human speech", 
+                   expectedMinSpeechDuration >= 100)
         assertTrue("Max speech duration should be greater than min", 
-                   maxSpeechDuration > minSpeechDuration)
-        assertTrue("Pre-speech buffer should be positive", preSpeechBuffer > 0)
+                   expectedMaxSpeechDuration > expectedMinSpeechDuration)
+        assertTrue("Max should allow for complete sentences", 
+                   expectedMaxSpeechDuration >= 5000)
+        assertTrue("Pre-speech buffer should be positive", 
+                   expectedPreSpeechBuffer > 0)
+        assertTrue("Pre-speech buffer should be reasonable", 
+                   expectedPreSpeechBuffer < expectedMinSpeechDuration)
     }
     
     @Test
     fun `test frame size aligns with VAD requirements`() {
         // VAD requires 512-sample frames at 16kHz
-        val frameSize = 512
+        val expectedFrameSize = SileroVadDetector.FRAME_SIZE_SAMPLES // 512
         val sampleRate = 16000
-        val frameDurationMs = (frameSize * 1000.0) / sampleRate
+        val frameDurationMs = (expectedFrameSize * 1000.0) / sampleRate
         
-        assertEquals(32.0, frameDurationMs, 0.1)
-        assertTrue("Frame duration should be ~32ms for VAD", frameDurationMs >= 30 && frameDurationMs <= 35)
+        assertEquals("Frame size should be 512 samples for Silero VAD", 
+                     512, expectedFrameSize)
+        assertEquals("Frame duration should be ~32ms for VAD", 
+                     32.0, frameDurationMs, 0.1)
+        assertTrue("Frame duration should be suitable for real-time processing", 
+                   frameDurationMs >= 30 && frameDurationMs <= 35)
     }
 }
