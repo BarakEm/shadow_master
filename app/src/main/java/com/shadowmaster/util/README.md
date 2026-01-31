@@ -87,20 +87,33 @@ suspend fun segmentAudio(audioFile: String, mode: String, audioLengthMs: Long) {
 ### UI Rendering Tracking
 
 ```kotlin
+@HiltViewModel
+class LibraryViewModel @Inject constructor(
+    private val performanceTracker: PerformanceTracker,
+    private val libraryRepository: LibraryRepository
+) : ViewModel() {
+
+    fun trackInitialRender() {
+        viewModelScope.launch {
+            val operationId = performanceTracker.startUIRender(
+                screenName = "LibraryScreen",
+                operation = "initial_load"
+            )
+
+            // Load data...
+            libraryRepository.loadPlaylists()
+
+            performanceTracker.endUIRender(operationId)
+        }
+    }
+}
+
 @Composable
-fun LibraryScreen() {
-    val performanceTracker = hiltViewModel<LibraryViewModel>().performanceTracker
-    
+fun LibraryScreen(
+    viewModel: LibraryViewModel = hiltViewModel()
+) {
     LaunchedEffect(Unit) {
-        val operationId = performanceTracker.startUIRender(
-            screenName = "LibraryScreen",
-            operation = "initial_load"
-        )
-        
-        // Load data...
-        loadPlaylists()
-        
-        performanceTracker.endUIRender(operationId)
+        viewModel.trackInitialRender()
     }
     
     // UI content...
@@ -175,6 +188,9 @@ performanceTracker.clearMetrics()
 
 // Reset (clear + re-enable)
 performanceTracker.reset()
+
+// Release resources (call when tracker is no longer needed)
+performanceTracker.release()
 ```
 
 ## JSON Export Format

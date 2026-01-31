@@ -6,6 +6,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -116,8 +117,8 @@ class PerformanceTracker @Inject constructor(
     private val _metricsCount = MutableStateFlow(0)
     val metricsCount: StateFlow<Int> = _metricsCount.asStateFlow()
     
-    private var enabled: Boolean = true
-    private var sessionStartTime: Long = System.currentTimeMillis()
+    @Volatile private var enabled: Boolean = true
+    @Volatile private var sessionStartTime: Long = System.currentTimeMillis()
 
     /**
      * Enable or disable metrics collection.
@@ -131,7 +132,7 @@ class PerformanceTracker @Inject constructor(
      * Start tracking an audio import operation.
      * @return Operation ID to use when ending the operation
      */
-    fun startAudioImport(fileName: String, fileSizeBytes: Long): String {
+    suspend fun startAudioImport(fileName: String, fileSizeBytes: Long): String {
         if (!enabled) return ""
         
         val operationId = UUID.randomUUID().toString()
@@ -142,9 +143,7 @@ class PerformanceTracker @Inject constructor(
             fileSizeBytes = fileSizeBytes
         )
         
-        scope.launch {
-            addMetric(metric)
-        }
+        addMetric(metric)
         
         return operationId
     }
@@ -152,7 +151,7 @@ class PerformanceTracker @Inject constructor(
     /**
      * End tracking an audio import operation.
      */
-    fun endAudioImport(
+    suspend fun endAudioImport(
         operationId: String,
         success: Boolean,
         durationSeconds: Double? = null,
@@ -161,22 +160,20 @@ class PerformanceTracker @Inject constructor(
     ) {
         if (!enabled || operationId.isEmpty()) return
         
-        scope.launch {
-            mutex.withLock {
-                val index = metrics.indexOfFirst { 
-                    it is AudioImportMetric && it.operationId == operationId 
-                }
-                
-                if (index != -1) {
-                    val existing = metrics[index] as AudioImportMetric
-                    metrics[index] = existing.copy(
-                        endTime = System.currentTimeMillis(),
-                        success = success,
-                        durationSeconds = durationSeconds,
-                        audioFormat = audioFormat,
-                        error = error
-                    )
-                }
+        mutex.withLock {
+            val index = metrics.indexOfFirst { 
+                it is AudioImportMetric && it.operationId == operationId 
+            }
+            
+            if (index != -1) {
+                val existing = metrics[index] as AudioImportMetric
+                metrics[index] = existing.copy(
+                    endTime = System.currentTimeMillis(),
+                    success = success,
+                    durationSeconds = durationSeconds,
+                    audioFormat = audioFormat,
+                    error = error
+                )
             }
         }
     }
@@ -185,7 +182,7 @@ class PerformanceTracker @Inject constructor(
      * Start tracking a segmentation operation.
      * @return Operation ID to use when ending the operation
      */
-    fun startSegmentation(
+    suspend fun startSegmentation(
         audioFileName: String,
         segmentationMode: String,
         audioLengthMs: Long
@@ -201,9 +198,7 @@ class PerformanceTracker @Inject constructor(
             audioLengthMs = audioLengthMs
         )
         
-        scope.launch {
-            addMetric(metric)
-        }
+        addMetric(metric)
         
         return operationId
     }
@@ -211,7 +206,7 @@ class PerformanceTracker @Inject constructor(
     /**
      * End tracking a segmentation operation.
      */
-    fun endSegmentation(
+    suspend fun endSegmentation(
         operationId: String,
         success: Boolean,
         segmentsDetected: Int = 0,
@@ -219,21 +214,19 @@ class PerformanceTracker @Inject constructor(
     ) {
         if (!enabled || operationId.isEmpty()) return
         
-        scope.launch {
-            mutex.withLock {
-                val index = metrics.indexOfFirst { 
-                    it is SegmentationMetric && it.operationId == operationId 
-                }
-                
-                if (index != -1) {
-                    val existing = metrics[index] as SegmentationMetric
-                    metrics[index] = existing.copy(
-                        endTime = System.currentTimeMillis(),
-                        success = success,
-                        segmentsDetected = segmentsDetected,
-                        error = error
-                    )
-                }
+        mutex.withLock {
+            val index = metrics.indexOfFirst { 
+                it is SegmentationMetric && it.operationId == operationId 
+            }
+            
+            if (index != -1) {
+                val existing = metrics[index] as SegmentationMetric
+                metrics[index] = existing.copy(
+                    endTime = System.currentTimeMillis(),
+                    success = success,
+                    segmentsDetected = segmentsDetected,
+                    error = error
+                )
             }
         }
     }
@@ -242,7 +235,7 @@ class PerformanceTracker @Inject constructor(
      * Start tracking a UI render operation.
      * @return Operation ID to use when ending the operation
      */
-    fun startUIRender(screenName: String, operation: String): String {
+    suspend fun startUIRender(screenName: String, operation: String): String {
         if (!enabled) return ""
         
         val operationId = UUID.randomUUID().toString()
@@ -253,9 +246,7 @@ class PerformanceTracker @Inject constructor(
             operation = operation
         )
         
-        scope.launch {
-            addMetric(metric)
-        }
+        addMetric(metric)
         
         return operationId
     }
@@ -263,22 +254,20 @@ class PerformanceTracker @Inject constructor(
     /**
      * End tracking a UI render operation.
      */
-    fun endUIRender(operationId: String, frameCount: Int = 0) {
+    suspend fun endUIRender(operationId: String, frameCount: Int = 0) {
         if (!enabled || operationId.isEmpty()) return
         
-        scope.launch {
-            mutex.withLock {
-                val index = metrics.indexOfFirst { 
-                    it is UIRenderMetric && it.operationId == operationId 
-                }
-                
-                if (index != -1) {
-                    val existing = metrics[index] as UIRenderMetric
-                    metrics[index] = existing.copy(
-                        endTime = System.currentTimeMillis(),
-                        frameCount = frameCount
-                    )
-                }
+        mutex.withLock {
+            val index = metrics.indexOfFirst { 
+                it is UIRenderMetric && it.operationId == operationId 
+            }
+            
+            if (index != -1) {
+                val existing = metrics[index] as UIRenderMetric
+                metrics[index] = existing.copy(
+                    endTime = System.currentTimeMillis(),
+                    frameCount = frameCount
+                )
             }
         }
     }
@@ -287,7 +276,7 @@ class PerformanceTracker @Inject constructor(
      * Start tracking a database query operation.
      * @return Operation ID to use when ending the operation
      */
-    fun startDatabaseQuery(queryType: String, tableName: String): String {
+    suspend fun startDatabaseQuery(queryType: String, tableName: String): String {
         if (!enabled) return ""
         
         val operationId = UUID.randomUUID().toString()
@@ -298,9 +287,7 @@ class PerformanceTracker @Inject constructor(
             tableName = tableName
         )
         
-        scope.launch {
-            addMetric(metric)
-        }
+        addMetric(metric)
         
         return operationId
     }
@@ -308,7 +295,7 @@ class PerformanceTracker @Inject constructor(
     /**
      * End tracking a database query operation.
      */
-    fun endDatabaseQuery(
+    suspend fun endDatabaseQuery(
         operationId: String,
         success: Boolean,
         recordCount: Int = 0,
@@ -316,21 +303,19 @@ class PerformanceTracker @Inject constructor(
     ) {
         if (!enabled || operationId.isEmpty()) return
         
-        scope.launch {
-            mutex.withLock {
-                val index = metrics.indexOfFirst { 
-                    it is DatabaseQueryMetric && it.operationId == operationId 
-                }
-                
-                if (index != -1) {
-                    val existing = metrics[index] as DatabaseQueryMetric
-                    metrics[index] = existing.copy(
-                        endTime = System.currentTimeMillis(),
-                        success = success,
-                        recordCount = recordCount,
-                        error = error
-                    )
-                }
+        mutex.withLock {
+            val index = metrics.indexOfFirst { 
+                it is DatabaseQueryMetric && it.operationId == operationId 
+            }
+            
+            if (index != -1) {
+                val existing = metrics[index] as DatabaseQueryMetric
+                metrics[index] = existing.copy(
+                    endTime = System.currentTimeMillis(),
+                    success = success,
+                    recordCount = recordCount,
+                    error = error
+                )
             }
         }
     }
@@ -546,19 +531,17 @@ class PerformanceTracker @Inject constructor(
      * @return File path where the JSON was saved
      */
     suspend fun saveToFile(json: String, fileName: String = "performance_metrics.json"): String {
-        return mutex.withLock {
-            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
-                .format(Date())
-            val fullFileName = "metrics_${timestamp}_$fileName"
-            val file = File(context.cacheDir, fullFileName)
-            
-            FileWriter(file).use { writer ->
-                writer.write(json)
-            }
-            
-            Log.i(TAG, "Performance metrics saved to: ${file.absolutePath}")
-            file.absolutePath
+        val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US)
+            .format(Date())
+        val fullFileName = "metrics_${timestamp}_$fileName"
+        val file = File(context.cacheDir, fullFileName)
+        
+        FileWriter(file).use { writer ->
+            writer.write(json)
         }
+        
+        Log.i(TAG, "Performance metrics saved to: ${file.absolutePath}")
+        return file.absolutePath
     }
 
     /**
@@ -578,7 +561,18 @@ class PerformanceTracker @Inject constructor(
      */
     suspend fun reset() {
         clearMetrics()
-        enabled = true
+        mutex.withLock {
+            enabled = true
+        }
+    }
+    
+    /**
+     * Release resources used by the PerformanceTracker.
+     * Call this when the tracker is no longer needed.
+     */
+    fun release() {
+        scope.cancel()
+        Log.d(TAG, "PerformanceTracker resources released")
     }
 }
 
