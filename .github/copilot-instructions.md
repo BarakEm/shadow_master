@@ -201,8 +201,8 @@ Shadow Master is an Android app for language learning through "shadowing" - a te
 - Export playlist as practice audio
 
 ### 📋 Version 1.2 (Planned)
-- Automatic transcription (Speech-to-Text API)
-- Automatic translation (Translation API)
+- Automatic transcription (Google Cloud Speech-to-Text, Azure Speech Services, or Whisper API)
+- Automatic translation (Google Cloud Translation, Azure Translator, or DeepL API)
 - Real Azure pronunciation assessment
 - Import from URL (YouTube, podcasts)
 
