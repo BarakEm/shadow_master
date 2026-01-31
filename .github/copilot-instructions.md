@@ -35,6 +35,13 @@ Shadow Master is an Android app for language learning through "shadowing" - a te
 4. **Playback** (`PlaybackEngine`) - AudioTrack for segment playback
 5. **Recording** (`UserRecordingManager`) - microphone capture for user speech
 
+### Audio Export Architecture
+The audio export system is split into focused classes:
+- `AudioExporter` - Main orchestrator, manages workflow and temp files
+- `ExportProgressTracker` - Progress state management with StateFlow
+- `PlaylistExporter` - Audio generation logic (beeps, repeats, silence)
+- `WavFileCreator` - WAV file creation and MediaStore operations
+
 ### Dependency Injection
 - All managers are `@Singleton` with `@Inject constructor`
 - Activities/Services use `@AndroidEntryPoint`
@@ -56,7 +63,10 @@ Shadow Master is an Android app for language learning through "shadowing" - a te
 | Settings repository | `data/repository/SettingsRepository.kt` |
 | Library repository | `data/repository/LibraryRepository.kt` |
 | Audio importer | `library/AudioImporter.kt` |
-| Audio exporter | `library/AudioExporter.kt` |
+| Audio exporter | `library/AudioExporter.kt` (orchestrator) |
+| Export progress tracker | `library/ExportProgressTracker.kt` |
+| Playlist exporter | `library/PlaylistExporter.kt` |
+| WAV file creator | `library/WavFileCreator.kt` |
 | UI screens | `ui/home/`, `ui/library/`, `ui/practice/`, `ui/driving/`, `ui/settings/` |
 
 ## Common Development Tasks
