@@ -160,13 +160,18 @@ class UserRecordingManager @Inject constructor(
             cb
         }
 
-        withContext(Dispatchers.Main) {
-            callback?.invoke(segment)
+        // Invoke callback with error handling
+        try {
+            withContext(Dispatchers.Main) {
+                callback?.invoke(segment)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error invoking recording completion callback", e)
         }
     }
 
     fun stopRecording() {
-        synchronized(this) {
+        val shouldLaunchCleanup = synchronized(this) {
             if (!isRecording) {
                 return
             }
@@ -177,11 +182,16 @@ class UserRecordingManager @Inject constructor(
             }
 
             isRecording = false
-            
+            true
+        }
+        
+        if (shouldLaunchCleanup) {
             cleanupJob = scope.launch {
                 try {
-                    // Wait for the recording job to complete before finishing
-                    recordingJob?.join()
+                    // Wait for the recording job to complete (with timeout)
+                    withTimeoutOrNull(5000) {
+                        recordingJob?.join()
+                    } ?: Log.w(TAG, "Recording job did not complete within timeout")
                 } catch (e: Exception) {
                     Log.e(TAG, "Error waiting for recording job", e)
                 } finally {
