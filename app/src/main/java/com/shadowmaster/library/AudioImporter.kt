@@ -57,8 +57,45 @@ class AudioImporter @Inject constructor(
 
 
     /**
-     * Import audio file and store PCM without segmentation.
-     * Returns ImportedAudio entity for later segmentation.
+     * Import an audio file and store as PCM without performing segmentation.
+     * 
+     * This method extracts audio from any supported format (MP3, WAV, M4A, AAC, OGG, FLAC)
+     * and converts it to 16kHz mono PCM format suitable for VAD processing. The PCM data
+     * is stored persistently for later segmentation with different configurations.
+     * 
+     * The import process includes:
+     * 1. Decode audio using MediaCodec
+     * 2. Convert to mono if multi-channel
+     * 3. Resample to 16kHz if needed
+     * 4. Save to persistent storage
+     * 5. Create database record
+     * 
+     * @param uri The URI of the audio file to import (supports content://, file://, etc.)
+     * @param language The language code for the audio content (e.g., "en", "es", "fr").
+     *                 Defaults to "auto" for automatic detection (not yet implemented).
+     * @return Result containing the [ImportedAudio] entity on success, or an exception on failure.
+     *         Failure reasons include: file not found, unsupported format, decode errors, or I/O errors.
+     * 
+     * @throws Exception if audio extraction fails or database operations fail
+     * 
+     * Thread Safety: This method is thread-safe. It executes on [Dispatchers.IO] context.
+     * 
+     * Example usage:
+     * ```kotlin
+     * val uri = Uri.parse("content://media/external/audio/media/1234")
+     * val result = audioImporter.importAudioOnly(uri, "en")
+     * result.onSuccess { importedAudio ->
+     *     println("Imported: ${importedAudio.sourceFileName}, ${importedAudio.durationMs}ms")
+     *     // Later: segment with different configs
+     *     segmentImportedAudio(importedAudio.id, config = sentenceConfig)
+     * }.onFailure { error ->
+     *     println("Import failed: ${error.message}")
+     * }
+     * ```
+     * 
+     * @see segmentImportedAudio for applying segmentation to imported audio
+     * @see importAudioFile for combined import and segmentation
+     * @see ImportedAudio for the returned entity structure
      */
     suspend fun importAudioOnly(
         uri: Uri,
@@ -126,8 +163,69 @@ class AudioImporter @Inject constructor(
     }
 
     /**
-     * Apply segmentation to imported audio with specified configuration.
-     * Creates a new playlist with segmented items.
+     * Apply VAD-based segmentation to previously imported audio with customizable configuration.
+     * 
+     * This method uses the Silero VAD detector to identify speech boundaries in the PCM audio
+     * and creates individual segment files. Each segment is saved as a separate audio file and
+     * database record, organized into a playlist for practice sessions.
+     * 
+     * The segmentation process includes:
+     * 1. Load PCM audio from persistent storage
+     * 2. Initialize VAD detector (with retry logic)
+     * 3. Detect speech segments using config parameters
+     * 4. Apply segment mode (WORD vs SENTENCE)
+     * 5. Extract and save individual segments
+     * 6. Create playlist and ShadowItem records
+     * 
+     * @param importedAudioId The unique identifier of the [ImportedAudio] entity to segment.
+     *                        Must reference an existing record from [importAudioOnly].
+     * @param playlistName Optional custom name for the created playlist. If null, generates
+     *                     a name from the source filename and config name.
+     * @param config The [SegmentationConfig] defining segmentation parameters:
+     *               - minSegmentDurationMs: Minimum segment length (default 500ms)
+     *               - maxSegmentDurationMs: Maximum segment length (default 8000ms)
+     *               - silenceThresholdMs: Required silence to end segment (default 700ms)
+     *               - preSpeechBufferMs: Pre-speech padding (default 200ms)
+     *               - segmentMode: WORD (short chunks) or SENTENCE (natural boundaries)
+     * @param enableTranscription Reserved for future automatic transcription feature.
+     *                            Currently not implemented.
+     * @return Result containing the playlist ID (String) on success, or an exception on failure.
+     *         Failure reasons include: imported audio not found, PCM file missing, VAD initialization
+     *         failure, no speech detected, or database errors.
+     * 
+     * @throws Exception if segmentation fails or database operations fail
+     * 
+     * Thread Safety: This method is thread-safe. It executes on [Dispatchers.IO] context.
+     * 
+     * Example usage:
+     * ```kotlin
+     * // First import the audio
+     * val importResult = importAudioOnly(uri, "en")
+     * val importedAudio = importResult.getOrThrow()
+     * 
+     * // Create or get segmentation config
+     * val wordConfig = SegmentationConfig(
+     *     name = "Word Mode",
+     *     segmentMode = SegmentMode.WORD,
+     *     minSegmentDurationMs = 500,
+     *     maxSegmentDurationMs = 2000
+     * )
+     * 
+     * // Segment with the config
+     * val result = segmentImportedAudio(
+     *     importedAudioId = importedAudio.id,
+     *     playlistName = "My Practice Session",
+     *     config = wordConfig
+     * )
+     * result.onSuccess { playlistId ->
+     *     println("Created playlist: $playlistId")
+     * }
+     * ```
+     * 
+     * @see importAudioOnly for importing audio without segmentation
+     * @see importAudioFile for combined import and segmentation
+     * @see SegmentationConfig for configuration options
+     * @see SileroVadDetector for VAD implementation details
      */
     suspend fun segmentImportedAudio(
         importedAudioId: String,
@@ -369,8 +467,55 @@ class AudioImporter @Inject constructor(
     }
 
     /**
-     * Import an audio file and create a playlist with segmented items.
-     * Maintains backward compatibility - imports and immediately segments with default config.
+     * Import an audio file and immediately create a segmented playlist with default configuration.
+     * 
+     * This is a convenience method that combines [importAudioOnly] and [segmentImportedAudio]
+     * in a single call. It maintains backward compatibility with the original import workflow
+     * and is suitable when you want to use the default segmentation settings.
+     * 
+     * The method performs the following steps:
+     * 1. Import audio and convert to 16kHz mono PCM
+     * 2. Store PCM persistently
+     * 3. Load or create default segmentation config
+     * 4. Apply VAD-based segmentation
+     * 5. Create playlist with segmented items
+     * 
+     * If you need multiple segmentations with different configurations, use [importAudioOnly]
+     * followed by multiple calls to [segmentImportedAudio] instead.
+     * 
+     * @param uri The URI of the audio file to import (supports content://, file://, etc.)
+     * @param playlistName Optional custom name for the created playlist. If null, generates
+     *                     a name from the source filename.
+     * @param language The language code for the audio content (e.g., "en", "es", "fr").
+     *                 Defaults to "auto" for automatic detection (not yet implemented).
+     * @param enableTranscription Reserved for future automatic transcription feature.
+     *                            Currently not implemented.
+     * @return Result containing the playlist ID (String) on success, or an exception on failure.
+     *         Failure reasons include: file not found, unsupported format, decode errors,
+     *         VAD initialization failure, no speech detected, or database errors.
+     * 
+     * @throws Exception if import or segmentation fails
+     * 
+     * Thread Safety: This method is thread-safe. It executes on [Dispatchers.IO] context.
+     * 
+     * Example usage:
+     * ```kotlin
+     * val uri = Uri.parse("content://media/external/audio/media/1234")
+     * val result = audioImporter.importAudioFile(
+     *     uri = uri,
+     *     playlistName = "Spanish Lesson 1",
+     *     language = "es"
+     * )
+     * result.onSuccess { playlistId ->
+     *     println("Import complete! Playlist ID: $playlistId")
+     *     // Navigate to practice screen with playlistId
+     * }.onFailure { error ->
+     *     println("Import failed: ${error.message}")
+     * }
+     * ```
+     * 
+     * @see importAudioOnly for import without immediate segmentation
+     * @see segmentImportedAudio for applying custom segmentation configs
      */
     suspend fun importAudioFile(
         uri: Uri,
@@ -771,7 +916,45 @@ class AudioImporter @Inject constructor(
     }
 
     /**
-     * Get import progress as a flow.
+     * Get real-time progress updates for an import job as a Flow.
+     * 
+     * This method returns a Flow that emits [ImportJob] updates every 500ms, allowing
+     * UI components to display import progress, status, and error messages in real-time.
+     * 
+     * The Flow emits continuously until the coroutine scope is cancelled. Consumers should
+     * collect with appropriate lifecycle awareness to avoid memory leaks.
+     * 
+     * Note: This method is currently designed for the import job tracking system but is
+     * not actively used in the current import workflows ([importAudioOnly], [importAudioFile]).
+     * It's retained for potential future use with background/queued imports.
+     * 
+     * @param jobId The unique identifier of the import job to track.
+     * @return Flow<ImportJob?> that emits job updates every 500ms. Emits null if job not found.
+     * 
+     * Thread Safety: The Flow is safe to collect from any context. Database queries
+     * execute on [Dispatchers.IO] internally.
+     * 
+     * Example usage:
+     * ```kotlin
+     * // In a ViewModel or Composable
+     * audioImporter.getImportProgress(jobId)
+     *     .collectAsState(initial = null)
+     * 
+     * // Or with lifecycle awareness
+     * viewModelScope.launch {
+     *     audioImporter.getImportProgress(jobId)
+     *         .collect { job ->
+     *             when (job?.status) {
+     *                 ImportStatus.COMPLETED -> showSuccess()
+     *                 ImportStatus.FAILED -> showError(job.errorMessage)
+     *                 ImportStatus.IN_PROGRESS -> updateProgress(job.progress)
+     *                 else -> {}
+     *             }
+     *         }
+     * }
+     * ```
+     * 
+     * @see ImportJob for the emitted job structure
      */
     fun getImportProgress(jobId: String): Flow<ImportJob?> {
         return flow {
@@ -782,15 +965,86 @@ class AudioImporter @Inject constructor(
         }
     }
 
+    /**
+     * Release resources and cancel all background operations.
+     * 
+     * This method should be called when the AudioImporter is no longer needed,
+     * typically during application shutdown or when the dependency injection scope
+     * is destroyed. It cancels the internal coroutine scope to stop any ongoing
+     * background operations.
+     * 
+     * After calling this method, the AudioImporter instance should not be used
+     * for any further operations.
+     * 
+     * Thread Safety: This method is thread-safe and can be called from any thread.
+     * 
+     * Example usage:
+     * ```kotlin
+     * // In a ViewModel's onCleared()
+     * override fun onCleared() {
+     *     super.onCleared()
+     *     audioImporter.release()
+     * }
+     * 
+     * // Or when tearing down dependency injection scope
+     * fun cleanup() {
+     *     audioImporter.release()
+     * }
+     * ```
+     */
     fun release() {
         scope.cancel()
     }
 
     /**
-     * Save a captured audio segment to the library.
-     * Creates a "Captured Audio" playlist if it doesn't exist.
-     * @param segment The audio segment to save
-     * @return The created ShadowItem, or null if save failed
+     * Save a captured audio segment from live audio capture to the Shadow Library.
+     * 
+     * This method is used by the Live Shadow mode to save interesting audio segments
+     * captured from other apps (e.g., language learning apps, podcasts, videos) for
+     * later practice. Segments are automatically organized into a "Captured Audio" playlist.
+     * 
+     * The save process includes:
+     * 1. Validate audio sample rate (should be 16kHz)
+     * 2. Get or create "Captured Audio" playlist (thread-safe)
+     * 3. Convert audio samples to PCM format
+     * 4. Save to segment storage
+     * 5. Create database record
+     * 
+     * The method uses a mutex to ensure thread-safe playlist creation when multiple
+     * segments are detected simultaneously.
+     * 
+     * @param segment The [AudioSegment] to save, containing:
+     *                - samples: ShortArray of audio data
+     *                - sampleRate: Should be 16000 Hz
+     *                - durationMs: Length in milliseconds
+     * @return The created [ShadowItem] on success, or null if the save operation fails.
+     *         Returns null for validation errors, I/O errors, or database errors.
+     * 
+     * Thread Safety: This method is thread-safe. Multiple segments can be saved
+     * concurrently without race conditions. Uses [Dispatchers.IO] for I/O operations
+     * and [playlistCreationMutex] to prevent duplicate playlist creation.
+     * 
+     * Example usage:
+     * ```kotlin
+     * // In AudioProcessingPipeline or ShadowingCoordinator
+     * val segment = AudioSegment(
+     *     samples = audioSamples,
+     *     sampleRate = 16000,
+     *     durationMs = 2500
+     * )
+     * 
+     * val savedItem = audioImporter.saveCapturedSegment(segment)
+     * if (savedItem != null) {
+     *     println("Saved segment: ${savedItem.id}, ${savedItem.durationMs}ms")
+     *     // Show notification or update UI
+     * } else {
+     *     println("Failed to save segment")
+     * }
+     * ```
+     * 
+     * @see AudioSegment for the input structure
+     * @see ShadowItem for the returned entity
+     * @see getOrCreateCapturedAudioPlaylist for playlist management
      */
     suspend fun saveCapturedSegment(segment: AudioSegment): ShadowItem? = withContext(Dispatchers.IO) {
         var segmentFile: File? = null
@@ -880,10 +1134,50 @@ class AudioImporter @Inject constructor(
     }
 
     /**
-     * Split a segment into two parts at the given timestamp.
-     * @param item The item to split
-     * @param splitPointMs The position within the segment to split (relative to segment start)
-     * @return List of two new ShadowItems, or null if split failed
+     * Split a single segment into two separate segments at the specified timestamp.
+     * 
+     * This method is useful for manually refining automatic segmentation when a detected
+     * segment is too long or contains multiple distinct phrases. The original segment is
+     * deleted and replaced with two new segments.
+     * 
+     * The split process:
+     * 1. Validate split point (must leave MIN_SEGMENT_DURATION_MS on each side)
+     * 2. Read source audio data
+     * 3. Create two new PCM files
+     * 4. Create two new ShadowItem records
+     * 5. Delete original segment and file
+     * 6. Update playlist ordering for subsequent items
+     * 
+     * @param item The [ShadowItem] to split. Must have a valid audio file.
+     * @param splitPointMs The position within the segment to split, in milliseconds
+     *                     relative to the segment start (not absolute time).
+     *                     Must be at least [MIN_SEGMENT_DURATION_MS] (500ms) from either edge.
+     * @return List containing two new [ShadowItem] objects on success, or null if:
+     *         - Split point is too close to edges (< 500ms from start or end)
+     *         - Source file doesn't exist
+     *         - I/O errors occur
+     *         - Database operations fail
+     * 
+     * Thread Safety: This method is thread-safe. It executes on [Dispatchers.IO] context.
+     * However, splitting the same item concurrently from multiple coroutines may cause
+     * race conditions.
+     * 
+     * Example usage:
+     * ```kotlin
+     * // Split a 5-second segment at 2.5 seconds
+     * val item = shadowItemDao.getItemById(itemId)
+     * val splitResult = audioImporter.splitSegment(item, splitPointMs = 2500)
+     * 
+     * splitResult?.let { (firstPart, secondPart) ->
+     *     println("Split into:")
+     *     println("  Part 1: ${firstPart.durationMs}ms")
+     *     println("  Part 2: ${secondPart.durationMs}ms")
+     *     // Update UI to show new segments
+     * } ?: println("Split failed - invalid split point or file error")
+     * ```
+     * 
+     * @see mergeSegments for the reverse operation
+     * @see MIN_SEGMENT_DURATION_MS for minimum allowed segment length
      */
     suspend fun splitSegment(item: ShadowItem, splitPointMs: Long): List<ShadowItem>? = withContext(Dispatchers.IO) {
         try {
@@ -962,9 +1256,55 @@ class AudioImporter @Inject constructor(
     }
 
     /**
-     * Merge multiple segments into one.
-     * @param items The items to merge (must be from same playlist, in order)
-     * @return The new merged ShadowItem, or null if merge failed
+     * Merge multiple consecutive segments into a single combined segment.
+     * 
+     * This method is useful for combining short segments that were over-segmented by
+     * VAD or for creating longer practice phrases. Audio data is concatenated in order,
+     * and transcriptions/translations are combined with spaces.
+     * 
+     * The merge process:
+     * 1. Validate input (at least 2 items, all from same playlist)
+     * 2. Sort items by playlist order
+     * 3. Concatenate audio data into new PCM file
+     * 4. Combine metadata (transcriptions, translations)
+     * 5. Create new merged ShadowItem
+     * 6. Delete original items and their audio files
+     * 7. Update playlist ordering for subsequent items
+     * 
+     * @param items List of [ShadowItem] objects to merge. Requirements:
+     *              - Minimum 2 items
+     *              - All items must be from the same playlist
+     *              - Items should be consecutive for logical merging (not enforced)
+     * @return The new merged [ShadowItem] on success, or null if:
+     *         - Less than 2 items provided
+     *         - Items are from different playlists
+     *         - Source files don't exist
+     *         - I/O errors occur
+     *         - Database operations fail
+     * 
+     * Thread Safety: This method is thread-safe. It executes on [Dispatchers.IO] context.
+     * However, merging overlapping item sets concurrently may cause race conditions.
+     * 
+     * Example usage:
+     * ```kotlin
+     * // Merge three consecutive segments
+     * val items = listOf(item1, item2, item3)
+     * val mergedItem = audioImporter.mergeSegments(items)
+     * 
+     * mergedItem?.let { merged ->
+     *     println("Merged ${items.size} segments:")
+     *     println("  Total duration: ${merged.durationMs}ms")
+     *     println("  Combined transcription: ${merged.transcription}")
+     *     // Update UI to reflect merged segment
+     * } ?: println("Merge failed - check items are from same playlist")
+     * ```
+     * 
+     * Notes:
+     * - Transcriptions and translations are space-separated in the merged result
+     * - Practice statistics (count, last practiced) are reset for the merged item
+     * - Playlist order is adjusted to fill the gap left by removed items
+     * 
+     * @see splitSegment for the reverse operation
      */
     suspend fun mergeSegments(items: List<ShadowItem>): ShadowItem? = withContext(Dispatchers.IO) {
         try {
