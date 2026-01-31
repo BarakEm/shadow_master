@@ -57,4 +57,37 @@
     <!-- Android Auto -->
     <string name="auto_browse_root">Shadow Master</string>
     <string name="auto_start_session">Start Session</string>
+
+    <!-- Error Messages -->
+    <string name="error_file_not_found_title">File Not Found</string>
+    <string name="error_file_not_found_message">The file at %1$s could not be found.</string>
+    <string name="error_file_not_found_suggestion">Please check that the file still exists and try again.</string>
+    
+    <string name="error_unsupported_format_title">Unsupported Format</string>
+    <string name="error_unsupported_format_message">The audio format %1$s is not supported.</string>
+    <string name="error_unsupported_format_suggestion">Please use MP3, M4A, WAV, OGG, AAC, FLAC, OPUS, WMA, or WEBM files.</string>
+    
+    <string name="error_decoding_failed_title">Decoding Failed</string>
+    <string name="error_decoding_failed_message">Failed to decode audio: %1$s</string>
+    <string name="error_decoding_failed_suggestion">The audio file may be corrupted. Try a different file or re-download it.</string>
+    
+    <string name="error_permission_denied_title">Permission Required</string>
+    <string name="error_permission_denied_message">Permission denied: %1$s</string>
+    <string name="error_permission_denied_suggestion">Please grant the required permission in Settings to continue.</string>
+    
+    <string name="error_network_title">Network Error</string>
+    <string name="error_network_message">Failed to download from %1$s</string>
+    <string name="error_network_suggestion">Please check your internet connection and try again.</string>
+    
+    <string name="error_storage_title">Storage Error</string>
+    <string name="error_storage_message">Storage operation failed: %1$s</string>
+    <string name="error_storage_suggestion">Please check that you have enough storage space and try again.</string>
+    
+    <string name="error_invalid_input_title">Invalid Input</string>
+    <string name="error_invalid_input_message">%1$s</string>
+    <string name="error_invalid_input_suggestion">Please correct the input and try again.</string>
+    
+    <string name="error_unknown_title">Unexpected Error</string>
+    <string name="error_unknown_message">An unexpected error occurred.</string>
+    <string name="error_unknown_suggestion">Please try again or contact support if the problem persists.</string>
 </resources>
