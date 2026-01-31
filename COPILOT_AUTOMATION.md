@@ -253,7 +253,15 @@ gh issue comment 33 --body "@copilot Please also ensure thread safety in the imp
 
 ### ⚠️ CRITICAL BUG: Audio Import Broken (Issue #75)
 
-**Project currently unusable** - audio import creates empty playlists. Copilot is investigating.
+**Project currently unusable** - audio import creates empty playlists.
+
+**Copilot Status:**
+- ✅ Issue created and auto-delegated to @copilot
+- ✅ Copilot analyzed the issue and created draft PR #76
+- 🚧 Working on fix: focusing on segment extraction failures
+- ⏳ Waiting for Copilot to complete PR
+
+View progress: https://github.com/BarakEm/shadow_master/pull/76
 
 ### 🎉 Campaign Status: 20/20 Tasks Complete (But App Broken)
 
