@@ -976,6 +976,14 @@ class AudioImporter @Inject constructor(
     /**
      * Helper method to update import job status and progress.
      */
+    /**
+     * Helper method to update import job status and progress.
+     * 
+     * Note: Once a job reaches a terminal state (COMPLETED or FAILED), the completedAt
+     * timestamp is preserved to prevent it from being overwritten. This is safe because
+     * our import workflow never transitions a job from a terminal state back to a
+     * non-terminal state - once COMPLETED or FAILED, the job's lifecycle is finished.
+     */
     private suspend fun updateImportJob(
         jobId: String,
         status: ImportStatus,
