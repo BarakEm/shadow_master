@@ -6,6 +6,44 @@ import com.shadowmaster.R
 /**
  * Maps technical errors to user-friendly messages.
  * Provides localized, actionable error messages for display in the UI.
+ * 
+ * ## Usage Example
+ * ```kotlin
+ * // In a ViewModel or Repository with Hilt injection
+ * @Inject constructor(private val errorMapper: ErrorMapper)
+ * 
+ * // Or create manually
+ * val errorMapper = ErrorMapper(context)
+ * 
+ * // Map AudioImportError to user message
+ * try {
+ *     audioImporter.importFile(uri)
+ * } catch (e: AudioImportError) {
+ *     val errorMessage = errorMapper.mapToUserMessage(e)
+ *     // Display in UI
+ *     showErrorDialog(
+ *         title = errorMessage.title,
+ *         message = errorMessage.message,
+ *         suggestion = errorMessage.suggestion
+ *     )
+ *     // Log for debugging
+ *     Log.e(TAG, "Import failed: ${errorMessage.errorCode}", e)
+ * }
+ * 
+ * // Format for display
+ * val fullMessage = errorMessage.format() // Includes error code
+ * val userMessage = errorMessage.formatWithoutCode() // User-friendly only
+ * ```
+ * 
+ * ## Error Codes
+ * - ERR_FILE_001: File not found
+ * - ERR_FORMAT_001: Unsupported audio format
+ * - ERR_DECODE_001: Audio decoding failed
+ * - ERR_PERM_001: Permission denied
+ * - ERR_NET_001: Network error
+ * - ERR_STORAGE_001: Storage error
+ * - ERR_INPUT_001: Invalid input
+ * - ERR_UNKNOWN_001: Unknown/unexpected error
  */
 class ErrorMapper(private val context: Context) {
     
