@@ -57,14 +57,12 @@ fun LibraryScreen(
     var urlToImport by remember { mutableStateOf("") }
 
     // Stable callbacks to prevent recomposition
-    val onImportAudioFile = remember(viewModel) {
-        { uri: Uri? -> uri?.let { viewModel.importAudioFile(it) } }
-    }
+    val onImportAudioFile = remember(viewModel) { viewModel::importAudioFile }
     
     val audioPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
-        onImportAudioFile(uri)
+        uri?.let { onImportAudioFile(it) }
     }
 
     // Handle shared content import
@@ -488,12 +486,12 @@ fun LibraryScreen(
         
         // Check if any item in the playlist has an importedAudioId
         // Use derivedStateOf to only recompute when playlistItems changes
-        val hasImportedAudio by remember {
+        val hasImportedAudio by remember(playlistItems) {
             derivedStateOf {
                 playlistItems.any { it.importedAudioId != null }
             }
         }
-        val firstImportedAudioId by remember {
+        val firstImportedAudioId by remember(playlistItems) {
             derivedStateOf {
                 playlistItems.firstOrNull { it.importedAudioId != null }?.importedAudioId
             }
@@ -1101,12 +1099,8 @@ private fun PlaylistDetailContent(
         }
     } else {
         // Memoize the segments count text
-        val segmentsCountText by remember {
-            derivedStateOf { "${items.size} segments" }
-        }
-        val selectedCountText by remember {
-            derivedStateOf { "${selectedForMerge.size} selected" }
-        }
+        val segmentsCountText = remember(items.size) { "${items.size} segments" }
+        val selectedCountText = remember(selectedForMerge.size) { "${selectedForMerge.size} selected" }
         
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
