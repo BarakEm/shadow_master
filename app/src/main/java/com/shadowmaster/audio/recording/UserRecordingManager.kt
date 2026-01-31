@@ -152,8 +152,11 @@ class UserRecordingManager @Inject constructor(
 
         Log.i(TAG, "Recording finished: ${segment?.durationMs ?: 0}ms")
 
+        val callback = onRecordingComplete
+        onRecordingComplete = null  // Clear callback to prevent double invocation
+
         withContext(Dispatchers.Main) {
-            onRecordingComplete?.invoke(segment)
+            callback?.invoke(segment)
         }
     }
 
