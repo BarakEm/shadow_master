@@ -1,0 +1,387 @@
+# GitHub Copilot Pro Tasks
+
+Tasks suitable for delegation to GitHub Copilot Pro. Each task is self-contained and actionable.
+
+---
+
+## Unit Testing Tasks
+
+### 1. Add Unit Tests for ShadowingStateMachine
+**Priority:** High
+**Estimated Scope:** New test file
+
+Create unit tests for `core/ShadowingStateMachine.kt` covering all state transitions:
+- Test transitions from `Idle` to `Playing`, `Paused`, `Stopped`
+- Test transitions from `Playing` to all valid next states
+- Test invalid state transitions throw appropriate errors
+- Test edge cases like rapid state changes
+- Use JUnit5 and MockK for mocking dependencies
+
+**Files to reference:**
+- `app/src/main/kotlin/com/barak/shadowmaster/core/ShadowingStateMachine.kt`
+- `app/src/main/kotlin/com/barak/shadowmaster/data/model/ShadowingState.kt`
+
+---
+
+### 2. Add Unit Tests for LibraryRepository
+**Priority:** High
+**Estimated Scope:** New test file
+
+Create unit tests for `data/repository/LibraryRepository.kt`:
+- Test CRUD operations for playlists
+- Test CRUD operations for shadow items
+- Test database query methods return correct data
+- Test error handling for database failures
+- Mock Room DAOs using MockK
+
+**Files to reference:**
+- `app/src/main/kotlin/com/barak/shadowmaster/data/repository/LibraryRepository.kt`
+- `app/src/main/kotlin/com/barak/shadowmaster/data/local/*.kt`
+
+---
+
+### 3. Add Unit Tests for AudioProcessingPipeline
+**Priority:** Medium
+**Estimated Scope:** New test file
+
+Create unit tests for `audio/processing/AudioProcessingPipeline.kt`:
+- Test audio buffer processing with mock data
+- Test segment detection callbacks
+- Test error handling for invalid audio formats
+- Test memory management and buffer cleanup
+
+**Files to reference:**
+- `app/src/main/kotlin/com/barak/shadowmaster/audio/processing/AudioProcessingPipeline.kt`
+
+---
+
+### 4. Add ViewModel Unit Tests
+**Priority:** Medium
+**Estimated Scope:** Multiple test files
+
+Create unit tests for ViewModels:
+- `LibraryViewModel` - test playlist operations and UI state updates
+- `PracticeViewModel` - test practice session management
+- `SettingsViewModel` - test settings changes propagation
+- Use TestCoroutineDispatcher for coroutine testing
+
+**Files to reference:**
+- `app/src/main/kotlin/com/barak/shadowmaster/ui/library/LibraryViewModel.kt`
+- `app/src/main/kotlin/com/barak/shadowmaster/ui/practice/PracticeViewModel.kt`
+
+---
+
+## Code Refactoring Tasks
+
+### 5. Extract AudioFileUtility from AudioImporter
+**Priority:** High
+**Estimated Scope:** New utility class + refactor
+
+Extract common audio file operations from `AudioImporter.kt` (1046 lines) into a reusable utility class:
+- WAV file header creation/parsing
+- Audio format detection
+- Sample rate conversion helpers
+- PCM buffer operations
+- File I/O operations for audio data
+
+**Files to modify:**
+- `app/src/main/kotlin/com/barak/shadowmaster/library/AudioImporter.kt`
+- Create: `app/src/main/kotlin/com/barak/shadowmaster/library/AudioFileUtility.kt`
+
+---
+
+### 6. Extract UrlTypeDetector from UrlAudioImporter
+**Priority:** Medium
+**Estimated Scope:** New class + refactor
+
+Extract URL detection and parsing logic from `UrlAudioImporter.kt`:
+- YouTube URL detection and video ID extraction
+- Spotify URL detection
+- Generic audio URL detection
+- URL validation and normalization
+
+**Files to modify:**
+- `app/src/main/kotlin/com/barak/shadowmaster/library/UrlAudioImporter.kt`
+- Create: `app/src/main/kotlin/com/barak/shadowmaster/library/UrlTypeDetector.kt`
+
+---
+
+### 7. Split AudioExporter into Smaller Classes
+**Priority:** Medium
+**Estimated Scope:** 2-3 new classes + refactor
+
+Break down `AudioExporter.kt` (419 lines) into:
+- `WavFileCreator` - WAV header creation and file writing
+- `PlaylistExporter` - Playlist-to-audio conversion logic
+- `ExportProgressTracker` - Progress tracking and callbacks
+
+**Files to modify:**
+- `app/src/main/kotlin/com/barak/shadowmaster/library/AudioExporter.kt`
+- Create new files in same package
+
+---
+
+## Documentation Tasks
+
+### 8. Add KDoc to AudioImporter Public Methods
+**Priority:** Medium
+**Estimated Scope:** Documentation only
+
+Add comprehensive KDoc documentation to all public methods in `AudioImporter.kt`:
+- Document parameters, return values, and exceptions
+- Add usage examples for complex methods
+- Document thread safety considerations
+- Reference related classes and methods
+
+**Files to modify:**
+- `app/src/main/kotlin/com/barak/shadowmaster/library/AudioImporter.kt`
+
+---
+
+### 9. Add KDoc to ShadowingCoordinator
+**Priority:** Medium
+**Estimated Scope:** Documentation only
+
+Add KDoc documentation to `ShadowingCoordinator.kt`:
+- Document the orchestration flow
+- Document state transition handling
+- Add sequence diagram in markdown for complex flows
+- Document event handling patterns
+
+**Files to modify:**
+- `app/src/main/kotlin/com/barak/shadowmaster/core/ShadowingCoordinator.kt`
+
+---
+
+### 10. Document State Machine Transitions
+**Priority:** Low
+**Estimated Scope:** Documentation only
+
+Add comprehensive documentation to state-related files:
+- Document each state and its valid transitions
+- Add state diagram in markdown/mermaid format
+- Document event types and when they're triggered
+- Add examples of common state flows
+
+**Files to modify:**
+- `app/src/main/kotlin/com/barak/shadowmaster/data/model/ShadowingState.kt`
+- `app/src/main/kotlin/com/barak/shadowmaster/core/ShadowingStateMachine.kt`
+
+---
+
+## Error Handling Tasks
+
+### 11. Create AudioImportError Sealed Class
+**Priority:** High
+**Estimated Scope:** New class + refactor
+
+Create structured error types for audio import operations:
+```kotlin
+sealed class AudioImportError : Exception() {
+    data class FileNotFound(val path: String) : AudioImportError()
+    data class UnsupportedFormat(val format: String) : AudioImportError()
+    data class DecodingFailed(val reason: String) : AudioImportError()
+    data class PermissionDenied(val permission: String) : AudioImportError()
+    data class NetworkError(val url: String, val cause: Throwable) : AudioImportError()
+    data class StorageError(val reason: String) : AudioImportError()
+}
+```
+
+Replace generic Exception catches with specific error types.
+
+**Files to modify:**
+- Create: `app/src/main/kotlin/com/barak/shadowmaster/library/AudioImportError.kt`
+- `app/src/main/kotlin/com/barak/shadowmaster/library/AudioImporter.kt`
+- `app/src/main/kotlin/com/barak/shadowmaster/library/UrlAudioImporter.kt`
+
+---
+
+### 12. Create ErrorMapper for User-Friendly Messages
+**Priority:** Medium
+**Estimated Scope:** New class
+
+Create a utility class that maps technical errors to user-friendly messages:
+- Map AudioImportError types to localized strings
+- Provide actionable suggestions for each error type
+- Support multiple languages via string resources
+- Include error codes for debugging
+
+**Files to create:**
+- `app/src/main/kotlin/com/barak/shadowmaster/library/ErrorMapper.kt`
+
+---
+
+## Input Validation Tasks
+
+### 13. Add Input Validation for URI/URL Imports
+**Priority:** High
+**Estimated Scope:** Validation functions
+
+Add comprehensive input validation for audio imports:
+- Validate URI scheme (content://, file://, http://, https://)
+- Validate URL format and accessibility
+- Sanitize file paths to prevent path traversal
+- Validate audio file extensions before processing
+- Add maximum file size checks
+
+**Files to modify:**
+- `app/src/main/kotlin/com/barak/shadowmaster/library/AudioImporter.kt`
+- `app/src/main/kotlin/com/barak/shadowmaster/library/UrlAudioImporter.kt`
+
+---
+
+### 14. Add Playlist Name Validation
+**Priority:** Low
+**Estimated Scope:** Validation function + UI integration
+
+Add validation for playlist and segment names:
+- Maximum length enforcement (e.g., 100 characters)
+- Disallow special characters that break file systems
+- Trim whitespace
+- Prevent empty or blank names
+- Show validation errors in UI
+
+**Files to modify:**
+- `app/src/main/kotlin/com/barak/shadowmaster/ui/library/LibraryScreen.kt`
+- `app/src/main/kotlin/com/barak/shadowmaster/data/repository/LibraryRepository.kt`
+
+---
+
+## UI Component Tasks
+
+### 15. Extract Reusable Dialog Components
+**Priority:** Medium
+**Estimated Scope:** New composables
+
+Extract common dialog patterns from LibraryScreen into reusable components:
+- `ConfirmationDialog` - Yes/No confirmation dialogs
+- `TextInputDialog` - Single text input with validation
+- `SelectionDialog` - List selection dialogs
+- `ProgressDialog` - Progress indicator dialogs
+
+**Files to modify:**
+- `app/src/main/kotlin/com/barak/shadowmaster/ui/library/LibraryScreen.kt`
+- Create: `app/src/main/kotlin/com/barak/shadowmaster/ui/components/Dialogs.kt`
+
+---
+
+### 16. Add Compose Preview Functions
+**Priority:** Low
+**Estimated Scope:** Preview composables
+
+Add @Preview composable functions for UI components:
+- Preview for LibraryScreen with mock data
+- Preview for PracticeScreen states
+- Preview for SettingsScreen
+- Preview for custom components
+
+**Files to modify:**
+- All files in `app/src/main/kotlin/com/barak/shadowmaster/ui/`
+
+---
+
+## Performance Tasks
+
+### 17. Add Database Indices
+**Priority:** Medium
+**Estimated Scope:** Entity modifications
+
+Add database indices for frequently queried columns:
+- Index on `ShadowItem.playlistId` for playlist queries
+- Index on `ShadowItem.importedAudioId` for audio lookups
+- Index on `ShadowPlaylist.createdAt` for sorting
+- Index on `ImportJob.status` for job queries
+
+**Files to modify:**
+- `app/src/main/kotlin/com/barak/shadowmaster/data/local/ShadowItem.kt`
+- `app/src/main/kotlin/com/barak/shadowmaster/data/local/ShadowPlaylist.kt`
+- Update database migration version
+
+---
+
+### 18. Optimize Compose Recomposition in LibraryScreen
+**Priority:** Medium
+**Estimated Scope:** Compose optimization
+
+Optimize LibraryScreen to reduce unnecessary recompositions:
+- Add `remember` for expensive calculations
+- Use `derivedStateOf` for filtered lists
+- Add `key` parameters to LazyColumn items
+- Extract stable lambda callbacks
+- Profile with Compose metrics
+
+**Files to modify:**
+- `app/src/main/kotlin/com/barak/shadowmaster/ui/library/LibraryScreen.kt`
+
+---
+
+## Logging & Monitoring Tasks
+
+### 19. Add Structured Logging Wrapper
+**Priority:** Medium
+**Estimated Scope:** New utility class
+
+Create a structured logging utility:
+- Consistent log format: `[timestamp] [level] [tag] message`
+- Log levels: DEBUG, INFO, WARN, ERROR
+- Optional file logging for debugging
+- Integration with CrashReporter
+- Performance-conscious (no-op in release builds)
+
+**Files to create:**
+- `app/src/main/kotlin/com/barak/shadowmaster/util/Logger.kt`
+
+---
+
+### 20. Add Performance Metrics Collection
+**Priority:** Low
+**Estimated Scope:** New utility class
+
+Create utilities to collect performance metrics:
+- Audio import duration tracking
+- Segmentation processing time
+- UI rendering metrics
+- Database query performance
+- Export as JSON for analysis
+
+**Files to create:**
+- `app/src/main/kotlin/com/barak/shadowmaster/util/PerformanceTracker.kt`
+
+---
+
+## How to Delegate to Copilot
+
+1. Create a GitHub issue with the task title
+2. Copy the task description into the issue body
+3. Add label `copilot` or mention `@copilot` in the issue
+4. Assign the issue to trigger Copilot workspace
+
+Example issue format:
+```markdown
+Title: Add Unit Tests for ShadowingStateMachine
+
+## Description
+[Paste task description here]
+
+## Acceptance Criteria
+- [ ] All state transitions tested
+- [ ] Edge cases covered
+- [ ] Tests pass in CI
+
+## Labels
+- enhancement
+- testing
+- copilot
+```
+
+---
+
+## Task Priority Summary
+
+| Priority | Tasks |
+|----------|-------|
+| High | 1, 2, 5, 11, 13 |
+| Medium | 3, 4, 6, 7, 8, 9, 12, 15, 17, 18, 19 |
+| Low | 10, 14, 16, 20 |
+
+Start with high-priority tasks for maximum impact on code quality.
