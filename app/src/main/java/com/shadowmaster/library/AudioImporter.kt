@@ -154,8 +154,10 @@ class AudioImporter @Inject constructor(
             val validatedName = when (val result = NameValidator.validatePlaylistName(rawName)) {
                 is NameValidator.ValidationResult.Valid -> rawName.trim()
                 is NameValidator.ValidationResult.Invalid -> {
-                    // Try to sanitize the name, fallback to a default if sanitization fails
-                    NameValidator.sanitizeName(rawName) ?: "Imported Playlist ${System.currentTimeMillis()}"
+                    // Try to sanitize the name, fallback to a friendly default if sanitization fails
+                    val timestamp = java.text.SimpleDateFormat("yyyy-MM-dd HH:mm", java.util.Locale.getDefault())
+                        .format(java.util.Date())
+                    NameValidator.sanitizeName(rawName) ?: "Imported Playlist $timestamp"
                 }
             }
             

@@ -55,7 +55,7 @@ object NameValidator {
         val trimmed = name.trim()
         
         // Check if empty or blank
-        if (trimmed.isEmpty() || trimmed.isBlank()) {
+        if (trimmed.isBlank()) {
             return ValidationResult.Invalid("$nameType cannot be empty")
         }
         
