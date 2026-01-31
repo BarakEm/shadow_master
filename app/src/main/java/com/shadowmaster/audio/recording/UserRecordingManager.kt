@@ -30,6 +30,7 @@ class UserRecordingManager @Inject constructor(
 
     private var audioRecord: AudioRecord? = null
     private var recordingJob: Job? = null
+    private var cleanupJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val recordedSamples = mutableListOf<Short>()
@@ -152,20 +153,65 @@ class UserRecordingManager @Inject constructor(
 
         Log.i(TAG, "Recording finished: ${segment?.durationMs ?: 0}ms")
 
-        withContext(Dispatchers.Main) {
-            onRecordingComplete?.invoke(segment)
+        // Atomically get and clear the callback to prevent double invocation
+        val callback = synchronized(this) {
+            val cb = onRecordingComplete
+            onRecordingComplete = null
+            cb
+        }
+
+        // Invoke callback with error handling
+        try {
+            withContext(Dispatchers.Main) {
+                callback?.invoke(segment)
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error invoking recording completion callback", e)
         }
     }
 
     fun stopRecording() {
-        isRecording = false
-        recordingJob?.cancel()
-        recordingJob = null
+        val shouldLaunchCleanup = synchronized(this) {
+            if (!isRecording) {
+                return
+            }
+            
+            // Prevent multiple cleanup attempts
+            if (cleanupJob?.isActive == true) {
+                return
+            }
 
-        try {
-            audioRecord?.stop()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error stopping AudioRecord", e)
+            isRecording = false
+            true
+        }
+        
+        if (shouldLaunchCleanup) {
+            cleanupJob = scope.launch {
+                try {
+                    // Wait for the recording job to complete (with timeout)
+                    withTimeoutOrNull(5000) {
+                        recordingJob?.join()
+                    } ?: Log.w(TAG, "Recording job did not complete within timeout")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error waiting for recording job", e)
+                } finally {
+                    recordingJob = null
+
+                    try {
+                        audioRecord?.stop()
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error stopping AudioRecord", e)
+                    }
+
+                    // Finish recording and invoke callback with the recorded audio
+                    finishRecording()
+                    
+                    // Clear cleanup job to allow future stop operations
+                    synchronized(this@UserRecordingManager) {
+                        cleanupJob = null
+                    }
+                }
+            }
         }
     }
 
