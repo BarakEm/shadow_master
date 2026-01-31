@@ -124,29 +124,24 @@ fun LibraryScreen(
                         // Merge mode toggle
                         if (mergeMode) {
                             if (selectedForMerge.size >= 2) {
-                                val onMergeClick = remember { { viewModel.mergeSelectedSegments() } }
-                                IconButton(onClick = onMergeClick) {
+                                IconButton(onClick = { viewModel.mergeSelectedSegments() }) {
                                     Icon(
                                         imageVector = Icons.Default.SwapHoriz,
                                         contentDescription = "Merge Selected"
                                     )
                                 }
                             }
-                            val onCancelMerge = remember {
-                                {
-                                    mergeMode = false
-                                    viewModel.clearMergeSelection()
-                                }
-                            }
-                            IconButton(onClick = onCancelMerge) {
+                            IconButton(onClick = {
+                                mergeMode = false
+                                viewModel.clearMergeSelection()
+                            }) {
                                 Icon(
                                     imageVector = Icons.Default.Close,
                                     contentDescription = "Cancel Merge"
                                 )
                             }
                         } else {
-                            val onEnterMergeMode = remember { { mergeMode = true } }
-                            IconButton(onClick = onEnterMergeMode) {
+                            IconButton(onClick = { mergeMode = true }) {
                                 Icon(
                                     imageVector = Icons.Default.SwapHoriz,
                                     contentDescription = "Merge Mode"
