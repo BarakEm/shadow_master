@@ -11,6 +11,7 @@ import com.shadowmaster.data.local.ImportJobDao
 import com.shadowmaster.data.local.ShadowItemDao
 import com.shadowmaster.data.local.ShadowPlaylistDao
 import com.shadowmaster.data.model.*
+import com.shadowmaster.library.AudioImportError.*
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -73,7 +74,7 @@ class AudioImporter @Inject constructor(
 
             if (tempPcmFile == null) {
                 return@withContext Result.failure(
-                    Exception(extractError ?: "Failed to extract audio")
+                    DecodingFailed(extractError ?: "Failed to extract audio")
                 )
             }
 
@@ -105,10 +106,18 @@ class AudioImporter @Inject constructor(
             Log.i(TAG, "Imported audio: ${importedAudio.id}, ${importedAudio.durationMs}ms")
             Result.success(importedAudio)
 
-        } catch (e: Exception) {
+        } catch (e: AudioImportError) {
             Log.e(TAG, "Import failed", e)
             tempPcmFile?.delete()
             Result.failure(e)
+        } catch (e: IOException) {
+            Log.e(TAG, "Import failed - storage error", e)
+            tempPcmFile?.delete()
+            Result.failure(StorageError("Failed to save imported audio: ${e.message}"))
+        } catch (e: Exception) {
+            Log.e(TAG, "Import failed - unexpected error", e)
+            tempPcmFile?.delete()
+            Result.failure(StorageError("Unexpected error during import: ${e.message}"))
         }
     }
 
@@ -138,11 +147,11 @@ class AudioImporter @Inject constructor(
         try {
             // Get imported audio
             val importedAudio = importedAudioDao.getById(importedAudioId)
-                ?: return@withContext Result.failure(Exception("Imported audio not found"))
+                ?: return@withContext Result.failure(FileNotFound("Imported audio not found: $importedAudioId"))
 
             val pcmFile = File(importedAudio.pcmFilePath)
             if (!pcmFile.exists()) {
-                return@withContext Result.failure(Exception("PCM file not found"))
+                return@withContext Result.failure(FileNotFound(importedAudio.pcmFilePath))
             }
 
             // Create playlist
@@ -159,7 +168,7 @@ class AudioImporter @Inject constructor(
             // Initialize VAD (with retry logic)
             if (!initializeVad()) {
                 shadowPlaylistDao.delete(playlist)
-                return@withContext Result.failure(Exception("Failed to initialize VAD"))
+                return@withContext Result.failure(DecodingFailed("Failed to initialize VAD for speech detection"))
             }
 
             // Detect speech segments with config parameters
@@ -167,7 +176,7 @@ class AudioImporter @Inject constructor(
 
             if (segments.isEmpty()) {
                 shadowPlaylistDao.delete(playlist)
-                return@withContext Result.failure(Exception("No speech segments detected"))
+                return@withContext Result.failure(DecodingFailed("No speech segments detected in audio file"))
             }
 
             // Extract and save each segment
@@ -201,9 +210,15 @@ class AudioImporter @Inject constructor(
             Log.i(TAG, "Segmentation complete: ${shadowItems.size} segments created")
             Result.success(playlistId)
 
-        } catch (e: Exception) {
+        } catch (e: AudioImportError) {
             Log.e(TAG, "Segmentation failed", e)
             Result.failure(e)
+        } catch (e: IOException) {
+            Log.e(TAG, "Segmentation failed - storage error", e)
+            Result.failure(StorageError("Failed to save segments: ${e.message}"))
+        } catch (e: Exception) {
+            Log.e(TAG, "Segmentation failed - unexpected error", e)
+            Result.failure(StorageError("Unexpected error during segmentation: ${e.message}"))
         }
     }
 
@@ -403,9 +418,12 @@ class AudioImporter @Inject constructor(
                 enableTranscription = enableTranscription
             )
 
-        } catch (e: Exception) {
+        } catch (e: AudioImportError) {
             Log.e(TAG, "Import and segment failed", e)
             Result.failure(e)
+        } catch (e: Exception) {
+            Log.e(TAG, "Import and segment failed - unexpected error", e)
+            Result.failure(StorageError("Unexpected error: ${e.message}"))
         }
     }
 
@@ -413,6 +431,7 @@ class AudioImporter @Inject constructor(
     /**
      * Extract and decode audio from any format to mono 16kHz PCM.
      * Returns Pair(file, errorMessage) - file is null on failure with error message.
+     * @throws AudioImportError for specific error conditions
      */
     private fun extractAudioToPcmWithError(uri: Uri): Pair<File?, String?> {
         val tempFile = File(context.cacheDir, "temp_pcm_${System.currentTimeMillis()}.pcm")
@@ -462,6 +481,10 @@ class AudioImporter @Inject constructor(
                 try {
                     extractor.setDataSource(pfd.fileDescriptor)
                     Log.d(TAG, "Set data source via file descriptor")
+                } catch (e: SecurityException) {
+                    Log.e(TAG, "Permission denied for file descriptor", e)
+                    pfd?.close()
+                    throw PermissionDenied("Storage read permission")
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to set data source via file descriptor", e)
                     pfd?.close()
@@ -493,7 +516,8 @@ class AudioImporter @Inject constructor(
                 }
                 Log.e(TAG, "No audio track found. $trackInfo")
                 pfd?.close()
-                return Pair(null, "No audio track found. $trackInfo")
+                extractor.release()
+                throw UnsupportedFormat(trackInfo)
             }
 
             extractor.selectTrack(audioTrackIndex)
@@ -512,7 +536,7 @@ class AudioImporter @Inject constructor(
                 Log.e(TAG, "Failed to create decoder for $mime", e)
                 pfd?.close()
                 extractor.release()
-                return Pair(null, "Cannot decode audio format: $mime - try converting to MP3 or WAV first")
+                throw UnsupportedFormat("$mime - try converting to MP3 or WAV first")
             }
 
             val outputStream = FileOutputStream(tempFile)
@@ -583,6 +607,16 @@ class AudioImporter @Inject constructor(
             Log.i(TAG, "Decoded ${tempFile.length()} bytes of PCM audio")
             return Pair(tempFile, null)
 
+        } catch (e: AudioImportError) {
+            // Re-throw structured errors
+            throw e
+        } catch (e: IOException) {
+            Log.e(TAG, "Failed to decode audio - I/O error", e)
+            tempFile.delete()
+            try { codec?.release() } catch (ignored: Exception) {}
+            try { extractor?.release() } catch (ignored: Exception) {}
+            try { pfd?.close() } catch (ignored: Exception) {}
+            throw StorageError("Failed to read or write audio data: ${e.message}")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to decode audio", e)
             tempFile.delete()
