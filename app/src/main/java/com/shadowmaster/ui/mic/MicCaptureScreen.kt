@@ -19,10 +19,12 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.shadowmaster.ui.theme.ShadowMasterTheme
 
 @Composable
 fun MicCaptureScreen(
@@ -391,4 +393,70 @@ private fun formatDuration(ms: Long): String {
     val minutes = totalSeconds / 60
     val seconds = totalSeconds % 60
     return "%d:%02d".format(minutes, seconds)
+}
+
+// Preview Functions
+
+@Preview(showBackground = true)
+@Composable
+fun MicInstructionsCardPreview() {
+    ShadowMasterTheme {
+        Surface {
+            Box(modifier = Modifier.padding(16.dp)) {
+                MicInstructionsCard()
+            }
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun MicStatusIndicatorIdlePreview() {
+    ShadowMasterTheme {
+        Surface {
+            MicStatusIndicator(
+                state = MicCaptureState.IDLE,
+                duration = 0
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun MicStatusIndicatorRecordingPreview() {
+    ShadowMasterTheme {
+        Surface {
+            MicStatusIndicator(
+                state = MicCaptureState.RECORDING,
+                duration = 8500
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun MicStatusIndicatorProcessingPreview() {
+    ShadowMasterTheme {
+        Surface {
+            MicStatusIndicator(
+                state = MicCaptureState.PROCESSING,
+                duration = 15000
+            )
+        }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun MicStatusIndicatorSavedPreview() {
+    ShadowMasterTheme {
+        Surface {
+            MicStatusIndicator(
+                state = MicCaptureState.SAVED,
+                duration = 12500
+            )
+        }
+    }
 }
