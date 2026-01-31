@@ -2,6 +2,7 @@ package com.shadowmaster.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shadowmaster.data.model.BeepToneType
 import com.shadowmaster.data.model.PracticeMode
 import com.shadowmaster.data.model.SegmentMode
 import com.shadowmaster.data.model.ShadowingConfig
@@ -83,6 +84,24 @@ class SettingsViewModel @Inject constructor(
     fun updateAudioFeedbackEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.updateAudioFeedbackEnabled(enabled)
+        }
+    }
+
+    fun updateBeepVolume(volume: Int) {
+        viewModelScope.launch {
+            settingsRepository.updateBeepVolume(volume)
+        }
+    }
+
+    fun updateBeepToneType(toneType: BeepToneType) {
+        viewModelScope.launch {
+            settingsRepository.updateBeepToneType(toneType)
+        }
+    }
+
+    fun updateBeepDurationMs(durationMs: Int) {
+        viewModelScope.launch {
+            settingsRepository.updateBeepDurationMs(durationMs)
         }
     }
 

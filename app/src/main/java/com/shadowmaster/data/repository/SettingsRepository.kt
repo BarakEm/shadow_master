@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import com.shadowmaster.data.model.BeepToneType
 import com.shadowmaster.data.model.PracticeMode
 import com.shadowmaster.data.model.SegmentMode
 import com.shadowmaster.data.model.ShadowingConfig
@@ -31,6 +32,9 @@ class SettingsRepository @Inject constructor(
         val PAUSE_FOR_NAVIGATION = booleanPreferencesKey("pause_for_navigation")
         val BUS_MODE = booleanPreferencesKey("bus_mode")
         val AUDIO_FEEDBACK_ENABLED = booleanPreferencesKey("audio_feedback_enabled")
+        val BEEP_VOLUME = intPreferencesKey("beep_volume")
+        val BEEP_TONE_TYPE = stringPreferencesKey("beep_tone_type")
+        val BEEP_DURATION_MS = intPreferencesKey("beep_duration_ms")
         val PLAYBACK_USER_RECORDING = booleanPreferencesKey("playback_user_recording")
         val SILENCE_BETWEEN_REPEATS_MS = intPreferencesKey("silence_between_repeats_ms")
         val PRACTICE_MODE = stringPreferencesKey("practice_mode")
@@ -59,6 +63,13 @@ class SettingsRepository @Inject constructor(
             pauseForNavigation = preferences[Keys.PAUSE_FOR_NAVIGATION] ?: true,
             busMode = preferences[Keys.BUS_MODE] ?: false,
             audioFeedbackEnabled = preferences[Keys.AUDIO_FEEDBACK_ENABLED] ?: true,
+            beepVolume = preferences[Keys.BEEP_VOLUME] ?: 80,
+            beepToneType = try {
+                BeepToneType.valueOf(preferences[Keys.BEEP_TONE_TYPE] ?: BeepToneType.SOFT.name)
+            } catch (e: IllegalArgumentException) {
+                BeepToneType.SOFT
+            },
+            beepDurationMs = preferences[Keys.BEEP_DURATION_MS] ?: 150,
             playbackUserRecording = preferences[Keys.PLAYBACK_USER_RECORDING] ?: false,
             silenceBetweenRepeatsMs = preferences[Keys.SILENCE_BETWEEN_REPEATS_MS] ?: 1000,
             practiceMode = try {
@@ -142,6 +153,30 @@ class SettingsRepository @Inject constructor(
         }
     }
 
+    suspend fun updateBeepVolume(volume: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.BEEP_VOLUME] = volume.coerceIn(
+                ShadowingConfig.MIN_BEEP_VOLUME,
+                ShadowingConfig.MAX_BEEP_VOLUME
+            )
+        }
+    }
+
+    suspend fun updateBeepToneType(toneType: BeepToneType) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.BEEP_TONE_TYPE] = toneType.name
+        }
+    }
+
+    suspend fun updateBeepDurationMs(durationMs: Int) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.BEEP_DURATION_MS] = durationMs.coerceIn(
+                ShadowingConfig.MIN_BEEP_DURATION_MS,
+                ShadowingConfig.MAX_BEEP_DURATION_MS
+            )
+        }
+    }
+
     suspend fun updateConfig(config: ShadowingConfig) {
         context.dataStore.edit { preferences ->
             preferences[Keys.LANGUAGE] = config.language.code
@@ -154,6 +189,9 @@ class SettingsRepository @Inject constructor(
             preferences[Keys.PAUSE_FOR_NAVIGATION] = config.pauseForNavigation
             preferences[Keys.BUS_MODE] = config.busMode
             preferences[Keys.AUDIO_FEEDBACK_ENABLED] = config.audioFeedbackEnabled
+            preferences[Keys.BEEP_VOLUME] = config.beepVolume
+            preferences[Keys.BEEP_TONE_TYPE] = config.beepToneType.name
+            preferences[Keys.BEEP_DURATION_MS] = config.beepDurationMs
             preferences[Keys.PLAYBACK_USER_RECORDING] = config.playbackUserRecording
             preferences[Keys.SILENCE_BETWEEN_REPEATS_MS] = config.silenceBetweenRepeatsMs
             preferences[Keys.PRACTICE_MODE] = config.practiceMode.name

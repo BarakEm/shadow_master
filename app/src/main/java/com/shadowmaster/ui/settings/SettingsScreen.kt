@@ -16,6 +16,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.shadowmaster.R
+import com.shadowmaster.data.model.BeepToneType
 import com.shadowmaster.data.model.PracticeMode
 import com.shadowmaster.data.model.SegmentMode
 import com.shadowmaster.data.model.ShadowingConfig
@@ -160,6 +161,35 @@ fun SettingsScreen(
                 checked = config.audioFeedbackEnabled,
                 onCheckedChange = { viewModel.updateAudioFeedbackEnabled(it) }
             )
+
+            // Beep Customization (only visible when audio feedback is enabled)
+            if (config.audioFeedbackEnabled) {
+                // Beep Volume
+                IntSliderSetting(
+                    title = "Beep Volume",
+                    value = config.beepVolume,
+                    valueRange = ShadowingConfig.MIN_BEEP_VOLUME..ShadowingConfig.MAX_BEEP_VOLUME,
+                    steps = 10,
+                    valueLabel = { "$it%" },
+                    onValueChange = { viewModel.updateBeepVolume(it) }
+                )
+
+                // Beep Tone Type
+                BeepToneTypeSelector(
+                    selectedToneType = config.beepToneType,
+                    onToneTypeSelected = { viewModel.updateBeepToneType(it) }
+                )
+
+                // Beep Duration
+                IntSliderSetting(
+                    title = "Beep Duration",
+                    value = config.beepDurationMs,
+                    valueRange = ShadowingConfig.MIN_BEEP_DURATION_MS..ShadowingConfig.MAX_BEEP_DURATION_MS,
+                    steps = 9,
+                    valueLabel = { "${it}ms" },
+                    onValueChange = { viewModel.updateBeepDurationMs(it) }
+                )
+            }
 
             // Navigation Pause Toggle
             SwitchSetting(
@@ -397,6 +427,44 @@ private fun PracticeModeSelector(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BeepToneTypeSelector(
+    selectedToneType: BeepToneType,
+    onToneTypeSelected: (BeepToneType) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Beep Tone",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        BeepToneType.entries.forEach { toneType ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onToneTypeSelected(toneType) }
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(
+                    selected = toneType == selectedToneType,
+                    onClick = { onToneTypeSelected(toneType) }
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = toneType.displayName,
+                    style = MaterialTheme.typography.bodyLarge
+                )
             }
         }
     }

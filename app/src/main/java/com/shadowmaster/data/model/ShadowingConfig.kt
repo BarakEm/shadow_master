@@ -11,6 +11,9 @@ data class ShadowingConfig(
     val pauseForNavigation: Boolean = true,
     val busMode: Boolean = false,  // Passive listening - no user recording required
     val audioFeedbackEnabled: Boolean = true,  // Beeps for state transitions
+    val beepVolume: Int = 80,  // Beep volume (0-100)
+    val beepToneType: BeepToneType = BeepToneType.SOFT,  // Tone type for beeps
+    val beepDurationMs: Int = 150,  // Duration of beeps in milliseconds
     val playbackUserRecording: Boolean = false,  // Play back user's recording after shadowing
     val silenceBetweenRepeatsMs: Int = 1000,  // Silence between repeats in bus mode
     val practiceMode: PracticeMode = PracticeMode.STANDARD,  // Learning approach
@@ -25,6 +28,10 @@ data class ShadowingConfig(
         const val MAX_PLAYBACK_REPEATS = 5
         const val MIN_USER_REPEATS = 1
         const val MAX_USER_REPEATS = 3
+        const val MIN_BEEP_VOLUME = 0
+        const val MAX_BEEP_VOLUME = 100
+        const val MIN_BEEP_DURATION_MS = 50
+        const val MAX_BEEP_DURATION_MS = 500
     }
 }
 
@@ -39,6 +46,21 @@ enum class SegmentMode {
 enum class PracticeMode {
     STANDARD,   // Play full segment, user repeats
     BUILDUP     // Backward buildup: play last chunk, then last 2 chunks, etc. until full segment
+}
+
+/**
+ * Tone type for audio feedback beeps.
+ * Maps to Android ToneGenerator tone constants.
+ */
+enum class BeepToneType(
+    val displayName: String,
+    val toneConstant: Int
+) {
+    SOFT("Soft", android.media.ToneGenerator.TONE_PROP_BEEP),
+    STANDARD("Standard", android.media.ToneGenerator.TONE_PROP_ACK),
+    ALERT("Alert", android.media.ToneGenerator.TONE_CDMA_ALERT_NETWORK_LITE),
+    CONFIRM("Confirm", android.media.ToneGenerator.TONE_SUP_CONFIRM),
+    ERROR("Error", android.media.ToneGenerator.TONE_SUP_ERROR)
 }
 
 enum class SupportedLanguage(
