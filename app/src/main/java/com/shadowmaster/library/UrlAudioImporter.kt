@@ -15,7 +15,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.util.UUID
 import java.util.concurrent.TimeUnit
-import java.util.regex.Pattern
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -31,17 +30,6 @@ class UrlAudioImporter @Inject constructor(
 ) {
     companion object {
         private const val TAG = "UrlAudioImporter"
-
-        // URL patterns
-        private val YOUTUBE_PATTERNS = listOf(
-            Pattern.compile("(?:https?://)?(?:www\\.)?youtube\\.com/watch\\?v=([\\w-]+)"),
-            Pattern.compile("(?:https?://)?(?:www\\.)?youtu\\.be/([\\w-]+)"),
-            Pattern.compile("(?:https?://)?(?:m\\.)?youtube\\.com/watch\\?v=([\\w-]+)")
-        )
-        private val SPOTIFY_PODCAST_PATTERN =
-            Pattern.compile("(?:https?://)?open\\.spotify\\.com/episode/([\\w]+)")
-        private val DIRECT_AUDIO_PATTERN =
-            Pattern.compile("(?:https?://).*\\.(mp3|m4a|wav|ogg|aac|flac)(?:\\?.*)?$", Pattern.CASE_INSENSITIVE)
     }
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -59,31 +47,6 @@ class UrlAudioImporter @Inject constructor(
     val importProgress: StateFlow<UrlImportProgress?> = _importProgress.asStateFlow()
 
     /**
-     * Detect the type of URL and extract relevant info.
-     */
-    fun detectUrlType(url: String): UrlType {
-        // Check YouTube
-        for (pattern in YOUTUBE_PATTERNS) {
-            if (pattern.matcher(url).find()) {
-                return UrlType.YOUTUBE
-            }
-        }
-
-        // Check Spotify podcast
-        if (SPOTIFY_PODCAST_PATTERN.matcher(url).find()) {
-            return UrlType.SPOTIFY_PODCAST
-        }
-
-        // Check direct audio
-        if (DIRECT_AUDIO_PATTERN.matcher(url).find()) {
-            return UrlType.DIRECT_AUDIO
-        }
-
-        // Unknown - might be supported by NewPipe
-        return UrlType.UNKNOWN
-    }
-
-    /**
      * Import audio from a URL.
      */
     suspend fun importFromUrl(
@@ -98,7 +61,7 @@ class UrlAudioImporter @Inject constructor(
                 progress = 0
             )
 
-            val urlType = detectUrlType(url)
+            val urlType = UrlTypeDetector.detectUrlType(url)
             Log.i(TAG, "Detected URL type: $urlType for $url")
 
             val result = when (urlType) {
