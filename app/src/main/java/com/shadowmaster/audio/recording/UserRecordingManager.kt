@@ -30,6 +30,7 @@ class UserRecordingManager @Inject constructor(
 
     private var audioRecord: AudioRecord? = null
     private var recordingJob: Job? = null
+    private var cleanupJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private val recordedSamples = mutableListOf<Short>()
@@ -164,22 +165,32 @@ class UserRecordingManager @Inject constructor(
         if (!isRecording) {
             return
         }
+        
+        // Prevent multiple cleanup attempts
+        if (cleanupJob?.isActive == true) {
+            return
+        }
 
         isRecording = false
         
-        scope.launch {
-            // Wait for the recording job to complete before finishing
-            recordingJob?.join()
-            recordingJob = null
-
+        cleanupJob = scope.launch {
             try {
-                audioRecord?.stop()
+                // Wait for the recording job to complete before finishing
+                recordingJob?.join()
             } catch (e: Exception) {
-                Log.e(TAG, "Error stopping AudioRecord", e)
-            }
+                Log.e(TAG, "Error waiting for recording job", e)
+            } finally {
+                recordingJob = null
 
-            // Finish recording and invoke callback with the recorded audio
-            finishRecording()
+                try {
+                    audioRecord?.stop()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error stopping AudioRecord", e)
+                }
+
+                // Finish recording and invoke callback with the recorded audio
+                finishRecording()
+            }
         }
     }
 
