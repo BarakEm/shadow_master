@@ -243,7 +243,6 @@ sealed class ShadowingEvent {
      *
      * Triggered when:
      * - Assessment service returns pronunciation scores
-     * - Currently returns mock scores (real Azure integration pending)
      *
      * Effect: **Assessment** -> **Feedback**
      *
@@ -256,7 +255,7 @@ sealed class ShadowingEvent {
      *
      * Triggered when:
      * - Feedback timeout expires
-     * - User dismisses feedback (future feature)
+     * - User dismisses feedback
      *
      * Effect:
      * - **Feedback** -> **UserRecording** (if more user repeats configured)
@@ -291,7 +290,7 @@ sealed class ShadowingEvent {
      *
      * Triggered when:
      * - User taps "Skip" button
-     * - User gestures to skip (future feature)
+     * - User uses skip gesture
      *
      * Effect: **Playback**, **UserRecording**, **Assessment**, or **Feedback** -> **Listening**
      */
