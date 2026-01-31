@@ -58,10 +58,13 @@ fun LibraryScreen(
     var showUrlImportDialog by remember { mutableStateOf(false) }
     var urlToImport by remember { mutableStateOf("") }
 
+    // Stable callbacks to prevent recomposition
+    val onImportAudioFile = remember(viewModel) { viewModel::importAudioFile }
+    
     val audioPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
-        uri?.let { viewModel.importAudioFile(it) }
+        uri?.let { onImportAudioFile(it) }
     }
 
     // Handle shared content import
@@ -100,13 +103,16 @@ fun LibraryScreen(
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = {
-                        if (selectedPlaylist != null) {
-                            viewModel.clearSelection()
-                        } else {
-                            onNavigateBack()
+                    val onBackClick = remember(selectedPlaylist) {
+                        {
+                            if (selectedPlaylist != null) {
+                                viewModel.clearSelection()
+                            } else {
+                                onNavigateBack()
+                            }
                         }
-                    }) {
+                    }
+                    IconButton(onClick = onBackClick) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back"
@@ -155,8 +161,11 @@ fun LibraryScreen(
         floatingActionButton = {
             if (selectedPlaylist != null && !mergeMode) {
                 // Show Practice FAB when viewing playlist details
+                val onStartPracticeClick = remember(selectedPlaylist, onStartPractice) {
+                    { selectedPlaylist?.let { onStartPractice(it.id) } }
+                }
                 ExtendedFloatingActionButton(
-                    onClick = { onStartPractice(selectedPlaylist!!.id) },
+                    onClick = onStartPracticeClick,
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary
                 ) {
@@ -169,42 +178,10 @@ fun LibraryScreen(
                 }
             } else if (selectedPlaylist == null) {
                 // Show Import FAB when viewing playlist list
-                var showMenu by remember { mutableStateOf(false) }
-                Box {
-                    FloatingActionButton(
-                        onClick = { showMenu = true }
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Import Audio"
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Import Audio File") },
-                            onClick = {
-                                showMenu = false
-                                audioPickerLauncher.launch(arrayOf("audio/*"))
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Default.AudioFile, contentDescription = null)
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Import from URL") },
-                            onClick = {
-                                showMenu = false
-                                showUrlImportDialog = true
-                            },
-                            leadingIcon = {
-                                Icon(Icons.Default.Link, contentDescription = null)
-                            }
-                        )
-                    }
-                }
+                ImportFab(
+                    onImportAudioFile = { audioPickerLauncher.launch(arrayOf("audio/*")) },
+                    onImportFromUrl = { showUrlImportDialog = true }
+                )
             }
         }
     ) { paddingValues ->
@@ -510,10 +487,11 @@ fun LibraryScreen(
         val presets = remember { com.shadowmaster.library.SegmentationPresets.getAllPresets() }
         
         // Check if any item in the playlist has an importedAudioId
-        val hasImportedAudio = remember(playlistItems) {
+        // derivedStateOf automatically tracks playlistItems reads
+        val hasImportedAudio by derivedStateOf {
             playlistItems.any { it.importedAudioId != null }
         }
-        val firstImportedAudioId = remember(playlistItems) {
+        val firstImportedAudioId by derivedStateOf {
             playlistItems.firstOrNull { it.importedAudioId != null }?.importedAudioId
         }
 
@@ -759,6 +737,49 @@ fun LibraryScreen(
 }
 
 @Composable
+private fun ImportFab(
+    onImportAudioFile: () -> Unit,
+    onImportFromUrl: () -> Unit
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    Box {
+        FloatingActionButton(
+            onClick = { showMenu = true }
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = "Import Audio"
+            )
+        }
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Import Audio File") },
+                onClick = {
+                    showMenu = false
+                    onImportAudioFile()
+                },
+                leadingIcon = {
+                    Icon(Icons.Default.AudioFile, contentDescription = null)
+                }
+            )
+            DropdownMenuItem(
+                text = { Text("Import from URL") },
+                onClick = {
+                    showMenu = false
+                    onImportFromUrl()
+                },
+                leadingIcon = {
+                    Icon(Icons.Default.Link, contentDescription = null)
+                }
+            )
+        }
+    }
+}
+
+@Composable
 private fun PlaylistsContent(
     playlists: List<ShadowPlaylist>,
     activeImports: List<ImportJob>,
@@ -948,6 +969,11 @@ private fun PlaylistCard(
     onResegmentClick: () -> Unit,
     onPlayClick: () -> Unit
 ) {
+    // Memoize formatted date to avoid recalculating
+    val lastPracticedText = remember(playlist.lastPracticedAt) {
+        playlist.lastPracticedAt?.let { " • Last: ${formatDate(it)}" }
+    }
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -986,9 +1012,9 @@ private fun PlaylistCard(
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary
                     )
-                    playlist.lastPracticedAt?.let {
+                    lastPracticedText?.let {
                         Text(
-                            text = " • Last: ${formatDate(it)}",
+                            text = it,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -1070,6 +1096,10 @@ private fun PlaylistDetailContent(
             )
         }
     } else {
+        // Memoize the segments count text
+        val segmentsCountText = remember(items.size) { "${items.size} segments" }
+        val selectedCountText = remember(selectedForMerge.size) { "${selectedForMerge.size} selected" }
+        
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
@@ -1084,13 +1114,13 @@ private fun PlaylistDetailContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "${items.size} segments",
+                        text = segmentsCountText,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     if (mergeMode) {
                         Text(
-                            text = "${selectedForMerge.size} selected",
+                            text = selectedCountText,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary
                         )
@@ -1122,6 +1152,12 @@ private fun ShadowItemCard(
     isSelectedForMerge: Boolean,
     onToggleMergeSelection: () -> Unit
 ) {
+    // Memoize computed values to avoid recalculating on each recomposition
+    val durationText = remember(item.durationMs) { formatDuration(item.durationMs) }
+    val displayText = remember(item.transcription, item.orderInPlaylist) {
+        item.transcription ?: "Segment ${item.orderInPlaylist + 1}"
+    }
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -1161,7 +1197,7 @@ private fun ShadowItemCard(
                 shape = MaterialTheme.shapes.small
             ) {
                 Text(
-                    text = formatDuration(item.durationMs),
+                    text = durationText,
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                 )
@@ -1172,7 +1208,7 @@ private fun ShadowItemCard(
             // Item info
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = item.transcription ?: "Segment ${item.orderInPlaylist + 1}",
+                    text = displayText,
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
