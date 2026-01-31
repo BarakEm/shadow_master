@@ -561,14 +561,15 @@ class PerformanceTracker @Inject constructor(
      */
     suspend fun reset() {
         clearMetrics()
-        mutex.withLock {
-            enabled = true
-        }
+        enabled = true  // @Volatile ensures thread-safe visibility
     }
     
     /**
      * Release resources used by the PerformanceTracker.
-     * Call this when the tracker is no longer needed.
+     * This is a fire-and-forget operation - ongoing operations will be cancelled.
+     * Call this when the tracker is no longer needed (typically on application shutdown).
+     * 
+     * Note: As a singleton, this is rarely needed since the tracker lives for the app lifetime.
      */
     fun release() {
         scope.cancel()
