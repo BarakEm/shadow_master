@@ -162,34 +162,39 @@ class UserRecordingManager @Inject constructor(
     }
 
     fun stopRecording() {
-        if (!isRecording) {
-            return
-        }
-        
-        // Prevent multiple cleanup attempts
-        if (cleanupJob?.isActive == true) {
-            return
-        }
+        synchronized(this) {
+            if (!isRecording) {
+                return
+            }
+            
+            // Prevent multiple cleanup attempts
+            if (cleanupJob?.isActive == true) {
+                return
+            }
 
-        isRecording = false
-        
-        cleanupJob = scope.launch {
-            try {
-                // Wait for the recording job to complete before finishing
-                recordingJob?.join()
-            } catch (e: Exception) {
-                Log.e(TAG, "Error waiting for recording job", e)
-            } finally {
-                recordingJob = null
-
+            isRecording = false
+            
+            cleanupJob = scope.launch {
                 try {
-                    audioRecord?.stop()
+                    // Wait for the recording job to complete before finishing
+                    recordingJob?.join()
                 } catch (e: Exception) {
-                    Log.e(TAG, "Error stopping AudioRecord", e)
-                }
+                    Log.e(TAG, "Error waiting for recording job", e)
+                } finally {
+                    recordingJob = null
 
-                // Finish recording and invoke callback with the recorded audio
-                finishRecording()
+                    try {
+                        audioRecord?.stop()
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error stopping AudioRecord", e)
+                    }
+
+                    // Finish recording and invoke callback with the recorded audio
+                    finishRecording()
+                    
+                    // Clear cleanup job to allow future stop operations
+                    cleanupJob = null
+                }
             }
         }
     }
