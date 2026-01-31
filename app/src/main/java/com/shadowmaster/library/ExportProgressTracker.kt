@@ -47,8 +47,9 @@ class ExportProgressTracker @Inject constructor() {
      * Update only specific fields of the current progress.
      * Pass null to keep existing values, pass explicit values (including 0 or "") to update.
      * 
-     * Note: For nullable String fields (outputPath, error), passing null keeps the existing value.
-     * To clear these fields, use clearProgress() or updateProgress(ExportProgress(...)) instead.
+     * Note: For nullable String fields (outputPath, error), passing null will preserve their
+     * current values (which may themselves be null). To reset all fields to their defaults,
+     * use clearProgress().
      */
     fun updateProgress(
         status: ExportStatus? = null,

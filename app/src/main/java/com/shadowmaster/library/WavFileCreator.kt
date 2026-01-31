@@ -29,11 +29,12 @@ class WavFileCreator @Inject constructor(
      * Convert raw PCM file to WAV and save to Music folder.
      *
      * @param pcmFile The raw PCM audio file
-     * @param name The name for the output file (will be sanitized)
+     * @param name The name for the output file (will be sanitized to prevent path traversal)
      * @return The path/location string of the saved file
      */
     fun saveAsWav(pcmFile: File, name: String): String {
-        val sanitizedName = name.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+        // Remove any characters that could enable path traversal or cause file system issues
+        val sanitizedName = name.replace(Regex("[^a-zA-Z0-9_-]"), "_")
         val fileName = "ShadowMaster_${sanitizedName}_${System.currentTimeMillis()}.wav"
 
         val pcmData = pcmFile.readBytes()
