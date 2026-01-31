@@ -32,7 +32,8 @@ class AudioImporter @Inject constructor(
     private val importJobDao: ImportJobDao,
     private val vadDetector: SileroVadDetector,
     private val importedAudioDao: com.shadowmaster.data.local.ImportedAudioDao,
-    private val segmentationConfigDao: com.shadowmaster.data.local.SegmentationConfigDao
+    private val segmentationConfigDao: com.shadowmaster.data.local.SegmentationConfigDao,
+    private val audioFileUtility: AudioFileUtility
 ) {
     companion object {
         private const val TAG = "AudioImporter"
@@ -126,8 +127,8 @@ class AudioImporter @Inject constructor(
             // Create ImportedAudio entity
             val importedAudio = ImportedAudio(
                 sourceUri = uri.toString(),
-                sourceFileName = getFileName(uri) ?: "Unknown",
-                originalFormat = detectFormat(uri),
+                sourceFileName = audioFileUtility.getFileName(uri, context) ?: "Unknown",
+                originalFormat = audioFileUtility.detectFormat(uri, context),
                 pcmFilePath = persistentPcmFile.absolutePath,
                 durationMs = durationMs,
                 sampleRate = TARGET_SAMPLE_RATE,
@@ -146,19 +147,6 @@ class AudioImporter @Inject constructor(
             Log.e(TAG, "Import failed", e)
             tempPcmFile?.delete()
             Result.failure(e)
-        }
-    }
-
-    private fun detectFormat(uri: Uri): String {
-        val fileName = getFileName(uri) ?: ""
-        return when {
-            fileName.endsWith(".mp3", ignoreCase = true) -> "mp3"
-            fileName.endsWith(".wav", ignoreCase = true) -> "wav"
-            fileName.endsWith(".m4a", ignoreCase = true) -> "m4a"
-            fileName.endsWith(".aac", ignoreCase = true) -> "aac"
-            fileName.endsWith(".ogg", ignoreCase = true) -> "ogg"
-            fileName.endsWith(".flac", ignoreCase = true) -> "flac"
-            else -> "unknown"
         }
     }
 
@@ -697,14 +685,14 @@ class AudioImporter @Inject constructor(
 
                         // Convert to mono 16kHz if needed
                         val monoData = if (channels > 1) {
-                            convertToMono(pcmData, channels)
+                            audioFileUtility.convertToMono(pcmData, channels)
                         } else {
                             pcmData
                         }
 
                         // Resample if needed
                         val resampledData = if (sampleRate != TARGET_SAMPLE_RATE) {
-                            resample(monoData, sampleRate, TARGET_SAMPLE_RATE)
+                            audioFileUtility.resample(monoData, sampleRate, TARGET_SAMPLE_RATE)
                         } else {
                             monoData
                         }
@@ -743,60 +731,6 @@ class AudioImporter @Inject constructor(
             }
             return Pair(null, errorMsg)
         }
-    }
-
-    /**
-     * Convert stereo/multi-channel PCM to mono by averaging channels.
-     */
-    private fun convertToMono(pcmData: ByteArray, channels: Int): ByteArray {
-        if (channels == 1) return pcmData
-
-        val samplesPerChannel = pcmData.size / (channels * 2) // 16-bit samples
-        val monoData = ByteArray(samplesPerChannel * 2)
-
-        for (i in 0 until samplesPerChannel) {
-            var sum = 0
-            for (ch in 0 until channels) {
-                val offset = (i * channels + ch) * 2
-                val sample = (pcmData[offset + 1].toInt() shl 8) or (pcmData[offset].toInt() and 0xFF)
-                sum += sample
-            }
-            val monoSample = (sum / channels).toShort()
-            monoData[i * 2] = (monoSample.toInt() and 0xFF).toByte()
-            monoData[i * 2 + 1] = ((monoSample.toInt() shr 8) and 0xFF).toByte()
-        }
-
-        return monoData
-    }
-
-    /**
-     * Simple linear resampling for rate conversion.
-     */
-    private fun resample(pcmData: ByteArray, fromRate: Int, toRate: Int): ByteArray {
-        if (fromRate == toRate) return pcmData
-
-        val inputSamples = pcmData.size / 2
-        val outputSamples = (inputSamples.toLong() * toRate / fromRate).toInt()
-        val outputData = ByteArray(outputSamples * 2)
-
-        val ratio = fromRate.toDouble() / toRate
-
-        for (i in 0 until outputSamples) {
-            val srcPos = i * ratio
-            val srcIndex = srcPos.toInt().coerceIn(0, inputSamples - 2)
-            val frac = srcPos - srcIndex
-
-            // Get two adjacent samples for interpolation
-            val s1 = (pcmData[srcIndex * 2 + 1].toInt() shl 8) or (pcmData[srcIndex * 2].toInt() and 0xFF)
-            val s2 = (pcmData[(srcIndex + 1) * 2 + 1].toInt() shl 8) or (pcmData[(srcIndex + 1) * 2].toInt() and 0xFF)
-
-            // Linear interpolation
-            val sample = (s1 + (s2 - s1) * frac).toInt().toShort()
-            outputData[i * 2] = (sample.toInt() and 0xFF).toByte()
-            outputData[i * 2 + 1] = ((sample.toInt() shr 8) and 0xFF).toByte()
-        }
-
-        return outputData
     }
 
     /**
@@ -877,42 +811,13 @@ class AudioImporter @Inject constructor(
      * Extract a segment from the PCM file and save it.
      */
     private fun extractSegment(pcmFile: File, bounds: AudioSegmentBounds): File? {
-        try {
-            val segmentFile = File(segmentsDir, "${UUID.randomUUID()}.pcm")
-            val bytesPerMs = (TARGET_SAMPLE_RATE * 2) / 1000 // 16-bit mono
-
-            val startByte = bounds.startMs * bytesPerMs
-            val endByte = bounds.endMs * bytesPerMs
-            val length = (endByte - startByte).toInt()
-
-            RandomAccessFile(pcmFile, "r").use { input ->
-                input.seek(startByte)
-                val buffer = ByteArray(length)
-                val read = input.read(buffer)
-
-                if (read > 0) {
-                    FileOutputStream(segmentFile).use { output ->
-                        output.write(buffer, 0, read)
-                    }
-                    return segmentFile
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to extract segment", e)
-        }
-        return null
-    }
-
-    private fun getFileName(uri: Uri): String? {
-        return try {
-            context.contentResolver.query(uri, null, null, null, null)?.use { cursor ->
-                val nameIndex = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
-                cursor.moveToFirst()
-                cursor.getString(nameIndex)
-            }
-        } catch (e: Exception) {
-            uri.lastPathSegment
-        }
+        return audioFileUtility.extractSegment(
+            pcmFile = pcmFile,
+            startMs = bounds.startMs,
+            endMs = bounds.endMs,
+            sampleRate = TARGET_SAMPLE_RATE,
+            outputDir = segmentsDir
+        )
     }
 
     /**

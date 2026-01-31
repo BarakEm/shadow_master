@@ -49,7 +49,8 @@ enum class ExportStatus {
 @Singleton
 class AudioExporter @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val shadowItemDao: ShadowItemDao
+    private val shadowItemDao: ShadowItemDao,
+    private val audioFileUtility: AudioFileUtility
 ) {
     companion object {
         private const val TAG = "AudioExporter"
@@ -267,93 +268,13 @@ class AudioExporter @Inject constructor(
         val fileName = "ShadowMaster_${sanitizedName}_${System.currentTimeMillis()}.wav"
 
         val pcmData = pcmFile.readBytes()
-        val wavData = createWavHeader(pcmData.size) + pcmData
+        val wavData = audioFileUtility.createWavHeader(pcmData.size) + pcmData
 
         // Save to Music folder using MediaStore (works on all Android versions)
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             saveWithMediaStore(fileName, wavData)
         } else {
             saveToExternalStorage(fileName, wavData)
-        }
-    }
-
-    /**
-     * Create WAV file header.
-     */
-    private fun createWavHeader(pcmDataSize: Int): ByteArray {
-        val totalDataLen = pcmDataSize + 36
-        val byteRate = SAMPLE_RATE * 1 * 16 / 8 // mono, 16-bit
-
-        return ByteArray(44).apply {
-            // RIFF header
-            this[0] = 'R'.code.toByte()
-            this[1] = 'I'.code.toByte()
-            this[2] = 'F'.code.toByte()
-            this[3] = 'F'.code.toByte()
-
-            // File size - 8
-            this[4] = (totalDataLen and 0xff).toByte()
-            this[5] = ((totalDataLen shr 8) and 0xff).toByte()
-            this[6] = ((totalDataLen shr 16) and 0xff).toByte()
-            this[7] = ((totalDataLen shr 24) and 0xff).toByte()
-
-            // WAVE
-            this[8] = 'W'.code.toByte()
-            this[9] = 'A'.code.toByte()
-            this[10] = 'V'.code.toByte()
-            this[11] = 'E'.code.toByte()
-
-            // fmt chunk
-            this[12] = 'f'.code.toByte()
-            this[13] = 'm'.code.toByte()
-            this[14] = 't'.code.toByte()
-            this[15] = ' '.code.toByte()
-
-            // Subchunk1Size (16 for PCM)
-            this[16] = 16
-            this[17] = 0
-            this[18] = 0
-            this[19] = 0
-
-            // AudioFormat (1 = PCM)
-            this[20] = 1
-            this[21] = 0
-
-            // NumChannels (1 = mono)
-            this[22] = 1
-            this[23] = 0
-
-            // SampleRate
-            this[24] = (SAMPLE_RATE and 0xff).toByte()
-            this[25] = ((SAMPLE_RATE shr 8) and 0xff).toByte()
-            this[26] = ((SAMPLE_RATE shr 16) and 0xff).toByte()
-            this[27] = ((SAMPLE_RATE shr 24) and 0xff).toByte()
-
-            // ByteRate
-            this[28] = (byteRate and 0xff).toByte()
-            this[29] = ((byteRate shr 8) and 0xff).toByte()
-            this[30] = ((byteRate shr 16) and 0xff).toByte()
-            this[31] = ((byteRate shr 24) and 0xff).toByte()
-
-            // BlockAlign
-            this[32] = 2 // mono 16-bit
-            this[33] = 0
-
-            // BitsPerSample
-            this[34] = 16
-            this[35] = 0
-
-            // data chunk
-            this[36] = 'd'.code.toByte()
-            this[37] = 'a'.code.toByte()
-            this[38] = 't'.code.toByte()
-            this[39] = 'a'.code.toByte()
-
-            // Subchunk2Size
-            this[40] = (pcmDataSize and 0xff).toByte()
-            this[41] = ((pcmDataSize shr 8) and 0xff).toByte()
-            this[42] = ((pcmDataSize shr 16) and 0xff).toByte()
-            this[43] = ((pcmDataSize shr 24) and 0xff).toByte()
         }
     }
 
