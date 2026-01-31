@@ -65,8 +65,8 @@ class ShadowingStateMachine @Inject constructor() {
     val state: StateFlow<ShadowingState> = _state.asStateFlow()
 
     private var currentConfig: ShadowingConfig = ShadowingConfig()
-    private var currentPlaybackRepeat = 0  // 0-based counter for current playback iteration
-    private var currentUserRepeat = 0      // 0-based counter for current user recording iteration
+    private var currentPlaybackRepeat = 0  // Tracks current playback iteration (1-based when active, 0 when reset)
+    private var currentUserRepeat = 0      // Tracks current user recording iteration (1-based when active, 0 when reset)
     private var currentSegment: AudioSegment? = null  // The audio segment being practiced
     private var stateBeforePause: ShadowingState? = null  // Saved state for navigation pause/resume
 

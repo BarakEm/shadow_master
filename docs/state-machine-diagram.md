@@ -14,6 +14,13 @@ stateDiagram-v2
     Listening --> PausedForNavigation: NavigationStarted
     Listening --> Idle: Stop
     
+    note right of SegmentDetected
+        Brief transition state.
+        Coordinator initiates playback,
+        then PlaybackComplete triggers
+        transition to Playback state
+    end note
+    
     SegmentDetected --> Playback: PlaybackComplete
     SegmentDetected --> Idle: Stop
     
