@@ -1,6 +1,5 @@
 package com.shadowmaster.library
 
-import android.net.Uri
 import com.shadowmaster.data.local.*
 import com.shadowmaster.data.model.*
 import io.mockk.*
@@ -568,7 +567,8 @@ class LibraryRepositoryTest {
             it.id == session.id && 
             it.itemsPracticed == itemsPracticed && 
             it.totalDurationMs == durationMs &&
-            it.endedAt != null
+            it.endedAt != null &&
+            it.endedAt!! >= session.startedAt
         }) }
         coVerify(exactly = 1) { shadowPlaylistDao.markPracticed(playlistId) }
     }
