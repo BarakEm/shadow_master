@@ -65,6 +65,14 @@ android {
 
     kotlinOptions {
         jvmTarget = "17"
+        
+        // Enable Compose compiler metrics and reports for performance analysis
+        freeCompilerArgs += listOf(
+            "-P",
+            "plugin:androidx.compose.compiler.plugins.kotlin:metricsDestination=${project.buildDir.absolutePath}/compose_metrics",
+            "-P",
+            "plugin:androidx.compose.compiler.plugins.kotlin:reportsDestination=${project.buildDir.absolutePath}/compose_reports"
+        )
     }
 
     buildFeatures {
