@@ -237,13 +237,15 @@ class AudioProcessingPipelineTest {
     /**
      * Test AudioProcessingPipeline constants and configuration.
      * 
-     * Note: These constants are private in AudioProcessingPipeline, but their values
-     * are critical for proper audio processing. This test documents the expected values.
-     * If the actual constants change, this test will need to be updated to match.
+     * Note: These constants are private in AudioProcessingPipeline, so we document
+     * the expected values here. Changes to the actual constants should be accompanied
+     * by updates to these tests to ensure consistency. Integration tests in the
+     * androidTest directory can verify end-to-end behavior with the actual values.
      */
     @Test
     fun `test pipeline constants are properly defined for audio processing`() {
         // Expected values based on AudioProcessingPipeline implementation
+        // If these change in the actual code, update them here and verify the changes are intentional
         val expectedMinSpeechDuration = 500L // MIN_SPEECH_DURATION_MS
         val expectedMaxSpeechDuration = 8000L // MAX_SPEECH_DURATION_MS
         val expectedPreSpeechBuffer = 200L // PRE_SPEECH_BUFFER_MS
