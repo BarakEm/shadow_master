@@ -445,7 +445,7 @@ fun LanguageSelectorPreview() {
     ShadowMasterTheme {
         Surface {
             LanguageSelector(
-                selectedLanguage = SupportedLanguage.ENGLISH,
+                selectedLanguage = SupportedLanguage.ENGLISH_US,
                 onLanguageSelected = {}
             )
         }

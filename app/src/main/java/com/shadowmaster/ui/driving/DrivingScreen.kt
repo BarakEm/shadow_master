@@ -30,6 +30,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.shadowmaster.R
 import com.shadowmaster.data.model.ShadowingState
+import com.shadowmaster.data.model.AudioSegment
 import com.shadowmaster.ui.theme.ShadowMasterTheme
 
 @Composable
@@ -420,7 +421,11 @@ fun StatusIndicatorListeningPreview() {
 fun StatusIndicatorUserRecordingPreview() {
     ShadowMasterTheme {
         Surface {
-            StatusIndicator(state = ShadowingState.UserRecording)
+            val mockSegment = AudioSegment(
+                samples = ShortArray(0),
+                sampleRate = 16000
+            )
+            StatusIndicator(state = ShadowingState.UserRecording(mockSegment, 1, 3))
         }
     }
 }
@@ -430,7 +435,7 @@ fun StatusIndicatorUserRecordingPreview() {
 fun StatusIndicatorPausedPreview() {
     ShadowMasterTheme {
         Surface {
-            StatusIndicator(state = ShadowingState.Paused)
+            StatusIndicator(state = ShadowingState.Idle)
         }
     }
 }
