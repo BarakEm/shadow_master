@@ -66,14 +66,6 @@ fun SettingsScreen(
 
             HorizontalDivider()
 
-            // Segment Mode Selection
-            SegmentModeSelector(
-                selectedMode = config.segmentMode,
-                onModeSelected = { viewModel.updateSegmentMode(it) }
-            )
-
-            HorizontalDivider()
-
             // Playback Speed
             SliderSetting(
                 title = stringResource(R.string.playback_speed),
@@ -101,16 +93,6 @@ fun SettingsScreen(
                     onValueChange = { viewModel.updateUserRepeats(it) }
                 )
             }
-
-            // Silence Threshold
-            IntSliderSetting(
-                title = stringResource(R.string.silence_threshold),
-                value = config.silenceThresholdMs,
-                valueRange = ShadowingConfig.MIN_SILENCE_THRESHOLD_MS..ShadowingConfig.MAX_SILENCE_THRESHOLD_MS,
-                steps = 12,
-                valueLabel = { "${it}ms" },
-                onValueChange = { viewModel.updateSilenceThreshold(it) }
-            )
 
             HorizontalDivider()
 
