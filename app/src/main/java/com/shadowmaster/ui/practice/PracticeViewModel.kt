@@ -44,6 +44,7 @@ class PracticeViewModel @Inject constructor(
     private val libraryRepository: LibraryRepository,
     private val settingsRepository: SettingsRepository,
     private val audioFeedbackSystem: AudioFeedbackSystem,
+    private val mediaControlManager: com.shadowmaster.media.MediaControlManager,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -83,6 +84,26 @@ class PracticeViewModel @Inject constructor(
     init {
         audioFeedbackSystem.initialize()
         loadPlaylist()
+        setupAudioFocusHandling()
+    }
+
+    private fun setupAudioFocusHandling() {
+        // Pause playback when audio focus is lost (e.g., another app starts playing)
+        mediaControlManager.setOnFocusLostCallback {
+            if (_state.value is PracticeState.Playing || _state.value is PracticeState.UserRecording) {
+                Log.d(TAG, "Audio focus lost - pausing practice")
+                isPaused = true
+                _state.value = PracticeState.Paused
+            }
+        }
+
+        // Resume playback when audio focus is regained
+        mediaControlManager.setOnFocusGainedCallback {
+            if (_state.value is PracticeState.Paused) {
+                Log.d(TAG, "Audio focus regained - resuming practice")
+                isPaused = false
+            }
+        }
     }
 
     private fun loadPlaylist() {
@@ -553,6 +574,10 @@ class PracticeViewModel @Inject constructor(
             Log.w(TAG, "Error releasing AudioTrack in onCleared", e)
         }
         audioTrack = null
+
+        // Clean up audio focus callbacks
+        mediaControlManager.setOnFocusLostCallback(null)
+        mediaControlManager.setOnFocusGainedCallback(null)
     }
 }
 

@@ -172,6 +172,23 @@ class ShadowingCoordinator @Inject constructor(
     init {
         observeStateChanges()
         observeConfig()
+        setupAudioFocusHandling()
+    }
+
+    /**
+     * Sets up audio focus handling to pause/resume playback when focus is lost/gained.
+     * This allows the app to properly handle interruptions from other apps (calls, notifications, etc.)
+     */
+    private fun setupAudioFocusHandling() {
+        mediaControlManager.setOnFocusLostCallback {
+            Log.d(TAG, "Audio focus lost - pausing playback")
+            playbackEngine.pause()
+        }
+
+        mediaControlManager.setOnFocusGainedCallback {
+            Log.d(TAG, "Audio focus regained - resuming playback")
+            playbackEngine.resume()
+        }
     }
 
     /**
