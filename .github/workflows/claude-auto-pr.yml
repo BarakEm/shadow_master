@@ -32,55 +32,88 @@ jobs:
             ISSUE_NUM="${BASH_REMATCH[1]}"
             echo "issue_number=$ISSUE_NUM" >> $GITHUB_OUTPUT
             echo "has_issue=true" >> $GITHUB_OUTPUT
+            echo "title=Fix #$ISSUE_NUM" >> $GITHUB_OUTPUT
           else
             echo "has_issue=false" >> $GITHUB_OUTPUT
+            echo "title=Claude automated fix" >> $GITHUB_OUTPUT
           fi
+
+      - name: Check if PR already exists
+        id: check-pr
+        run: |
+          EXISTING_PR=$(gh pr list --head "${{ steps.extract.outputs.branch }}" --json number --jq '.[0].number // empty')
+          if [ -n "$EXISTING_PR" ]; then
+            echo "PR #$EXISTING_PR already exists for this branch"
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "number=$EXISTING_PR" >> $GITHUB_OUTPUT
+          else
+            echo "No existing PR found"
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Get commit messages for PR body
         id: commits
+        if: steps.check-pr.outputs.exists != 'true'
         run: |
-          COMMITS=$(git log origin/master..HEAD --pretty=format:"- %s" | head -20)
-          echo "commits<<EOF" >> $GITHUB_OUTPUT
-          echo "$COMMITS" >> $GITHUB_OUTPUT
+          COMMITS=$(git log origin/master..HEAD --pretty=format:"- %s" 2>/dev/null | head -20 || echo "- Initial commit")
+
+          # Build PR body
+          if [ "${{ steps.extract.outputs.has_issue }}" = "true" ]; then
+            BODY="## Automated PR from Claude
+
+          Fixes #${{ steps.extract.outputs.issue_number }}
+
+          ### Commits
+          $COMMITS
+
+          ---
+          *This PR was automatically created by Claude Code.*"
+          else
+            BODY="## Automated PR from Claude
+
+          ### Commits
+          $COMMITS
+
+          ---
+          *This PR was automatically created by Claude Code.*"
+          fi
+
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$BODY" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create Pull Request
         id: create-pr
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ steps.extract.outputs.branch }}
-          base: master
-          title: |
-            ${{ steps.extract.outputs.has_issue == 'true' && format('Fix #{0}', steps.extract.outputs.issue_number) || 'Claude automated fix' }}
-          body: |
-            ## Automated PR from Claude
+        if: steps.check-pr.outputs.exists != 'true'
+        run: |
+          PR_URL=$(gh pr create \
+            --title "${{ steps.extract.outputs.title }}" \
+            --body "${{ steps.commits.outputs.body }}" \
+            --base master \
+            --head "${{ steps.extract.outputs.branch }}" \
+            --label "claude-automated")
 
-            ${{ steps.extract.outputs.has_issue == 'true' && format('Fixes #{0}', steps.extract.outputs.issue_number) || '' }}
-
-            ### Commits
-            ${{ steps.commits.outputs.commits }}
-
-            ---
-            *This PR was automatically created by Claude Code.*
-          labels: |
-            claude-automated
-            auto-merge
-          delete-branch: true
+          PR_NUM=$(echo "$PR_URL" | grep -oE '[0-9]+$')
+          echo "Created PR #$PR_NUM"
+          echo "number=$PR_NUM" >> $GITHUB_OUTPUT
+          echo "url=$PR_URL" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Enable Auto-Merge
-        if: steps.create-pr.outputs.pull-request-number
+        if: steps.check-pr.outputs.exists != 'true' && steps.create-pr.outputs.number
         run: |
-          gh pr merge ${{ steps.create-pr.outputs.pull-request-number }} \
-            --auto --squash \
-            --subject "Merge Claude fix: ${{ steps.extract.outputs.branch }}"
+          echo "Enabling auto-merge for PR #${{ steps.create-pr.outputs.number }}..."
+          gh pr merge ${{ steps.create-pr.outputs.number }} --auto --squash || echo "Auto-merge setup failed or already enabled"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Comment on linked issue
-        if: steps.extract.outputs.has_issue == 'true' && steps.create-pr.outputs.pull-request-number
+        if: steps.extract.outputs.has_issue == 'true' && steps.check-pr.outputs.exists != 'true' && steps.create-pr.outputs.number
         run: |
           gh issue comment ${{ steps.extract.outputs.issue_number }} \
-            --body "🤖 Claude has created PR #${{ steps.create-pr.outputs.pull-request-number }} to fix this issue. It will be auto-merged once checks pass."
+            --body "🤖 Claude has created PR #${{ steps.create-pr.outputs.number }} to fix this issue. It will be auto-merged once checks pass."
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
