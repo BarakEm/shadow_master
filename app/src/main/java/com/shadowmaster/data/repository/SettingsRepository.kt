@@ -9,6 +9,7 @@ import com.shadowmaster.data.model.PracticeMode
 import com.shadowmaster.data.model.SegmentMode
 import com.shadowmaster.data.model.ShadowingConfig
 import com.shadowmaster.data.model.SupportedLanguage
+import com.shadowmaster.data.model.TranslationConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -39,6 +40,18 @@ class SettingsRepository @Inject constructor(
         val SILENCE_BETWEEN_REPEATS_MS = intPreferencesKey("silence_between_repeats_ms")
         val PRACTICE_MODE = stringPreferencesKey("practice_mode")
         val BUILDUP_CHUNK_MS = intPreferencesKey("buildup_chunk_ms")
+        
+        // Translation config keys
+        val TRANSLATION_DEFAULT_PROVIDER = stringPreferencesKey("translation_default_provider")
+        val TRANSLATION_TARGET_LANGUAGE = stringPreferencesKey("translation_target_language")
+        val TRANSLATION_AUTO_TRANSLATE = booleanPreferencesKey("translation_auto_translate")
+        val TRANSLATION_GOOGLE_API_KEY = stringPreferencesKey("translation_google_api_key")
+        val TRANSLATION_GOOGLE_ENABLED = booleanPreferencesKey("translation_google_enabled")
+        val TRANSLATION_DEEPL_API_KEY = stringPreferencesKey("translation_deepl_api_key")
+        val TRANSLATION_DEEPL_ENABLED = booleanPreferencesKey("translation_deepl_enabled")
+        val TRANSLATION_CUSTOM_URL = stringPreferencesKey("translation_custom_url")
+        val TRANSLATION_CUSTOM_API_KEY = stringPreferencesKey("translation_custom_api_key")
+        val TRANSLATION_CUSTOM_ENABLED = booleanPreferencesKey("translation_custom_enabled")
     }
 
     // Blocking access for initial value (use sparingly)
@@ -77,7 +90,19 @@ class SettingsRepository @Inject constructor(
             } catch (e: IllegalArgumentException) {
                 PracticeMode.STANDARD
             },
-            buildupChunkMs = preferences[Keys.BUILDUP_CHUNK_MS] ?: 1500
+            buildupChunkMs = preferences[Keys.BUILDUP_CHUNK_MS] ?: 1500,
+            translationConfig = TranslationConfig(
+                defaultProvider = preferences[Keys.TRANSLATION_DEFAULT_PROVIDER] ?: "mock",
+                targetLanguage = preferences[Keys.TRANSLATION_TARGET_LANGUAGE] ?: "en",
+                autoTranslateOnTranscribe = preferences[Keys.TRANSLATION_AUTO_TRANSLATE] ?: false,
+                googleApiKey = preferences[Keys.TRANSLATION_GOOGLE_API_KEY] ?: "",
+                googleEnabled = preferences[Keys.TRANSLATION_GOOGLE_ENABLED] ?: false,
+                deeplApiKey = preferences[Keys.TRANSLATION_DEEPL_API_KEY] ?: "",
+                deeplEnabled = preferences[Keys.TRANSLATION_DEEPL_ENABLED] ?: false,
+                customEndpointUrl = preferences[Keys.TRANSLATION_CUSTOM_URL] ?: "",
+                customEndpointApiKey = preferences[Keys.TRANSLATION_CUSTOM_API_KEY] ?: "",
+                customEnabled = preferences[Keys.TRANSLATION_CUSTOM_ENABLED] ?: false
+            )
         )
     }
 
@@ -196,6 +221,18 @@ class SettingsRepository @Inject constructor(
             preferences[Keys.SILENCE_BETWEEN_REPEATS_MS] = config.silenceBetweenRepeatsMs
             preferences[Keys.PRACTICE_MODE] = config.practiceMode.name
             preferences[Keys.BUILDUP_CHUNK_MS] = config.buildupChunkMs
+            
+            // Translation config
+            preferences[Keys.TRANSLATION_DEFAULT_PROVIDER] = config.translationConfig.defaultProvider
+            preferences[Keys.TRANSLATION_TARGET_LANGUAGE] = config.translationConfig.targetLanguage
+            preferences[Keys.TRANSLATION_AUTO_TRANSLATE] = config.translationConfig.autoTranslateOnTranscribe
+            preferences[Keys.TRANSLATION_GOOGLE_API_KEY] = config.translationConfig.googleApiKey
+            preferences[Keys.TRANSLATION_GOOGLE_ENABLED] = config.translationConfig.googleEnabled
+            preferences[Keys.TRANSLATION_DEEPL_API_KEY] = config.translationConfig.deeplApiKey
+            preferences[Keys.TRANSLATION_DEEPL_ENABLED] = config.translationConfig.deeplEnabled
+            preferences[Keys.TRANSLATION_CUSTOM_URL] = config.translationConfig.customEndpointUrl
+            preferences[Keys.TRANSLATION_CUSTOM_API_KEY] = config.translationConfig.customEndpointApiKey
+            preferences[Keys.TRANSLATION_CUSTOM_ENABLED] = config.translationConfig.customEnabled
         }
     }
 
@@ -220,6 +257,68 @@ class SettingsRepository @Inject constructor(
     suspend fun updateBuildupChunkMs(ms: Int) {
         context.dataStore.edit { preferences ->
             preferences[Keys.BUILDUP_CHUNK_MS] = ms.coerceIn(500, 3000)
+        }
+    }
+    
+    // Translation settings update methods
+    
+    suspend fun updateTranslationDefaultProvider(provider: String) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.TRANSLATION_DEFAULT_PROVIDER] = provider
+        }
+    }
+    
+    suspend fun updateTranslationTargetLanguage(language: String) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.TRANSLATION_TARGET_LANGUAGE] = language
+        }
+    }
+    
+    suspend fun updateTranslationAutoTranslate(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.TRANSLATION_AUTO_TRANSLATE] = enabled
+        }
+    }
+    
+    suspend fun updateTranslationGoogleApiKey(apiKey: String) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.TRANSLATION_GOOGLE_API_KEY] = apiKey
+        }
+    }
+    
+    suspend fun updateTranslationGoogleEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.TRANSLATION_GOOGLE_ENABLED] = enabled
+        }
+    }
+    
+    suspend fun updateTranslationDeeplApiKey(apiKey: String) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.TRANSLATION_DEEPL_API_KEY] = apiKey
+        }
+    }
+    
+    suspend fun updateTranslationDeeplEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.TRANSLATION_DEEPL_ENABLED] = enabled
+        }
+    }
+    
+    suspend fun updateTranslationCustomUrl(url: String) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.TRANSLATION_CUSTOM_URL] = url
+        }
+    }
+    
+    suspend fun updateTranslationCustomApiKey(apiKey: String) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.TRANSLATION_CUSTOM_API_KEY] = apiKey
+        }
+    }
+    
+    suspend fun updateTranslationCustomEnabled(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.TRANSLATION_CUSTOM_ENABLED] = enabled
         }
     }
 }

@@ -17,7 +17,8 @@ data class ShadowingConfig(
     val playbackUserRecording: Boolean = false,  // Play back user's recording after shadowing
     val silenceBetweenRepeatsMs: Int = 1000,  // Silence between repeats in bus mode
     val practiceMode: PracticeMode = PracticeMode.STANDARD,  // Learning approach
-    val buildupChunkMs: Int = 1500  // Target chunk size for buildup mode
+    val buildupChunkMs: Int = 1500,  // Target chunk size for buildup mode
+    val translationConfig: TranslationConfig = TranslationConfig()  // Translation provider settings
 ) {
     companion object {
         const val MIN_SILENCE_THRESHOLD_MS = 300
@@ -85,3 +86,27 @@ enum class SupportedLanguage(
         }
     }
 }
+
+/**
+ * Configuration for translation providers.
+ * Stores API keys, default provider, and translation preferences.
+ */
+data class TranslationConfig(
+    val defaultProvider: String = "mock",  // mock, google, deepl, custom
+    val targetLanguage: String = "en",  // User's native/target language (ISO 639-1)
+    val autoTranslateOnTranscribe: Boolean = false,  // Auto-translate after transcription
+    
+    // Google Translate settings
+    val googleApiKey: String = "",
+    val googleEnabled: Boolean = false,
+    
+    // DeepL settings
+    val deeplApiKey: String = "",
+    val deeplEnabled: Boolean = false,
+    
+    // Custom Endpoint settings
+    val customEndpointUrl: String = "",
+    val customEndpointApiKey: String = "",
+    val customEndpointHeaders: Map<String, String> = emptyMap(),
+    val customEnabled: Boolean = false
+)
