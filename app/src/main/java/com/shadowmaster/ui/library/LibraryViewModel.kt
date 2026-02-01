@@ -480,8 +480,11 @@ class LibraryViewModel @Inject constructor(
                     _translationProgress.value = (index + 1) to itemsToTranslate.size
                 }
                 
-                _importSuccess.value = "Translated $successCount segments" +
-                    if (failureCount > 0) " ($failureCount failed)" else ""
+                _importSuccess.value = if (failureCount > 0) {
+                    "Translated $successCount segments ($failureCount failed)"
+                } else {
+                    "Translated $successCount segments"
+                }
                     
             } catch (e: Exception) {
                 _importError.value = "Batch translation failed: ${e.message}"

@@ -11,6 +11,12 @@ import java.io.IOException
 /**
  * DeepL Translation API provider.
  * Requires API key from DeepL.
+ * 
+ * Language variants:
+ * - English: Auto-detects EN-US vs EN-GB based on context
+ * - Portuguese: Defaults to PT-BR (Brazilian Portuguese)
+ * - Chinese: Uses ZH for Simplified Chinese
+ * 
  * Documentation: https://www.deepl.com/docs-api
  */
 class DeepLProvider(
@@ -124,7 +130,12 @@ class DeepLProvider(
     
     /**
      * Normalize language codes to DeepL's format.
-     * DeepL uses "EN" for English (auto-detects variant), "PT-BR" for Brazilian Portuguese, etc.
+     * 
+     * DeepL API language code conventions:
+     * - English: "EN" (auto-detects EN-US vs EN-GB)
+     * - Portuguese: "PT-BR" (defaults to Brazilian Portuguese; use "PT-PT" for European)
+     * - Chinese: "ZH" (Simplified Chinese)
+     * - All codes are uppercase (DeepL requirement)
      */
     private fun normalizeLanguageCode(code: String): String {
         return when (code.lowercase().take(2)) {

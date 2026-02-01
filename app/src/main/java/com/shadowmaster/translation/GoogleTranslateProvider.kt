@@ -128,12 +128,16 @@ class GoogleTranslateProvider(
     
     /**
      * Normalize language codes to Google's format.
-     * Google uses "zh" for Chinese, "iw" for Hebrew, etc.
+     * 
+     * Google Translate API has specific language code requirements:
+     * - Uses "zh-CN" for Simplified Chinese (default for "zh")
+     * - Uses "iw" for Hebrew instead of ISO 639-1 "he"
+     * - Most other languages use standard ISO 639-1 two-letter codes
      */
     private fun normalizeLanguageCode(code: String): String {
         return when (code.lowercase().take(2)) {
             "zh" -> "zh-CN"  // Default to Simplified Chinese
-            "he" -> "iw"      // Google uses "iw" for Hebrew
+            "he" -> "iw"      // Google API uses "iw" for Hebrew (legacy ISO 639 code)
             else -> code.lowercase().take(2)
         }
     }
