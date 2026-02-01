@@ -1,0 +1,81 @@
+name: Auto-Merge Claude PRs
+
+# Auto-merge PRs from Claude branches when checks pass
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  check_suite:
+    types: [completed]
+  workflow_run:
+    workflows: ["Auto PR for Claude Branches"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    # Only run for Claude branches or PRs with auto-merge label
+    if: |
+      (github.event_name == 'pull_request' &&
+       (startsWith(github.head_ref, 'claude/') || contains(github.event.pull_request.labels.*.name, 'auto-merge'))) ||
+      github.event_name == 'check_suite' ||
+      github.event_name == 'workflow_run'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Auto-merge Claude PRs
+        run: |
+          # Get open PRs from Claude branches
+          PRS=$(gh pr list --json number,headRefName,mergeable,labels --jq '
+            .[] | select(
+              (.headRefName | startswith("claude/")) or
+              (.labels[].name == "auto-merge")
+            ) | .number
+          ')
+
+          for PR_NUM in $PRS; do
+            echo "Processing PR #$PR_NUM..."
+
+            # Check if PR is mergeable
+            MERGEABLE=$(gh pr view $PR_NUM --json mergeable --jq '.mergeable')
+
+            if [ "$MERGEABLE" = "MERGEABLE" ]; then
+              echo "PR #$PR_NUM is mergeable, enabling auto-merge..."
+              gh pr merge $PR_NUM --auto --squash || echo "Auto-merge already enabled or failed"
+            else
+              echo "PR #$PR_NUM is not mergeable yet (status: $MERGEABLE)"
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Direct merge for simple fixes (no required checks)
+  quick-merge:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'pull_request' &&
+      startsWith(github.head_ref, 'claude/issue-')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Quick merge if no conflicts
+        run: |
+          PR_NUM=${{ github.event.pull_request.number }}
+
+          # Wait a moment for GitHub to calculate mergeability
+          sleep 10
+
+          # Check merge status
+          MERGEABLE=$(gh pr view $PR_NUM --json mergeable --jq '.mergeable')
+
+          if [ "$MERGEABLE" = "MERGEABLE" ]; then
+            echo "Attempting quick merge for PR #$PR_NUM..."
+            gh pr merge $PR_NUM --squash --admin || gh pr merge $PR_NUM --auto --squash
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
