@@ -20,6 +20,8 @@ Import audio files from your device for offline, hands-free practice:
 - **No permissions required** - works with any audio file on your phone
 - **Better segmentation** - pre-processes audio for accurate speech boundaries
 - **Playlist management** - organize content into playlists
+- **Multiple segmentation modes** - create different playlists from same audio (word-level or sentence-level)
+- **Re-segmentation** - adjust segmentation without re-importing
 - **Offline practice** - no internet needed after import
 - **Track progress** - see practice counts and favorites
 
@@ -78,12 +80,20 @@ cd shadow_master
 1. Open Shadow Master
 2. Tap "Shadow Library" on the home screen
 3. Tap + to import an audio file
-4. Wait for processing (speech segmentation)
-5. Tap a playlist, then tap Play to start practice
-6. The app will:
-   - Play each segment
-   - Wait for you to repeat (or skip in Bus Mode)
-   - Track your practice progress
+4. View your imported audio in the "Imported Audio" tab
+5. Tap "Create Playlist" on an imported audio item
+6. Choose a segmentation mode:
+   - **Word Mode**: Shorter segments (500ms-2000ms) for word-level practice
+   - **Sentence Mode**: Longer segments (1000ms-8000ms) for full sentences
+7. Name your playlist and tap "Create"
+8. Switch to "Playlists" tab and tap your new playlist
+9. Tap Play to start practice
+10. The app will:
+    - Play each segment
+    - Wait for you to repeat (or skip in Bus Mode)
+    - Track your practice progress
+
+**Tip**: Create multiple playlists from the same audio with different segmentation modes for varied practice!
 
 ### Live Shadow Mode
 1. Open Shadow Master
@@ -94,11 +104,13 @@ cd shadow_master
 
 ### Settings
 
-- **Playback Speed**: 0.5x - 1.5x (slower for difficult content)
-- **Playback Repeats**: 1-3 times before your turn
+- **Language**: Select target language for pronunciation assessment
+- **Playback Speed**: 0.5x - 2.0x (slower for difficult content)
+- **Playback Repeats**: 1-5 times before your turn
+- **User Repeats**: How many times you practice each segment
 - **Bus Mode**: Listen-only, no speaking practice
-- **Audio Feedback**: Beeps for state awareness
-- **Silence Threshold**: How long to wait for speech end (500-1500ms)
+- **Practice Mode**: Standard or Buildup (backward buildup technique)
+- **Audio Feedback**: Beeps for state awareness (customizable volume and tone)
 
 ## Configuration
 

@@ -30,6 +30,20 @@ class LibraryViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    val importedAudio: StateFlow<List<ImportedAudio>> = libraryRepository.getAllImportedAudio()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val segmentationConfigs: StateFlow<List<SegmentationConfig>> = libraryRepository.getAllSegmentationConfigs()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
     val activeImports: StateFlow<List<ImportJob>> = libraryRepository.getActiveImports()
         .stateIn(
             scope = viewModelScope,
@@ -314,6 +328,32 @@ class LibraryViewModel @Inject constructor(
             result.onFailure { error ->
                 _importError.value = "Re-segmentation failed: ${error.message}"
             }
+        }
+    }
+
+    fun createPlaylistFromImportedAudio(
+        importedAudioId: String,
+        playlistName: String,
+        configId: String
+    ) {
+        viewModelScope.launch {
+            val result = libraryRepository.createPlaylistFromImportedAudio(
+                importedAudioId = importedAudioId,
+                playlistName = playlistName,
+                configId = configId
+            )
+            result.onSuccess { playlistId ->
+                _importSuccess.value = "Playlist created successfully!"
+            }
+            result.onFailure { error ->
+                _importError.value = "Failed to create playlist: ${error.message}"
+            }
+        }
+    }
+
+    fun deleteImportedAudio(audio: ImportedAudio) {
+        viewModelScope.launch {
+            libraryRepository.deleteImportedAudio(audio)
         }
     }
 }

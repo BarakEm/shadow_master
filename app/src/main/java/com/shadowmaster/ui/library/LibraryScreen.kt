@@ -4,7 +4,9 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -49,7 +51,10 @@ fun LibraryScreen(
     val urlImportProgress by viewModel.urlImportProgress.collectAsState()
     val selectedForMerge by viewModel.selectedForMerge.collectAsState()
     val exportProgress by viewModel.exportProgress.collectAsState()
+    val importedAudio by viewModel.importedAudio.collectAsState()
+    val segmentationConfigs by viewModel.segmentationConfigs.collectAsState()
 
+    var selectedTab by remember { mutableStateOf(0) }
     var showDeleteDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
     var showRenamePlaylistDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
     var showEditItemDialog by remember { mutableStateOf<ShadowItem?>(null) }
@@ -59,6 +64,8 @@ fun LibraryScreen(
     var mergeMode by remember { mutableStateOf(false) }
     var showUrlImportDialog by remember { mutableStateOf(false) }
     var urlToImport by remember { mutableStateOf("") }
+    var showCreatePlaylistDialog by remember { mutableStateOf<ImportedAudio?>(null) }
+    var showDeleteAudioDialog by remember { mutableStateOf<ImportedAudio?>(null) }
 
     // Stable callbacks to prevent recomposition
     val onImportAudioFile = remember(viewModel) {
@@ -187,54 +194,79 @@ fun LibraryScreen(
             }
         }
     ) { paddingValues ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (selectedPlaylist != null) {
-                // Show playlist items
-                PlaylistDetailContent(
-                    items = playlistItems,
-                    onToggleFavorite = { viewModel.toggleFavorite(it) },
-                    onEditItem = { showEditItemDialog = it },
-                    onSplitItem = { showSplitDialog = it },
-                    mergeMode = mergeMode,
-                    selectedForMerge = selectedForMerge,
-                    onToggleMergeSelection = { viewModel.toggleMergeSelection(it.id) }
-                )
-            } else {
-                // Show playlists list
-                PlaylistsContent(
-                    playlists = playlists,
-                    activeImports = activeImports,
-                    failedImports = recentFailedImports,
-                    onPlaylistClick = { viewModel.selectPlaylist(it) },
-                    onDeleteClick = { showDeleteDialog = it },
-                    onRenameClick = { showRenamePlaylistDialog = it },
-                    onExportClick = { showExportDialog = it },
-                    onResegmentClick = { 
-                        viewModel.selectPlaylist(it)
-                        showResegmentDialog = it 
-                    },
-                    onStartPractice = onStartPractice,
-                    onDismissFailedImport = { viewModel.dismissFailedImport(it) }
-                )
+            // Show tabs only when not viewing playlist detail
+            if (selectedPlaylist == null) {
+                TabRow(selectedTabIndex = selectedTab) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        text = { Text("Playlists") }
+                    )
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        text = { Text("Imported Audio") }
+                    )
+                }
             }
 
-            // Error snackbar
-            importError?.let { error ->
-                Snackbar(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(16.dp),
-                    action = {
-                        TextButton(onClick = { viewModel.clearError() }) {
-                            Text("Dismiss")
-                        }
+            Box(modifier = Modifier.weight(1f)) {
+                if (selectedPlaylist != null) {
+                    // Show playlist items
+                    PlaylistDetailContent(
+                        items = playlistItems,
+                        onToggleFavorite = { viewModel.toggleFavorite(it) },
+                        onEditItem = { showEditItemDialog = it },
+                        onSplitItem = { showSplitDialog = it },
+                        mergeMode = mergeMode,
+                        selectedForMerge = selectedForMerge,
+                        onToggleMergeSelection = { viewModel.toggleMergeSelection(it.id) }
+                    )
+                } else {
+                    // Show content based on selected tab
+                    when (selectedTab) {
+                        0 -> PlaylistsContent(
+                            playlists = playlists,
+                            activeImports = activeImports,
+                            failedImports = recentFailedImports,
+                            onPlaylistClick = { viewModel.selectPlaylist(it) },
+                            onDeleteClick = { showDeleteDialog = it },
+                            onRenameClick = { showRenamePlaylistDialog = it },
+                            onExportClick = { showExportDialog = it },
+                            onResegmentClick = { 
+                                viewModel.selectPlaylist(it)
+                                showResegmentDialog = it 
+                            },
+                            onStartPractice = onStartPractice,
+                            onDismissFailedImport = { viewModel.dismissFailedImport(it) }
+                        )
+                        1 -> ImportedAudioContent(
+                            importedAudio = importedAudio,
+                            onCreatePlaylist = { showCreatePlaylistDialog = it },
+                            onDeleteAudio = { showDeleteAudioDialog = it }
+                        )
                     }
-                ) {
-                    Text(error)
+                    }
+
+                // Error snackbar
+                importError?.let { error ->
+                    Snackbar(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(16.dp),
+                        action = {
+                            TextButton(onClick = { viewModel.clearError() }) {
+                                Text("Dismiss")
+                            }
+                        }
+                    ) {
+                        Text(error)
+                    }
                 }
             }
         }
@@ -719,6 +751,118 @@ fun LibraryScreen(
             }
         )
     }
+
+    // Create playlist from imported audio dialog
+    showCreatePlaylistDialog?.let { audio ->
+        var playlistName by remember { mutableStateOf(audio.sourceFileName.substringBeforeLast(".")) }
+        var selectedConfigId by remember { mutableStateOf(segmentationConfigs.firstOrNull()?.id ?: "") }
+        
+        AlertDialog(
+            onDismissRequest = { showCreatePlaylistDialog = null },
+            title = { Text("Create Playlist") },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = playlistName,
+                        onValueChange = { playlistName = it },
+                        label = { Text("Playlist Name") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Segmentation Mode",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    segmentationConfigs.forEach { config ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedConfigId = config.id }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedConfigId == config.id,
+                                onClick = { selectedConfigId = config.id }
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = config.name,
+                                    style = MaterialTheme.typography.bodyLarge
+                                )
+                                Text(
+                                    text = when (config.segmentMode) {
+                                        SegmentMode.WORD -> "Short segments (${config.minSegmentDurationMs}ms - ${config.maxSegmentDurationMs}ms)"
+                                        SegmentMode.SENTENCE -> "Sentence-length segments"
+                                    },
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val name = playlistName.trim()
+                        if (name.isNotEmpty() && selectedConfigId.isNotEmpty()) {
+                            viewModel.createPlaylistFromImportedAudio(audio.id, name, selectedConfigId)
+                            showCreatePlaylistDialog = null
+                        }
+                    },
+                    enabled = playlistName.trim().isNotEmpty() && selectedConfigId.isNotEmpty()
+                ) {
+                    Text("Create")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCreatePlaylistDialog = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Delete imported audio confirmation dialog
+    showDeleteAudioDialog?.let { audio ->
+        AlertDialog(
+            onDismissRequest = { showDeleteAudioDialog = null },
+            title = { Text("Delete Imported Audio") },
+            text = { 
+                Column {
+                    Text("Delete \"${audio.sourceFileName}\"?")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "This will delete the original imported audio. This cannot be undone!",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteImportedAudio(audio)
+                        showDeleteAudioDialog = null
+                    }
+                ) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteAudioDialog = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -847,6 +991,141 @@ private fun PlaylistsContent(
                     onPlayClick = { onStartPractice(playlist.id) }
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ImportedAudioContent(
+    importedAudio: List<ImportedAudio>,
+    onCreatePlaylist: (ImportedAudio) -> Unit,
+    onDeleteAudio: (ImportedAudio) -> Unit
+) {
+    if (importedAudio.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(32.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AudioFile,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "No imported audio files",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Import audio files to create playlists",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(importedAudio, key = { it.id }) { audio ->
+                ImportedAudioCard(
+                    audio = audio,
+                    onCreatePlaylist = { onCreatePlaylist(audio) },
+                    onDelete = { onDeleteAudio(audio) }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ImportedAudioCard(
+    audio: ImportedAudio,
+    onCreatePlaylist: () -> Unit,
+    onDelete: () -> Unit
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = { /* No single click action */ },
+                onLongClick = { showMenu = true }
+            )
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = audio.sourceFileName,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text(
+                            text = formatDuration(audio.durationMs),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "•",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = formatDate(audio.createdAt),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+                
+                Button(onClick = onCreatePlaylist) {
+                    Text("Create Playlist")
+                }
+            }
+        }
+        
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false }
+        ) {
+            DropdownMenuItem(
+                text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                onClick = {
+                    showMenu = false
+                    onDelete()
+                },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            )
         }
     }
 }
