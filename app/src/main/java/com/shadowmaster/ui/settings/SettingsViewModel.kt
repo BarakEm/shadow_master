@@ -116,4 +116,66 @@ class SettingsViewModel @Inject constructor(
             settingsRepository.updateBuildupChunkMs(ms)
         }
     }
+    
+    // Translation settings methods
+    
+    fun updateTranslationDefaultProvider(provider: String) {
+        viewModelScope.launch {
+            settingsRepository.updateTranslationDefaultProvider(provider)
+        }
+    }
+    
+    fun updateTranslationTargetLanguage(language: String) {
+        viewModelScope.launch {
+            settingsRepository.updateTranslationTargetLanguage(language)
+        }
+    }
+    
+    fun updateTranslationAutoTranslate(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.updateTranslationAutoTranslate(enabled)
+        }
+    }
+    
+    fun updateTranslationGoogleApiKey(apiKey: String) {
+        viewModelScope.launch {
+            settingsRepository.updateTranslationGoogleApiKey(apiKey)
+        }
+    }
+    
+    fun updateTranslationGoogleEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.updateTranslationGoogleEnabled(enabled)
+        }
+    }
+    
+    fun updateTranslationDeeplApiKey(apiKey: String) {
+        viewModelScope.launch {
+            settingsRepository.updateTranslationDeeplApiKey(apiKey)
+        }
+    }
+    
+    fun updateTranslationDeeplEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.updateTranslationDeeplEnabled(enabled)
+        }
+    }
+    
+    fun updateTranslationCustomUrl(url: String) {
+        viewModelScope.launch {
+            settingsRepository.updateTranslationCustomUrl(url)
+        }
+    }
+    
+    fun updateTranslationCustomApiKey(apiKey: String) {
+        viewModelScope.launch {
+            settingsRepository.updateTranslationCustomApiKey(apiKey)
+        }
+    }
+    
+    fun updateTranslationCustomEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.updateTranslationCustomEnabled(enabled)
+        }
+    }
 }
