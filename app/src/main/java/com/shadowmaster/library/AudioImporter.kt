@@ -34,7 +34,8 @@ class AudioImporter @Inject constructor(
     private val vadDetector: SileroVadDetector,
     private val importedAudioDao: com.shadowmaster.data.local.ImportedAudioDao,
     private val segmentationConfigDao: com.shadowmaster.data.local.SegmentationConfigDao,
-    private val audioFileUtility: AudioFileUtility
+    private val audioFileUtility: AudioFileUtility,
+    private val settingsRepository: com.shadowmaster.data.repository.SettingsRepository
 ) {
     companion object {
         private const val TAG = "AudioImporter"
@@ -594,17 +595,25 @@ class AudioImporter @Inject constructor(
 
             // Phase 2: Segment with default config and progress tracking
             updateImportJob(job.id, ImportStatus.DETECTING_SEGMENTS, 50)
-            
+
+            // Get current user settings for segment mode
+            val currentSettings = settingsRepository.config.first()
+
             val defaultConfig = segmentationConfigDao.getById("default-config")
                 ?: SegmentationConfig(
                     id = "default-config",
                     name = "Default"
                 ).also { segmentationConfigDao.insert(it) }
 
+            // Apply user's segment mode preference to the config
+            val configWithUserSettings = defaultConfig.copy(
+                segmentMode = currentSettings.segmentMode
+            )
+
             val segmentResult = segmentImportedAudio(
                 importedAudioId = importedAudio.id,
                 playlistName = playlistName,
-                config = defaultConfig,
+                config = configWithUserSettings,
                 enableTranscription = enableTranscription,
                 jobId = job.id
             )

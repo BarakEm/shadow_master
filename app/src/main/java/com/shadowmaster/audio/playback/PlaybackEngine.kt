@@ -19,6 +19,7 @@ class PlaybackEngine @Inject constructor() {
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     private var isPlaying = false
+    private var isPaused = false
     private var onPlaybackComplete: (() -> Unit)? = null
 
     fun play(
@@ -103,6 +104,16 @@ class PlaybackEngine @Inject constructor() {
             val chunkSize = bufferSize
 
             while (offset < byteBuffer.size && isPlaying) {
+                // Handle pause state
+                if (isPaused) {
+                    try { track.pause() } catch (_: Exception) {}
+                    while (isPaused && isPlaying) {
+                        delay(50)
+                    }
+                    if (!isPlaying) break
+                    try { track.play() } catch (_: Exception) {}
+                }
+
                 val bytesToWrite = minOf(chunkSize, byteBuffer.size - offset)
                 val written = track.write(byteBuffer, offset, bytesToWrite)
 
@@ -147,5 +158,17 @@ class PlaybackEngine @Inject constructor() {
         audioTrack = null
     }
 
+    fun pause() {
+        isPaused = true
+        Log.d(TAG, "Playback paused")
+    }
+
+    fun resume() {
+        isPaused = false
+        Log.d(TAG, "Playback resumed")
+    }
+
     fun isPlaying(): Boolean = isPlaying
+
+    fun isPaused(): Boolean = isPaused
 }
