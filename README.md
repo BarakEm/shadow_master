@@ -165,7 +165,7 @@ com.shadowmaster/
 - [x] Bus mode (listen-only)
 - [x] Settings persistence
 
-### 🚧 Version 1.1 (In Progress)
+### ✅ Version 1.1 (Complete)
 - [x] Rename playlists and segments
 - [x] Transcription display and manual entry
 - [x] Translation display and manual entry
@@ -173,7 +173,7 @@ com.shadowmaster/
 - [x] Split long segments into smaller parts
 - [x] Merge short segments together
 - [x] Export playlist as practice audio (WAV with beeps and silence gaps)
-- [ ] Enhanced audio beep customization
+- [x] Enhanced audio beep customization (volume, tone type, duration)
 
 ### 📋 Version 1.2 (Planned)
 - [ ] Automatic transcription (Speech-to-Text API)
