@@ -44,12 +44,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Enable auto-merge (admin bypass)
+      - name: Enable auto-merge
         run: |
           echo "Enabling auto-merge for PR #${{ github.event.pull_request.number }}..."
-          # Try admin merge first (bypasses branch protection), fall back to regular auto-merge
-          gh pr merge ${{ github.event.pull_request.number }} --auto --squash --admin 2>/dev/null \
-            || gh pr merge ${{ github.event.pull_request.number }} --auto --squash \
+          # Enable auto-merge (will merge once requirements are met)
+          gh pr merge ${{ github.event.pull_request.number }} --auto --squash \
             || echo "Auto-merge setup may require manual approval"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
