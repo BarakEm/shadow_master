@@ -1,0 +1,71 @@
+name: Auto-Merge Claude PRs
+
+# Auto-merge PRs from Claude branches when checks pass
+on:
+  check_suite:
+    types: [completed]
+  workflow_run:
+    workflows: ["Auto PR for Claude Branches"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge-on-checks:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'check_suite' && github.event.check_suite.conclusion == 'success'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Find and merge Claude PRs
+        run: |
+          # Get open PRs from Claude branches that are mergeable
+          PRS=$(gh pr list --json number,headRefName,mergeable --jq '
+            .[] | select(.headRefName | startswith("claude/")) | .number
+          ')
+
+          for PR_NUM in $PRS; do
+            echo "Checking PR #$PR_NUM..."
+
+            # Check if PR is mergeable
+            MERGEABLE=$(gh pr view $PR_NUM --json mergeable --jq '.mergeable')
+
+            if [ "$MERGEABLE" = "MERGEABLE" ]; then
+              echo "PR #$PR_NUM is ready, attempting merge..."
+              gh pr merge $PR_NUM --squash --admin 2>/dev/null \
+                || gh pr merge $PR_NUM --auto --squash \
+                || echo "Could not merge PR #$PR_NUM"
+            else
+              echo "PR #$PR_NUM not mergeable yet (status: $MERGEABLE)"
+            fi
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Trigger merge after auto-PR workflow completes
+  merge-after-pr-created:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Wait for GitHub to process PR
+        run: sleep 10
+
+      - name: Enable auto-merge on new PRs
+        run: |
+          # Get recent Claude PRs
+          PRS=$(gh pr list --json number,headRefName,createdAt --jq '
+            .[] | select(.headRefName | startswith("claude/")) | .number
+          ' | head -5)
+
+          for PR_NUM in $PRS; do
+            echo "Enabling auto-merge for PR #$PR_NUM..."
+            gh pr merge $PR_NUM --auto --squash 2>/dev/null || echo "Already set or failed"
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

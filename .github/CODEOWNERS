@@ -1,0 +1,19 @@
+# Shadow Master Code Owners
+# These owners will be automatically requested for review on PRs
+
+# Default owner for everything
+* @BarakEm
+
+# Core audio processing - critical code paths
+/app/src/main/java/com/shadowmaster/audio/ @BarakEm
+/app/src/main/java/com/shadowmaster/core/ @BarakEm
+
+# Database migrations - require careful review
+/app/src/main/java/com/shadowmaster/data/local/ @BarakEm
+
+# GitHub workflows - security sensitive
+/.github/workflows/ @BarakEm
+
+# Build configuration
+/*.gradle.kts @BarakEm
+/app/*.gradle.kts @BarakEm
