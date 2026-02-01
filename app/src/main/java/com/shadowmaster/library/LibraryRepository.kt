@@ -181,6 +181,23 @@ class LibraryRepository @Inject constructor(
         enableTranscription = false
     )
 
+    // Convenience method for creating playlist from imported audio
+    suspend fun createPlaylistFromImportedAudio(
+        importedAudioId: String,
+        playlistName: String,
+        configId: String
+    ): Result<String> {
+        val config = segmentationConfigDao.getById(configId)
+            ?: return Result.failure(IllegalArgumentException("Segmentation config not found: $configId"))
+        
+        return segmentImportedAudio(
+            importedAudioId = importedAudioId,
+            playlistName = playlistName,
+            config = config,
+            enableTranscription = false
+        )
+    }
+
     // Imported audio management
     fun getAllImportedAudio(): Flow<List<ImportedAudio>> =
         importedAudioDao.getAllImportedAudio()
