@@ -9,6 +9,8 @@ import com.shadowmaster.data.repository.SettingsRepository
 import com.shadowmaster.library.ExportProgress
 import com.shadowmaster.library.LibraryRepository
 import com.shadowmaster.library.UrlImportProgress
+import com.shadowmaster.translation.TranslationService
+import com.shadowmaster.translation.toUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
@@ -20,7 +22,8 @@ import javax.inject.Inject
 class LibraryViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val libraryRepository: LibraryRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val translationService: TranslationService
 ) : ViewModel() {
 
     val playlists: StateFlow<List<ShadowPlaylist>> = libraryRepository.getAllPlaylists()
@@ -355,5 +358,195 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch {
             libraryRepository.deleteImportedAudio(audio)
         }
+    }
+
+    // Translation functionality
+
+    private val _translationInProgress = MutableStateFlow(false)
+    val translationInProgress: StateFlow<Boolean> = _translationInProgress.asStateFlow()
+
+    private val _translationProgress = MutableStateFlow<Pair<Int, Int>?>(null)
+    val translationProgress: StateFlow<Pair<Int, Int>?> = _translationProgress.asStateFlow()
+
+    /**
+     * Translate a single segment using the specified provider.
+     *
+     * @param item The segment to translate
+     * @param providerType Provider to use (mock, google, deepl, custom)
+     * @param targetLanguage Target language ISO code (e.g., "en", "es")
+     */
+    fun translateSegment(
+        item: ShadowItem,
+        providerType: TranslationService.ProviderType,
+        targetLanguage: String? = null
+    ) {
+        viewModelScope.launch {
+            // Check if transcription exists
+            if (item.transcription.isNullOrBlank()) {
+                _importError.value = "Please transcribe this segment first before translating"
+                return@launch
+            }
+
+            _translationInProgress.value = true
+
+            try {
+                val config = settingsRepository.configBlocking
+                val translationConfig = config.translationConfig
+                val targetLang = targetLanguage ?: translationConfig.targetLanguage
+                val sourceLanguage = normalizeLanguageCode(item.language)
+
+                // Create provider with API keys from config
+                val provider = when (providerType) {
+                    TranslationService.ProviderType.GOOGLE ->
+                        translationService.createProvider(
+                            providerType,
+                            apiKey = translationConfig.googleApiKey
+                        )
+                    TranslationService.ProviderType.DEEPL ->
+                        translationService.createProvider(
+                            providerType,
+                            apiKey = translationConfig.deeplApiKey
+                        )
+                    TranslationService.ProviderType.CUSTOM ->
+                        translationService.createProvider(
+                            providerType,
+                            apiKey = translationConfig.customEndpointApiKey,
+                            customUrl = translationConfig.customEndpointUrl
+                        )
+                    else -> translationService.createProvider(providerType)
+                }
+
+                val result = translationService.translate(
+                    text = item.transcription!!,
+                    sourceLanguage = sourceLanguage,
+                    targetLanguage = targetLang,
+                    provider = provider
+                )
+
+                result.onSuccess { translatedText ->
+                    updateItemTranslation(item.id, translatedText)
+                    _importSuccess.value = "Translation complete"
+                }
+
+                result.onFailure { error ->
+                    val errorMessage = if (error is com.shadowmaster.translation.TranslationError) {
+                        error.toUserMessage()
+                    } else {
+                        error.message ?: "Translation failed"
+                    }
+                    _importError.value = errorMessage
+                }
+            } finally {
+                _translationInProgress.value = false
+            }
+        }
+    }
+
+    /**
+     * Batch translate all segments in the current playlist.
+     *
+     * @param providerType Provider to use
+     * @param targetLanguage Target language ISO code
+     */
+    fun translateAllSegments(
+        providerType: TranslationService.ProviderType,
+        targetLanguage: String? = null
+    ) {
+        viewModelScope.launch {
+            val items = _playlistItems.value
+            if (items.isEmpty()) {
+                _importError.value = "No segments to translate"
+                return@launch
+            }
+
+            // Filter items that have transcription
+            val itemsToTranslate = items.filter { !it.transcription.isNullOrBlank() }
+            if (itemsToTranslate.isEmpty()) {
+                _importError.value = "No transcribed segments found. Please transcribe segments first."
+                return@launch
+            }
+
+            _translationInProgress.value = true
+            _translationProgress.value = 0 to itemsToTranslate.size
+
+            try {
+                val config = settingsRepository.configBlocking
+                val translationConfig = config.translationConfig
+                val targetLang = targetLanguage ?: translationConfig.targetLanguage
+
+                // Create provider
+                val provider = when (providerType) {
+                    TranslationService.ProviderType.GOOGLE ->
+                        translationService.createProvider(
+                            providerType,
+                            apiKey = translationConfig.googleApiKey
+                        )
+                    TranslationService.ProviderType.DEEPL ->
+                        translationService.createProvider(
+                            providerType,
+                            apiKey = translationConfig.deeplApiKey
+                        )
+                    TranslationService.ProviderType.CUSTOM ->
+                        translationService.createProvider(
+                            providerType,
+                            apiKey = translationConfig.customEndpointApiKey,
+                            customUrl = translationConfig.customEndpointUrl
+                        )
+                    else -> translationService.createProvider(providerType)
+                }
+
+                var successCount = 0
+                var failureCount = 0
+
+                itemsToTranslate.forEachIndexed { index, item ->
+                    val sourceLanguage = normalizeLanguageCode(item.language)
+
+                    val result = translationService.translate(
+                        text = item.transcription!!,
+                        sourceLanguage = sourceLanguage,
+                        targetLanguage = targetLang,
+                        provider = provider
+                    )
+
+                    result.onSuccess { translatedText ->
+                        updateItemTranslation(item.id, translatedText)
+                        successCount++
+                    }
+
+                    result.onFailure {
+                        failureCount++
+                    }
+
+                    _translationProgress.value = (index + 1) to itemsToTranslate.size
+                }
+
+                _importSuccess.value = if (failureCount > 0) {
+                    "Translated $successCount segments ($failureCount failed)"
+                } else {
+                    "Translated $successCount segments"
+                }
+
+            } catch (e: Exception) {
+                _importError.value = "Batch translation failed: ${e.message}"
+            } finally {
+                _translationInProgress.value = false
+                _translationProgress.value = null
+            }
+        }
+    }
+
+    fun clearTranslationProgress() {
+        _translationProgress.value = null
+    }
+
+    /**
+     * Normalize language code from ShadowItem format to ISO 639-1.
+     * Converts "en-US" -> "en", "zh-CN" -> "zh", etc.
+     */
+    private fun normalizeLanguageCode(language: String): String {
+        return when {
+            language.contains("-") -> language.split("-").first()
+            else -> language
+        }.lowercase()
     }
 }
