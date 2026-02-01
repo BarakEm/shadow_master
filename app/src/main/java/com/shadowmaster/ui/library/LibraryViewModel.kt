@@ -33,6 +33,20 @@ class LibraryViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
+    val importedAudio: StateFlow<List<ImportedAudio>> = libraryRepository.getAllImportedAudio()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    val segmentationConfigs: StateFlow<List<SegmentationConfig>> = libraryRepository.getAllSegmentationConfigs()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
     val activeImports: StateFlow<List<ImportJob>> = libraryRepository.getActiveImports()
         .stateIn(
             scope = viewModelScope,
@@ -319,18 +333,44 @@ class LibraryViewModel @Inject constructor(
             }
         }
     }
-    
+
+    fun createPlaylistFromImportedAudio(
+        importedAudioId: String,
+        playlistName: String,
+        configId: String
+    ) {
+        viewModelScope.launch {
+            val result = libraryRepository.createPlaylistFromImportedAudio(
+                importedAudioId = importedAudioId,
+                playlistName = playlistName,
+                configId = configId
+            )
+            result.onSuccess { playlistId ->
+                _importSuccess.value = "Playlist created successfully!"
+            }
+            result.onFailure { error ->
+                _importError.value = "Failed to create playlist: ${error.message}"
+            }
+        }
+    }
+
+    fun deleteImportedAudio(audio: ImportedAudio) {
+        viewModelScope.launch {
+            libraryRepository.deleteImportedAudio(audio)
+        }
+    }
+
     // Translation functionality
-    
+
     private val _translationInProgress = MutableStateFlow(false)
     val translationInProgress: StateFlow<Boolean> = _translationInProgress.asStateFlow()
-    
+
     private val _translationProgress = MutableStateFlow<Pair<Int, Int>?>(null)
     val translationProgress: StateFlow<Pair<Int, Int>?> = _translationProgress.asStateFlow()
-    
+
     /**
      * Translate a single segment using the specified provider.
-     * 
+     *
      * @param item The segment to translate
      * @param providerType Provider to use (mock, google, deepl, custom)
      * @param targetLanguage Target language ISO code (e.g., "en", "es")
@@ -346,15 +386,15 @@ class LibraryViewModel @Inject constructor(
                 _importError.value = "Please transcribe this segment first before translating"
                 return@launch
             }
-            
+
             _translationInProgress.value = true
-            
+
             try {
                 val config = settingsRepository.configBlocking
                 val translationConfig = config.translationConfig
                 val targetLang = targetLanguage ?: translationConfig.targetLanguage
                 val sourceLanguage = normalizeLanguageCode(item.language)
-                
+
                 // Create provider with API keys from config
                 val provider = when (providerType) {
                     TranslationService.ProviderType.GOOGLE ->
@@ -375,19 +415,19 @@ class LibraryViewModel @Inject constructor(
                         )
                     else -> translationService.createProvider(providerType)
                 }
-                
+
                 val result = translationService.translate(
                     text = item.transcription!!,
                     sourceLanguage = sourceLanguage,
                     targetLanguage = targetLang,
                     provider = provider
                 )
-                
+
                 result.onSuccess { translatedText ->
                     updateItemTranslation(item.id, translatedText)
                     _importSuccess.value = "Translation complete"
                 }
-                
+
                 result.onFailure { error ->
                     val errorMessage = if (error is com.shadowmaster.translation.TranslationError) {
                         error.toUserMessage()
@@ -401,10 +441,10 @@ class LibraryViewModel @Inject constructor(
             }
         }
     }
-    
+
     /**
      * Batch translate all segments in the current playlist.
-     * 
+     *
      * @param providerType Provider to use
      * @param targetLanguage Target language ISO code
      */
@@ -418,22 +458,22 @@ class LibraryViewModel @Inject constructor(
                 _importError.value = "No segments to translate"
                 return@launch
             }
-            
+
             // Filter items that have transcription
             val itemsToTranslate = items.filter { !it.transcription.isNullOrBlank() }
             if (itemsToTranslate.isEmpty()) {
                 _importError.value = "No transcribed segments found. Please transcribe segments first."
                 return@launch
             }
-            
+
             _translationInProgress.value = true
             _translationProgress.value = 0 to itemsToTranslate.size
-            
+
             try {
                 val config = settingsRepository.configBlocking
                 val translationConfig = config.translationConfig
                 val targetLang = targetLanguage ?: translationConfig.targetLanguage
-                
+
                 // Create provider
                 val provider = when (providerType) {
                     TranslationService.ProviderType.GOOGLE ->
@@ -454,38 +494,38 @@ class LibraryViewModel @Inject constructor(
                         )
                     else -> translationService.createProvider(providerType)
                 }
-                
+
                 var successCount = 0
                 var failureCount = 0
-                
+
                 itemsToTranslate.forEachIndexed { index, item ->
                     val sourceLanguage = normalizeLanguageCode(item.language)
-                    
+
                     val result = translationService.translate(
                         text = item.transcription!!,
                         sourceLanguage = sourceLanguage,
                         targetLanguage = targetLang,
                         provider = provider
                     )
-                    
+
                     result.onSuccess { translatedText ->
                         updateItemTranslation(item.id, translatedText)
                         successCount++
                     }
-                    
+
                     result.onFailure {
                         failureCount++
                     }
-                    
+
                     _translationProgress.value = (index + 1) to itemsToTranslate.size
                 }
-                
+
                 _importSuccess.value = if (failureCount > 0) {
                     "Translated $successCount segments ($failureCount failed)"
                 } else {
                     "Translated $successCount segments"
                 }
-                    
+
             } catch (e: Exception) {
                 _importError.value = "Batch translation failed: ${e.message}"
             } finally {
@@ -494,11 +534,11 @@ class LibraryViewModel @Inject constructor(
             }
         }
     }
-    
+
     fun clearTranslationProgress() {
         _translationProgress.value = null
     }
-    
+
     /**
      * Normalize language code from ShadowItem format to ISO 639-1.
      * Converts "en-US" -> "en", "zh-CN" -> "zh", etc.

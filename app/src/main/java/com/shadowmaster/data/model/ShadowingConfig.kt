@@ -18,6 +18,7 @@ data class ShadowingConfig(
     val silenceBetweenRepeatsMs: Int = 1000,  // Silence between repeats in bus mode
     val practiceMode: PracticeMode = PracticeMode.STANDARD,  // Learning approach
     val buildupChunkMs: Int = 1500,  // Target chunk size for buildup mode
+    val transcription: TranscriptionConfig = TranscriptionConfig(),  // Transcription service settings
     val translationConfig: TranslationConfig = TranslationConfig()  // Translation provider settings
 ) {
     companion object {
@@ -88,6 +89,23 @@ enum class SupportedLanguage(
 }
 
 /**
+ * Configuration for automatic transcription services.
+ */
+data class TranscriptionConfig(
+    val defaultProvider: String = "google",  // google, azure, whisper, custom
+    val autoTranscribeOnImport: Boolean = false,
+
+    // Provider-specific settings
+    val googleApiKey: String? = null,
+    val azureApiKey: String? = null,
+    val azureRegion: String? = null,
+    val whisperApiKey: String? = null,
+    val customEndpointUrl: String? = null,
+    val customEndpointApiKey: String? = null,
+    val customEndpointHeaders: Map<String, String> = emptyMap()
+)
+
+/**
  * Configuration for translation providers.
  * Stores API keys, default provider, and translation preferences.
  */
@@ -95,15 +113,15 @@ data class TranslationConfig(
     val defaultProvider: String = "mock",  // mock, google, deepl, custom
     val targetLanguage: String = "en",  // User's native/target language (ISO 639-1)
     val autoTranslateOnTranscribe: Boolean = false,  // Auto-translate after transcription
-    
+
     // Google Translate settings
     val googleApiKey: String = "",
     val googleEnabled: Boolean = false,
-    
+
     // DeepL settings
     val deeplApiKey: String = "",
     val deeplEnabled: Boolean = false,
-    
+
     // Custom Endpoint settings
     val customEndpointUrl: String = "",
     val customEndpointApiKey: String = "",

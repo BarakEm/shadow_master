@@ -367,4 +367,127 @@ class SettingsViewModelTest {
             coVerify { settingsRepository.updateBuildupChunkMs(chunkMs) }
         }
     }
+
+    // ==================== Transcription Settings Tests ====================
+
+    @Test
+    fun `updateTranscriptionDefaultProvider calls repository`() = runTest {
+        // Given
+        val provider = "azure"
+
+        // When
+        viewModel.updateTranscriptionDefaultProvider(provider)
+        advanceUntilIdle()
+
+        // Then
+        coVerify { settingsRepository.updateTranscriptionDefaultProvider(provider) }
+    }
+
+    @Test
+    fun `updateTranscriptionAutoOnImport calls repository with true`() = runTest {
+        // When
+        viewModel.updateTranscriptionAutoOnImport(true)
+        advanceUntilIdle()
+
+        // Then
+        coVerify { settingsRepository.updateTranscriptionAutoOnImport(true) }
+    }
+
+    @Test
+    fun `updateTranscriptionAutoOnImport calls repository with false`() = runTest {
+        // When
+        viewModel.updateTranscriptionAutoOnImport(false)
+        advanceUntilIdle()
+
+        // Then
+        coVerify { settingsRepository.updateTranscriptionAutoOnImport(false) }
+    }
+
+    @Test
+    fun `updateTranscriptionGoogleApiKey calls repository`() = runTest {
+        // Given
+        val apiKey = "test-google-key"
+
+        // When
+        viewModel.updateTranscriptionGoogleApiKey(apiKey)
+        advanceUntilIdle()
+
+        // Then
+        coVerify { settingsRepository.updateTranscriptionGoogleApiKey(apiKey) }
+    }
+
+    @Test
+    fun `updateTranscriptionGoogleApiKey handles null`() = runTest {
+        // When
+        viewModel.updateTranscriptionGoogleApiKey(null)
+        advanceUntilIdle()
+
+        // Then
+        coVerify { settingsRepository.updateTranscriptionGoogleApiKey(null) }
+    }
+
+    @Test
+    fun `updateTranscriptionAzureApiKey calls repository`() = runTest {
+        // Given
+        val apiKey = "test-azure-key"
+
+        // When
+        viewModel.updateTranscriptionAzureApiKey(apiKey)
+        advanceUntilIdle()
+
+        // Then
+        coVerify { settingsRepository.updateTranscriptionAzureApiKey(apiKey) }
+    }
+
+    @Test
+    fun `updateTranscriptionAzureRegion calls repository`() = runTest {
+        // Given
+        val region = "eastus"
+
+        // When
+        viewModel.updateTranscriptionAzureRegion(region)
+        advanceUntilIdle()
+
+        // Then
+        coVerify { settingsRepository.updateTranscriptionAzureRegion(region) }
+    }
+
+    @Test
+    fun `updateTranscriptionWhisperApiKey calls repository`() = runTest {
+        // Given
+        val apiKey = "test-whisper-key"
+
+        // When
+        viewModel.updateTranscriptionWhisperApiKey(apiKey)
+        advanceUntilIdle()
+
+        // Then
+        coVerify { settingsRepository.updateTranscriptionWhisperApiKey(apiKey) }
+    }
+
+    @Test
+    fun `updateTranscriptionCustomUrl calls repository`() = runTest {
+        // Given
+        val url = "https://api.example.com/transcribe"
+
+        // When
+        viewModel.updateTranscriptionCustomUrl(url)
+        advanceUntilIdle()
+
+        // Then
+        coVerify { settingsRepository.updateTranscriptionCustomUrl(url) }
+    }
+
+    @Test
+    fun `updateTranscriptionCustomApiKey calls repository`() = runTest {
+        // Given
+        val apiKey = "test-custom-key"
+
+        // When
+        viewModel.updateTranscriptionCustomApiKey(apiKey)
+        advanceUntilIdle()
+
+        // Then
+        coVerify { settingsRepository.updateTranscriptionCustomApiKey(apiKey) }
+    }
 }

@@ -41,6 +41,16 @@ class SettingsRepository @Inject constructor(
         val PRACTICE_MODE = stringPreferencesKey("practice_mode")
         val BUILDUP_CHUNK_MS = intPreferencesKey("buildup_chunk_ms")
         
+        // Transcription settings
+        val TRANSCRIPTION_DEFAULT_PROVIDER = stringPreferencesKey("transcription_default_provider")
+        val TRANSCRIPTION_AUTO_ON_IMPORT = booleanPreferencesKey("transcription_auto_on_import")
+        val TRANSCRIPTION_GOOGLE_API_KEY = stringPreferencesKey("transcription_google_api_key")
+        val TRANSCRIPTION_AZURE_API_KEY = stringPreferencesKey("transcription_azure_api_key")
+        val TRANSCRIPTION_AZURE_REGION = stringPreferencesKey("transcription_azure_region")
+        val TRANSCRIPTION_WHISPER_API_KEY = stringPreferencesKey("transcription_whisper_api_key")
+        val TRANSCRIPTION_CUSTOM_URL = stringPreferencesKey("transcription_custom_url")
+        val TRANSCRIPTION_CUSTOM_API_KEY = stringPreferencesKey("transcription_custom_api_key")
+
         // Translation config keys
         val TRANSLATION_DEFAULT_PROVIDER = stringPreferencesKey("translation_default_provider")
         val TRANSLATION_TARGET_LANGUAGE = stringPreferencesKey("translation_target_language")
@@ -91,6 +101,16 @@ class SettingsRepository @Inject constructor(
                 PracticeMode.STANDARD
             },
             buildupChunkMs = preferences[Keys.BUILDUP_CHUNK_MS] ?: 1500,
+            transcription = com.shadowmaster.data.model.TranscriptionConfig(
+                defaultProvider = preferences[Keys.TRANSCRIPTION_DEFAULT_PROVIDER] ?: "google",
+                autoTranscribeOnImport = preferences[Keys.TRANSCRIPTION_AUTO_ON_IMPORT] ?: false,
+                googleApiKey = preferences[Keys.TRANSCRIPTION_GOOGLE_API_KEY],
+                azureApiKey = preferences[Keys.TRANSCRIPTION_AZURE_API_KEY],
+                azureRegion = preferences[Keys.TRANSCRIPTION_AZURE_REGION],
+                whisperApiKey = preferences[Keys.TRANSCRIPTION_WHISPER_API_KEY],
+                customEndpointUrl = preferences[Keys.TRANSCRIPTION_CUSTOM_URL],
+                customEndpointApiKey = preferences[Keys.TRANSCRIPTION_CUSTOM_API_KEY]
+            ),
             translationConfig = TranslationConfig(
                 defaultProvider = preferences[Keys.TRANSLATION_DEFAULT_PROVIDER] ?: "mock",
                 targetLanguage = preferences[Keys.TRANSLATION_TARGET_LANGUAGE] ?: "en",
@@ -259,63 +279,137 @@ class SettingsRepository @Inject constructor(
             preferences[Keys.BUILDUP_CHUNK_MS] = ms.coerceIn(500, 3000)
         }
     }
-    
-    // Translation settings update methods
-    
+
+    // ==================== Transcription Settings ====================
+
+    suspend fun updateTranscriptionDefaultProvider(provider: String) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.TRANSCRIPTION_DEFAULT_PROVIDER] = provider
+        }
+    }
+
+    suspend fun updateTranscriptionAutoOnImport(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.TRANSCRIPTION_AUTO_ON_IMPORT] = enabled
+        }
+    }
+
+    suspend fun updateTranscriptionGoogleApiKey(apiKey: String?) {
+        context.dataStore.edit { preferences ->
+            if (apiKey.isNullOrBlank()) {
+                preferences.remove(Keys.TRANSCRIPTION_GOOGLE_API_KEY)
+            } else {
+                preferences[Keys.TRANSCRIPTION_GOOGLE_API_KEY] = apiKey
+            }
+        }
+    }
+
+    suspend fun updateTranscriptionAzureApiKey(apiKey: String?) {
+        context.dataStore.edit { preferences ->
+            if (apiKey.isNullOrBlank()) {
+                preferences.remove(Keys.TRANSCRIPTION_AZURE_API_KEY)
+            } else {
+                preferences[Keys.TRANSCRIPTION_AZURE_API_KEY] = apiKey
+            }
+        }
+    }
+
+    suspend fun updateTranscriptionAzureRegion(region: String?) {
+        context.dataStore.edit { preferences ->
+            if (region.isNullOrBlank()) {
+                preferences.remove(Keys.TRANSCRIPTION_AZURE_REGION)
+            } else {
+                preferences[Keys.TRANSCRIPTION_AZURE_REGION] = region
+            }
+        }
+    }
+
+    suspend fun updateTranscriptionWhisperApiKey(apiKey: String?) {
+        context.dataStore.edit { preferences ->
+            if (apiKey.isNullOrBlank()) {
+                preferences.remove(Keys.TRANSCRIPTION_WHISPER_API_KEY)
+            } else {
+                preferences[Keys.TRANSCRIPTION_WHISPER_API_KEY] = apiKey
+            }
+        }
+    }
+
+    suspend fun updateTranscriptionCustomUrl(url: String?) {
+        context.dataStore.edit { preferences ->
+            if (url.isNullOrBlank()) {
+                preferences.remove(Keys.TRANSCRIPTION_CUSTOM_URL)
+            } else {
+                preferences[Keys.TRANSCRIPTION_CUSTOM_URL] = url
+            }
+        }
+    }
+
+    suspend fun updateTranscriptionCustomApiKey(apiKey: String?) {
+        context.dataStore.edit { preferences ->
+            if (apiKey.isNullOrBlank()) {
+                preferences.remove(Keys.TRANSCRIPTION_CUSTOM_API_KEY)
+            } else {
+                preferences[Keys.TRANSCRIPTION_CUSTOM_API_KEY] = apiKey
+            }
+        }
+    }
+
+    // ==================== Translation Settings ====================
+
     suspend fun updateTranslationDefaultProvider(provider: String) {
         context.dataStore.edit { preferences ->
             preferences[Keys.TRANSLATION_DEFAULT_PROVIDER] = provider
         }
     }
-    
+
     suspend fun updateTranslationTargetLanguage(language: String) {
         context.dataStore.edit { preferences ->
             preferences[Keys.TRANSLATION_TARGET_LANGUAGE] = language
         }
     }
-    
+
     suspend fun updateTranslationAutoTranslate(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[Keys.TRANSLATION_AUTO_TRANSLATE] = enabled
         }
     }
-    
+
     suspend fun updateTranslationGoogleApiKey(apiKey: String) {
         context.dataStore.edit { preferences ->
             preferences[Keys.TRANSLATION_GOOGLE_API_KEY] = apiKey
         }
     }
-    
+
     suspend fun updateTranslationGoogleEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[Keys.TRANSLATION_GOOGLE_ENABLED] = enabled
         }
     }
-    
+
     suspend fun updateTranslationDeeplApiKey(apiKey: String) {
         context.dataStore.edit { preferences ->
             preferences[Keys.TRANSLATION_DEEPL_API_KEY] = apiKey
         }
     }
-    
+
     suspend fun updateTranslationDeeplEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[Keys.TRANSLATION_DEEPL_ENABLED] = enabled
         }
     }
-    
+
     suspend fun updateTranslationCustomUrl(url: String) {
         context.dataStore.edit { preferences ->
             preferences[Keys.TRANSLATION_CUSTOM_URL] = url
         }
     }
-    
+
     suspend fun updateTranslationCustomApiKey(apiKey: String) {
         context.dataStore.edit { preferences ->
             preferences[Keys.TRANSLATION_CUSTOM_API_KEY] = apiKey
         }
     }
-    
+
     suspend fun updateTranslationCustomEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[Keys.TRANSLATION_CUSTOM_ENABLED] = enabled

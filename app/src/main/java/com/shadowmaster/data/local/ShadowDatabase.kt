@@ -187,7 +187,7 @@ interface SegmentationConfigDao {
         ImportedAudio::class,
         SegmentationConfig::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -270,6 +270,33 @@ abstract class ShadowDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                // Add predefined segmentation config presets for Word Mode and Sentence Mode
+                // These are in addition to the default-config from migration 1_2
+                
+                // Word Mode: shorter segments for word-level practice
+                database.execSQL("""
+                    INSERT OR IGNORE INTO segmentation_configs
+                    (id, minSegmentDurationMs, maxSegmentDurationMs, silenceThresholdMs,
+                     preSpeechBufferMs, segmentMode, name, createdAt)
+                    VALUES
+                    ('word-mode', 500, 2000, 700, 200, 'WORD', 'Word Mode',
+                     ${System.currentTimeMillis()})
+                """.trimIndent())
+                
+                // Sentence Mode: longer segments for sentence-level practice
+                database.execSQL("""
+                    INSERT OR IGNORE INTO segmentation_configs
+                    (id, minSegmentDurationMs, maxSegmentDurationMs, silenceThresholdMs,
+                     preSpeechBufferMs, segmentMode, name, createdAt)
+                    VALUES
+                    ('sentence-mode', 1000, 8000, 700, 200, 'SENTENCE', 'Sentence Mode',
+                     ${System.currentTimeMillis()})
+                """.trimIndent())
+            }
+        }
+
         fun getDatabase(context: Context): ShadowDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -277,7 +304,7 @@ abstract class ShadowDatabase : RoomDatabase() {
                     ShadowDatabase::class.java,
                     "shadow_library_db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                 INSTANCE = instance
                 instance
