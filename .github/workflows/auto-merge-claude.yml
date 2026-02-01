@@ -53,29 +53,29 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # Direct merge for simple fixes (no required checks)
-  quick-merge:
+  # Enable auto-merge for Claude PRs (works with branch protection)
+  enable-auto-merge:
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'pull_request' &&
-      startsWith(github.head_ref, 'claude/issue-')
+      startsWith(github.head_ref, 'claude/')
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Quick merge if no conflicts
+      - name: Wait for approval workflow
+        run: |
+          echo "Waiting for auto-approve workflow..."
+          sleep 15
+
+      - name: Enable auto-merge
         run: |
           PR_NUM=${{ github.event.pull_request.number }}
+          echo "Enabling auto-merge for PR #$PR_NUM..."
 
-          # Wait a moment for GitHub to calculate mergeability
-          sleep 10
-
-          # Check merge status
-          MERGEABLE=$(gh pr view $PR_NUM --json mergeable --jq '.mergeable')
-
-          if [ "$MERGEABLE" = "MERGEABLE" ]; then
-            echo "Attempting quick merge for PR #$PR_NUM..."
-            gh pr merge $PR_NUM --squash --admin || gh pr merge $PR_NUM --auto --squash
-          fi
+          # Enable auto-merge (will merge once all requirements are met)
+          gh pr merge $PR_NUM --auto --squash \
+            --subject "Merge Claude fix: ${{ github.head_ref }}" \
+            || echo "Auto-merge may already be enabled"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
