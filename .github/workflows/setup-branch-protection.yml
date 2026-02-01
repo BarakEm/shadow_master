@@ -1,6 +1,8 @@
 name: Setup Branch Protection
 
 # Run manually to configure branch protection
+# NOTE: This workflow requires an ADMIN_TOKEN secret with admin:repo permissions
+# The built-in GITHUB_TOKEN cannot modify branch protection rules
 on:
   workflow_dispatch:
     inputs:
@@ -19,14 +21,21 @@ on:
         default: false
         type: boolean
 
-permissions:
-  contents: write
-  administration: write
-
 jobs:
   protect-master:
     runs-on: ubuntu-latest
     steps:
+      - name: Check for admin token
+        id: check-token
+        run: |
+          if [ -z "${{ secrets.ADMIN_TOKEN }}" ]; then
+            echo "::error::ADMIN_TOKEN secret is required but not configured."
+            echo "::error::The built-in GITHUB_TOKEN cannot modify branch protection rules."
+            echo "::error::Please create a PAT with 'admin:repo' scope and add it as ADMIN_TOKEN secret."
+            exit 1
+          fi
+          echo "Admin token found, proceeding with branch protection setup..."
+
       - name: Setup branch protection for master
         run: |
           # Configure branch protection rules
@@ -59,7 +68,7 @@ jobs:
           echo "  - Allow force push: false"
           echo "  - Allow deletions: false"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.ADMIN_TOKEN }}
 
       - name: Enable auto-merge for repository
         run: |
@@ -71,4 +80,4 @@ jobs:
 
           echo "✅ Auto-merge enabled for repository"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.ADMIN_TOKEN }}
