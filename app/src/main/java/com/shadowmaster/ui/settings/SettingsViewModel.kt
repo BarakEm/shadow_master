@@ -116,4 +116,54 @@ class SettingsViewModel @Inject constructor(
             settingsRepository.updateBuildupChunkMs(ms)
         }
     }
+
+    // ==================== Transcription Settings ====================
+
+    fun updateTranscriptionDefaultProvider(provider: String) {
+        viewModelScope.launch {
+            settingsRepository.updateTranscriptionDefaultProvider(provider)
+        }
+    }
+
+    fun updateTranscriptionAutoOnImport(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.updateTranscriptionAutoOnImport(enabled)
+        }
+    }
+
+    fun updateTranscriptionGoogleApiKey(apiKey: String?) {
+        viewModelScope.launch {
+            settingsRepository.updateTranscriptionGoogleApiKey(apiKey)
+        }
+    }
+
+    fun updateTranscriptionAzureApiKey(apiKey: String?) {
+        viewModelScope.launch {
+            settingsRepository.updateTranscriptionAzureApiKey(apiKey)
+        }
+    }
+
+    fun updateTranscriptionAzureRegion(region: String?) {
+        viewModelScope.launch {
+            settingsRepository.updateTranscriptionAzureRegion(region)
+        }
+    }
+
+    fun updateTranscriptionWhisperApiKey(apiKey: String?) {
+        viewModelScope.launch {
+            settingsRepository.updateTranscriptionWhisperApiKey(apiKey)
+        }
+    }
+
+    fun updateTranscriptionCustomUrl(url: String?) {
+        viewModelScope.launch {
+            settingsRepository.updateTranscriptionCustomUrl(url)
+        }
+    }
+
+    fun updateTranscriptionCustomApiKey(apiKey: String?) {
+        viewModelScope.launch {
+            settingsRepository.updateTranscriptionCustomApiKey(apiKey)
+        }
+    }
 }
