@@ -17,7 +17,8 @@ data class ShadowingConfig(
     val playbackUserRecording: Boolean = false,  // Play back user's recording after shadowing
     val silenceBetweenRepeatsMs: Int = 1000,  // Silence between repeats in bus mode
     val practiceMode: PracticeMode = PracticeMode.STANDARD,  // Learning approach
-    val buildupChunkMs: Int = 1500  // Target chunk size for buildup mode
+    val buildupChunkMs: Int = 1500,  // Target chunk size for buildup mode
+    val transcription: TranscriptionConfig = TranscriptionConfig()  // Transcription service settings
 ) {
     companion object {
         const val MIN_SILENCE_THRESHOLD_MS = 300
@@ -85,3 +86,20 @@ enum class SupportedLanguage(
         }
     }
 }
+
+/**
+ * Configuration for automatic transcription services.
+ */
+data class TranscriptionConfig(
+    val defaultProvider: String = "google",  // google, azure, whisper, custom
+    val autoTranscribeOnImport: Boolean = false,
+    
+    // Provider-specific settings
+    val googleApiKey: String? = null,
+    val azureApiKey: String? = null,
+    val azureRegion: String? = null,
+    val whisperApiKey: String? = null,
+    val customEndpointUrl: String? = null,
+    val customEndpointApiKey: String? = null,
+    val customEndpointHeaders: Map<String, String> = emptyMap()
+)

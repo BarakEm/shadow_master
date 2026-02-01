@@ -180,6 +180,14 @@ fun SettingsScreen(
                 checked = config.pauseForNavigation,
                 onCheckedChange = { viewModel.updatePauseForNavigation(it) }
             )
+
+            HorizontalDivider()
+
+            // Transcription Services Section
+            TranscriptionServicesSection(
+                config = config,
+                viewModel = viewModel
+            )
         }
     }
 }
@@ -485,6 +493,370 @@ private fun SwitchSetting(
             onCheckedChange = onCheckedChange
         )
     }
+}
+
+@Composable
+private fun TranscriptionServicesSection(
+    config: ShadowingConfig,
+    viewModel: SettingsViewModel
+) {
+    var showGoogleKeyDialog by remember { mutableStateOf(false) }
+    var showAzureKeyDialog by remember { mutableStateOf(false) }
+    var showAzureRegionDialog by remember { mutableStateOf(false) }
+    var showWhisperKeyDialog by remember { mutableStateOf(false) }
+    var showCustomUrlDialog by remember { mutableStateOf(false) }
+    var showCustomKeyDialog by remember { mutableStateOf(false) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+    ) {
+        // Section Header
+        Text(
+            text = "Transcription Services",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+
+        // Auto-transcribe on import toggle
+        SwitchSetting(
+            title = "Auto-transcribe on Import",
+            subtitle = "Automatically transcribe audio segments after importing",
+            checked = config.transcription.autoTranscribeOnImport,
+            onCheckedChange = { viewModel.updateTranscriptionAutoOnImport(it) }
+        )
+
+        HorizontalDivider()
+
+        // Default Provider Selector
+        TranscriptionProviderSelector(
+            selectedProvider = config.transcription.defaultProvider,
+            onProviderSelected = { viewModel.updateTranscriptionDefaultProvider(it) }
+        )
+
+        HorizontalDivider()
+
+        // Google Speech-to-Text
+        ProviderConfigSection(
+            title = "Google Speech-to-Text",
+            isConfigured = !config.transcription.googleApiKey.isNullOrBlank(),
+            onConfigureClick = { showGoogleKeyDialog = true }
+        )
+
+        // Azure Speech Services
+        ProviderConfigSection(
+            title = "Azure Speech Services",
+            isConfigured = !config.transcription.azureApiKey.isNullOrBlank() &&
+                    !config.transcription.azureRegion.isNullOrBlank(),
+            onConfigureClick = { showAzureKeyDialog = true },
+            additionalInfo = if (!config.transcription.azureRegion.isNullOrBlank())
+                "Region: ${config.transcription.azureRegion}" else null
+        )
+
+        // OpenAI Whisper
+        ProviderConfigSection(
+            title = "OpenAI Whisper",
+            isConfigured = !config.transcription.whisperApiKey.isNullOrBlank(),
+            onConfigureClick = { showWhisperKeyDialog = true }
+        )
+
+        // Custom Endpoint
+        ProviderConfigSection(
+            title = "Custom Endpoint",
+            isConfigured = !config.transcription.customEndpointUrl.isNullOrBlank(),
+            onConfigureClick = { showCustomUrlDialog = true },
+            additionalInfo = config.transcription.customEndpointUrl
+        )
+    }
+
+    // Dialogs
+    if (showGoogleKeyDialog) {
+        ApiKeyDialog(
+            title = "Google API Key",
+            currentValue = config.transcription.googleApiKey ?: "",
+            onDismiss = { showGoogleKeyDialog = false },
+            onSave = { apiKey ->
+                viewModel.updateTranscriptionGoogleApiKey(apiKey.ifBlank { null })
+                showGoogleKeyDialog = false
+            }
+        )
+    }
+
+    if (showAzureKeyDialog) {
+        AzureConfigDialog(
+            currentApiKey = config.transcription.azureApiKey ?: "",
+            currentRegion = config.transcription.azureRegion ?: "",
+            onDismiss = { showAzureKeyDialog = false },
+            onSave = { apiKey, region ->
+                viewModel.updateTranscriptionAzureApiKey(apiKey.ifBlank { null })
+                viewModel.updateTranscriptionAzureRegion(region.ifBlank { null })
+                showAzureKeyDialog = false
+            }
+        )
+    }
+
+    if (showWhisperKeyDialog) {
+        ApiKeyDialog(
+            title = "OpenAI API Key",
+            currentValue = config.transcription.whisperApiKey ?: "",
+            onDismiss = { showWhisperKeyDialog = false },
+            onSave = { apiKey ->
+                viewModel.updateTranscriptionWhisperApiKey(apiKey.ifBlank { null })
+                showWhisperKeyDialog = false
+            }
+        )
+    }
+
+    if (showCustomUrlDialog) {
+        CustomEndpointDialog(
+            currentUrl = config.transcription.customEndpointUrl ?: "",
+            currentApiKey = config.transcription.customEndpointApiKey ?: "",
+            onDismiss = { showCustomUrlDialog = false },
+            onSave = { url, apiKey ->
+                viewModel.updateTranscriptionCustomUrl(url.ifBlank { null })
+                viewModel.updateTranscriptionCustomApiKey(apiKey.ifBlank { null })
+                showCustomUrlDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun TranscriptionProviderSelector(
+    selectedProvider: String,
+    onProviderSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+
+    val providers = mapOf(
+        "google" to "Google Speech-to-Text",
+        "azure" to "Azure Speech Services",
+        "whisper" to "OpenAI Whisper",
+        "custom" to "Custom Endpoint"
+    )
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { expanded = true }
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Default Provider",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = providers[selectedProvider] ?: "Unknown",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.primary
+        )
+
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            providers.forEach { (id, name) ->
+                DropdownMenuItem(
+                    text = { Text(name) },
+                    onClick = {
+                        onProviderSelected(id)
+                        expanded = false
+                    },
+                    leadingIcon = {
+                        if (id == selectedProvider) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProviderConfigSection(
+    title: String,
+    isConfigured: Boolean,
+    onConfigureClick: () -> Unit,
+    additionalInfo: String? = null
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onConfigureClick)
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                if (additionalInfo != null) {
+                    Text(
+                        text = additionalInfo,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
+            }
+            Text(
+                text = if (isConfigured) "Configured" else "Not configured",
+                style = MaterialTheme.typography.bodyMedium,
+                color = if (isConfigured)
+                    MaterialTheme.colorScheme.primary
+                else
+                    MaterialTheme.colorScheme.error
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ApiKeyDialog(
+    title: String,
+    currentValue: String,
+    onDismiss: () -> Unit,
+    onSave: (String) -> Unit
+) {
+    var apiKey by remember { mutableStateOf(currentValue) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column {
+                Text("Enter your API key:")
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = apiKey,
+                    onValueChange = { apiKey = it },
+                    label = { Text("API Key") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(apiKey) }) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AzureConfigDialog(
+    currentApiKey: String,
+    currentRegion: String,
+    onDismiss: () -> Unit,
+    onSave: (String, String) -> Unit
+) {
+    var apiKey by remember { mutableStateOf(currentApiKey) }
+    var region by remember { mutableStateOf(currentRegion) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Azure Configuration") },
+        text = {
+            Column {
+                Text("Enter your Azure Speech Services credentials:")
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = apiKey,
+                    onValueChange = { apiKey = it },
+                    label = { Text("API Key") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = region,
+                    onValueChange = { region = it },
+                    label = { Text("Region (e.g., eastus)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(apiKey, region) }) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CustomEndpointDialog(
+    currentUrl: String,
+    currentApiKey: String,
+    onDismiss: () -> Unit,
+    onSave: (String, String) -> Unit
+) {
+    var url by remember { mutableStateOf(currentUrl) }
+    var apiKey by remember { mutableStateOf(currentApiKey) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Custom Endpoint") },
+        text = {
+            Column {
+                Text("Configure your custom transcription endpoint:")
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text("Endpoint URL") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = apiKey,
+                    onValueChange = { apiKey = it },
+                    label = { Text("API Key (optional)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(url, apiKey) }) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 // Preview Functions

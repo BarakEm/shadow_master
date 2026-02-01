@@ -39,6 +39,16 @@ class SettingsRepository @Inject constructor(
         val SILENCE_BETWEEN_REPEATS_MS = intPreferencesKey("silence_between_repeats_ms")
         val PRACTICE_MODE = stringPreferencesKey("practice_mode")
         val BUILDUP_CHUNK_MS = intPreferencesKey("buildup_chunk_ms")
+        
+        // Transcription settings
+        val TRANSCRIPTION_DEFAULT_PROVIDER = stringPreferencesKey("transcription_default_provider")
+        val TRANSCRIPTION_AUTO_ON_IMPORT = booleanPreferencesKey("transcription_auto_on_import")
+        val TRANSCRIPTION_GOOGLE_API_KEY = stringPreferencesKey("transcription_google_api_key")
+        val TRANSCRIPTION_AZURE_API_KEY = stringPreferencesKey("transcription_azure_api_key")
+        val TRANSCRIPTION_AZURE_REGION = stringPreferencesKey("transcription_azure_region")
+        val TRANSCRIPTION_WHISPER_API_KEY = stringPreferencesKey("transcription_whisper_api_key")
+        val TRANSCRIPTION_CUSTOM_URL = stringPreferencesKey("transcription_custom_url")
+        val TRANSCRIPTION_CUSTOM_API_KEY = stringPreferencesKey("transcription_custom_api_key")
     }
 
     // Blocking access for initial value (use sparingly)
@@ -77,7 +87,17 @@ class SettingsRepository @Inject constructor(
             } catch (e: IllegalArgumentException) {
                 PracticeMode.STANDARD
             },
-            buildupChunkMs = preferences[Keys.BUILDUP_CHUNK_MS] ?: 1500
+            buildupChunkMs = preferences[Keys.BUILDUP_CHUNK_MS] ?: 1500,
+            transcription = com.shadowmaster.data.model.TranscriptionConfig(
+                defaultProvider = preferences[Keys.TRANSCRIPTION_DEFAULT_PROVIDER] ?: "google",
+                autoTranscribeOnImport = preferences[Keys.TRANSCRIPTION_AUTO_ON_IMPORT] ?: false,
+                googleApiKey = preferences[Keys.TRANSCRIPTION_GOOGLE_API_KEY],
+                azureApiKey = preferences[Keys.TRANSCRIPTION_AZURE_API_KEY],
+                azureRegion = preferences[Keys.TRANSCRIPTION_AZURE_REGION],
+                whisperApiKey = preferences[Keys.TRANSCRIPTION_WHISPER_API_KEY],
+                customEndpointUrl = preferences[Keys.TRANSCRIPTION_CUSTOM_URL],
+                customEndpointApiKey = preferences[Keys.TRANSCRIPTION_CUSTOM_API_KEY]
+            )
         )
     }
 
@@ -220,6 +240,80 @@ class SettingsRepository @Inject constructor(
     suspend fun updateBuildupChunkMs(ms: Int) {
         context.dataStore.edit { preferences ->
             preferences[Keys.BUILDUP_CHUNK_MS] = ms.coerceIn(500, 3000)
+        }
+    }
+
+    // ==================== Transcription Settings ====================
+
+    suspend fun updateTranscriptionDefaultProvider(provider: String) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.TRANSCRIPTION_DEFAULT_PROVIDER] = provider
+        }
+    }
+
+    suspend fun updateTranscriptionAutoOnImport(enabled: Boolean) {
+        context.dataStore.edit { preferences ->
+            preferences[Keys.TRANSCRIPTION_AUTO_ON_IMPORT] = enabled
+        }
+    }
+
+    suspend fun updateTranscriptionGoogleApiKey(apiKey: String?) {
+        context.dataStore.edit { preferences ->
+            if (apiKey.isNullOrBlank()) {
+                preferences.remove(Keys.TRANSCRIPTION_GOOGLE_API_KEY)
+            } else {
+                preferences[Keys.TRANSCRIPTION_GOOGLE_API_KEY] = apiKey
+            }
+        }
+    }
+
+    suspend fun updateTranscriptionAzureApiKey(apiKey: String?) {
+        context.dataStore.edit { preferences ->
+            if (apiKey.isNullOrBlank()) {
+                preferences.remove(Keys.TRANSCRIPTION_AZURE_API_KEY)
+            } else {
+                preferences[Keys.TRANSCRIPTION_AZURE_API_KEY] = apiKey
+            }
+        }
+    }
+
+    suspend fun updateTranscriptionAzureRegion(region: String?) {
+        context.dataStore.edit { preferences ->
+            if (region.isNullOrBlank()) {
+                preferences.remove(Keys.TRANSCRIPTION_AZURE_REGION)
+            } else {
+                preferences[Keys.TRANSCRIPTION_AZURE_REGION] = region
+            }
+        }
+    }
+
+    suspend fun updateTranscriptionWhisperApiKey(apiKey: String?) {
+        context.dataStore.edit { preferences ->
+            if (apiKey.isNullOrBlank()) {
+                preferences.remove(Keys.TRANSCRIPTION_WHISPER_API_KEY)
+            } else {
+                preferences[Keys.TRANSCRIPTION_WHISPER_API_KEY] = apiKey
+            }
+        }
+    }
+
+    suspend fun updateTranscriptionCustomUrl(url: String?) {
+        context.dataStore.edit { preferences ->
+            if (url.isNullOrBlank()) {
+                preferences.remove(Keys.TRANSCRIPTION_CUSTOM_URL)
+            } else {
+                preferences[Keys.TRANSCRIPTION_CUSTOM_URL] = url
+            }
+        }
+    }
+
+    suspend fun updateTranscriptionCustomApiKey(apiKey: String?) {
+        context.dataStore.edit { preferences ->
+            if (apiKey.isNullOrBlank()) {
+                preferences.remove(Keys.TRANSCRIPTION_CUSTOM_API_KEY)
+            } else {
+                preferences[Keys.TRANSCRIPTION_CUSTOM_API_KEY] = apiKey
+            }
         }
     }
 }
