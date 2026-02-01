@@ -789,6 +789,59 @@ class LibraryRepositoryTest {
         coVerify(exactly = 1) { segmentationConfigDao.delete(config) }
     }
 
+    @Test
+    fun `createPlaylistFromImportedAudio creates playlist successfully`() = runTest {
+        // Given
+        val importedAudioId = "test-audio-id"
+        val playlistName = "My Playlist"
+        val configId = "word-mode"
+        val config = createTestSegmentationConfig(id = configId, name = "Word Mode")
+        val expectedPlaylistId = "new-playlist-id"
+
+        coEvery { segmentationConfigDao.getById(configId) } returns config
+        coEvery { audioImporter.segmentImportedAudio(
+            importedAudioId = importedAudioId,
+            playlistName = playlistName,
+            config = config,
+            enableTranscription = false,
+            jobId = null
+        ) } returns Result.success(expectedPlaylistId)
+
+        // When
+        val result = repository.createPlaylistFromImportedAudio(importedAudioId, playlistName, configId)
+
+        // Then
+        assertTrue(result.isSuccess)
+        assertEquals(expectedPlaylistId, result.getOrNull())
+        coVerify(exactly = 1) { segmentationConfigDao.getById(configId) }
+        coVerify(exactly = 1) { audioImporter.segmentImportedAudio(
+            importedAudioId = importedAudioId,
+            playlistName = playlistName,
+            config = config,
+            enableTranscription = false,
+            jobId = null
+        ) }
+    }
+
+    @Test
+    fun `createPlaylistFromImportedAudio fails when config not found`() = runTest {
+        // Given
+        val importedAudioId = "test-audio-id"
+        val playlistName = "My Playlist"
+        val configId = "non-existent-config"
+
+        coEvery { segmentationConfigDao.getById(configId) } returns null
+
+        // When
+        val result = repository.createPlaylistFromImportedAudio(importedAudioId, playlistName, configId)
+
+        // Then
+        assertTrue(result.isFailure)
+        assertTrue(result.exceptionOrNull() is IllegalArgumentException)
+        coVerify(exactly = 1) { segmentationConfigDao.getById(configId) }
+        coVerify(exactly = 0) { audioImporter.segmentImportedAudio(any(), any(), any(), any(), any()) }
+    }
+
     // ==================== Segment Operations Tests ====================
 
     @Test
