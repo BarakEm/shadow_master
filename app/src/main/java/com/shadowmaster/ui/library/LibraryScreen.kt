@@ -250,7 +250,7 @@ fun LibraryScreen(
                             onDeleteAudio = { showDeleteAudioDialog = it }
                         )
                     }
-                    }
+                }
 
                 // Error snackbar
                 importError?.let { error ->
