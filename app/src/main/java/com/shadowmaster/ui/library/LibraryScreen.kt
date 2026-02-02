@@ -52,7 +52,6 @@ fun LibraryScreen(
     val selectedForMerge by viewModel.selectedForMerge.collectAsState()
     val exportProgress by viewModel.exportProgress.collectAsState()
     val importedAudio by viewModel.importedAudio.collectAsState()
-    val segmentationConfigs by viewModel.segmentationConfigs.collectAsState()
 
     var selectedTab by remember { mutableStateOf(0) }
     var showDeleteDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
@@ -755,8 +754,9 @@ fun LibraryScreen(
     // Create playlist from imported audio dialog
     showCreatePlaylistDialog?.let { audio ->
         var playlistName by remember { mutableStateOf(audio.sourceFileName.substringBeforeLast(".")) }
-        var selectedConfigId by remember { mutableStateOf(segmentationConfigs.firstOrNull()?.id ?: "") }
-        
+        val presets = remember { com.shadowmaster.library.SegmentationPresets.getAllPresets() }
+        var selectedPreset by remember { mutableStateOf<SegmentationConfig?>(presets.firstOrNull()) }
+
         AlertDialog(
             onDismissRequest = { showCreatePlaylistDialog = null },
             title = { Text("Create Playlist") },
@@ -776,29 +776,28 @@ fun LibraryScreen(
                         fontWeight = FontWeight.Medium
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    segmentationConfigs.forEach { config ->
+                    presets.forEach { preset ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { selectedConfigId = config.id }
+                                .clickable { selectedPreset = preset }
                                 .padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
-                                selected = selectedConfigId == config.id,
-                                onClick = { selectedConfigId = config.id }
+                                selected = preset.id == selectedPreset?.id,
+                                onClick = { selectedPreset = preset }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Column {
                                 Text(
-                                    text = config.name,
+                                    text = preset.name,
                                     style = MaterialTheme.typography.bodyLarge
                                 )
                                 Text(
-                                    text = when (config.segmentMode) {
-                                        SegmentMode.WORD -> "Short segments (${config.minSegmentDurationMs}ms - ${config.maxSegmentDurationMs}ms)"
-                                        SegmentMode.SENTENCE -> "Sentence-length segments"
-                                    },
+                                    text = "Mode: ${preset.segmentMode.name}, " +
+                                           "Min: ${preset.minSegmentDurationMs}ms, " +
+                                           "Max: ${preset.maxSegmentDurationMs}ms",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -811,12 +810,14 @@ fun LibraryScreen(
                 TextButton(
                     onClick = {
                         val name = playlistName.trim()
-                        if (name.isNotEmpty() && selectedConfigId.isNotEmpty()) {
-                            viewModel.createPlaylistFromImportedAudio(audio.id, name, selectedConfigId)
-                            showCreatePlaylistDialog = null
+                        selectedPreset?.let { preset ->
+                            if (name.isNotEmpty()) {
+                                viewModel.createPlaylistFromImportedAudio(audio.id, name, preset)
+                                showCreatePlaylistDialog = null
+                            }
                         }
                     },
-                    enabled = playlistName.trim().isNotEmpty() && selectedConfigId.isNotEmpty()
+                    enabled = playlistName.trim().isNotEmpty() && selectedPreset != null
                 ) {
                     Text("Create")
                 }

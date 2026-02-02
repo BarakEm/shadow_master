@@ -40,13 +40,6 @@ class LibraryViewModel @Inject constructor(
             initialValue = emptyList()
         )
 
-    val segmentationConfigs: StateFlow<List<SegmentationConfig>> = libraryRepository.getAllSegmentationConfigs()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
-
     val activeImports: StateFlow<List<ImportJob>> = libraryRepository.getActiveImports()
         .stateIn(
             scope = viewModelScope,
@@ -337,13 +330,14 @@ class LibraryViewModel @Inject constructor(
     fun createPlaylistFromImportedAudio(
         importedAudioId: String,
         playlistName: String,
-        configId: String
+        config: com.shadowmaster.data.model.SegmentationConfig
     ) {
         viewModelScope.launch {
-            val result = libraryRepository.createPlaylistFromImportedAudio(
+            val result = libraryRepository.segmentImportedAudio(
                 importedAudioId = importedAudioId,
                 playlistName = playlistName,
-                configId = configId
+                config = config,
+                enableTranscription = false
             )
             result.onSuccess { playlistId ->
                 _importSuccess.value = "Playlist created successfully!"
