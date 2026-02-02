@@ -1,7 +1,5 @@
 package com.shadowmaster.translation
 
-import android.content.Context
-import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -10,9 +8,7 @@ import javax.inject.Singleton
  * Provides a unified interface for translating text using configured providers.
  */
 @Singleton
-class TranslationService @Inject constructor(
-    @ApplicationContext private val context: Context
-) {
+class TranslationService @Inject constructor() {
     /**
      * Available provider types.
      */
