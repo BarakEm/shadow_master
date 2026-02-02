@@ -506,6 +506,7 @@ private fun TranscriptionServicesSection(
     var showWhisperKeyDialog by remember { mutableStateOf(false) }
     var showCustomUrlDialog by remember { mutableStateOf(false) }
     var showCustomKeyDialog by remember { mutableStateOf(false) }
+    var showLocalModelDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -560,6 +561,13 @@ private fun TranscriptionServicesSection(
             title = "OpenAI Whisper",
             isConfigured = !config.transcription.whisperApiKey.isNullOrBlank(),
             onConfigureClick = { showWhisperKeyDialog = true }
+        )
+
+        // Local Model (Whisper.cpp)
+        LocalModelProviderSection(
+            config = config,
+            viewModel = viewModel,
+            onConfigureClick = { showLocalModelDialog = true }
         )
 
         // Custom Endpoint
@@ -621,6 +629,15 @@ private fun TranscriptionServicesSection(
             }
         )
     }
+
+    // Local Model Dialog
+    if (showLocalModelDialog) {
+        LocalModelDialog(
+            config = config,
+            viewModel = viewModel,
+            onDismiss = { showLocalModelDialog = false }
+        )
+    }
 }
 
 @Composable
@@ -634,6 +651,7 @@ private fun TranscriptionProviderSelector(
         "google" to "Google Speech-to-Text",
         "azure" to "Azure Speech Services",
         "whisper" to "OpenAI Whisper",
+        "local" to "Local Model (Whisper.cpp)",
         "custom" to "Custom Endpoint"
     )
 
@@ -853,6 +871,226 @@ private fun CustomEndpointDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
+private fun LocalModelProviderSection(
+    config: ShadowingConfig,
+    viewModel: SettingsViewModel,
+    onConfigureClick: () -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val isConfigured = !config.transcription.localModelPath.isNullOrBlank() &&
+            com.shadowmaster.transcription.LocalModelProvider.isModelDownloaded(
+                context,
+                config.transcription.localModelName ?: com.shadowmaster.transcription.LocalModelProvider.TINY_MODEL_NAME
+            )
+    
+    val statusText = when {
+        config.transcription.localModelName != null && isConfigured -> 
+            "Model: ${config.transcription.localModelName} (ready)"
+        config.transcription.localModelName != null && !isConfigured -> 
+            "Model: ${config.transcription.localModelName} (not downloaded)"
+        else -> "No model selected"
+    }
+    
+    ProviderConfigSection(
+        title = "Local Model (Whisper.cpp)",
+        isConfigured = isConfigured,
+        onConfigureClick = onConfigureClick,
+        additionalInfo = statusText
+    )
+}
+
+@Composable
+private fun LocalModelDialog(
+    config: ShadowingConfig,
+    viewModel: SettingsViewModel,
+    onDismiss: () -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    
+    var selectedModel by remember { 
+        mutableStateOf(
+            config.transcription.localModelName ?: com.shadowmaster.transcription.LocalModelProvider.TINY_MODEL_NAME
+        ) 
+    }
+    var isDownloading by remember { mutableStateOf(false) }
+    var downloadProgress by remember { mutableFloatStateOf(0f) }
+    var downloadError by remember { mutableStateOf<String?>(null) }
+    
+    val tinyDownloaded = com.shadowmaster.transcription.LocalModelProvider.isModelDownloaded(
+        context,
+        com.shadowmaster.transcription.LocalModelProvider.TINY_MODEL_NAME
+    )
+    val baseDownloaded = com.shadowmaster.transcription.LocalModelProvider.isModelDownloaded(
+        context,
+        com.shadowmaster.transcription.LocalModelProvider.BASE_MODEL_NAME
+    )
+    
+    AlertDialog(
+        onDismissRequest = { if (!isDownloading) onDismiss() },
+        title = { Text("Local Model Configuration") },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Select and download a Whisper model for offline transcription:",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                
+                // Model selection
+                Column {
+                    // Tiny model
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = !isDownloading) { selectedModel = com.shadowmaster.transcription.LocalModelProvider.TINY_MODEL_NAME }
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selectedModel == com.shadowmaster.transcription.LocalModelProvider.TINY_MODEL_NAME,
+                            onClick = { selectedModel = com.shadowmaster.transcription.LocalModelProvider.TINY_MODEL_NAME },
+                            enabled = !isDownloading
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = "Tiny (~40MB)",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Text(
+                                text = if (tinyDownloaded) "✓ Downloaded" else "Not downloaded",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (tinyDownloaded) 
+                                    MaterialTheme.colorScheme.primary 
+                                else 
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                    
+                    // Base model
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = !isDownloading) { selectedModel = com.shadowmaster.transcription.LocalModelProvider.BASE_MODEL_NAME }
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selectedModel == com.shadowmaster.transcription.LocalModelProvider.BASE_MODEL_NAME,
+                            onClick = { selectedModel = com.shadowmaster.transcription.LocalModelProvider.BASE_MODEL_NAME },
+                            enabled = !isDownloading
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = "Base (~75MB)",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Text(
+                                text = if (baseDownloaded) "✓ Downloaded" else "Not downloaded",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (baseDownloaded) 
+                                    MaterialTheme.colorScheme.primary 
+                                else 
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+                
+                // Download progress
+                if (isDownloading) {
+                    Column {
+                        LinearProgressIndicator(
+                            progress = { downloadProgress },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Text(
+                            text = "Downloading... ${(downloadProgress * 100).toInt()}%",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+                
+                // Error message
+                if (downloadError != null) {
+                    Text(
+                        text = "Error: $downloadError",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            val modelDownloaded = when (selectedModel) {
+                com.shadowmaster.transcription.LocalModelProvider.TINY_MODEL_NAME -> tinyDownloaded
+                com.shadowmaster.transcription.LocalModelProvider.BASE_MODEL_NAME -> baseDownloaded
+                else -> false
+            }
+            
+            if (modelDownloaded) {
+                TextButton(
+                    onClick = {
+                        val modelPath = com.shadowmaster.transcription.LocalModelProvider.getModelPath(
+                            context,
+                            selectedModel
+                        ).absolutePath
+                        viewModel.updateTranscriptionLocalModelPath(modelPath)
+                        viewModel.updateTranscriptionLocalModelName(selectedModel)
+                        onDismiss()
+                    },
+                    enabled = !isDownloading
+                ) {
+                    Text("Use Model")
+                }
+            } else {
+                TextButton(
+                    onClick = {
+                        isDownloading = true
+                        downloadError = null
+                        downloadProgress = 0f
+                        
+                        coroutineScope.launch {
+                            val provider = com.shadowmaster.transcription.LocalModelProvider(context, null)
+                            val result = provider.downloadModel(selectedModel) { progress ->
+                                downloadProgress = progress
+                            }
+                            
+                            result.onSuccess {
+                                viewModel.updateTranscriptionLocalModelPath(it.absolutePath)
+                                viewModel.updateTranscriptionLocalModelName(selectedModel)
+                                isDownloading = false
+                                onDismiss()
+                            }.onFailure { error ->
+                                downloadError = error.message
+                                isDownloading = false
+                            }
+                        }
+                    },
+                    enabled = !isDownloading
+                ) {
+                    Text("Download")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isDownloading
+            ) {
                 Text("Cancel")
             }
         }

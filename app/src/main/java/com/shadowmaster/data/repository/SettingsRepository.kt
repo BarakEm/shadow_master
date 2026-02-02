@@ -50,6 +50,8 @@ class SettingsRepository @Inject constructor(
         val TRANSCRIPTION_WHISPER_API_KEY = stringPreferencesKey("transcription_whisper_api_key")
         val TRANSCRIPTION_CUSTOM_URL = stringPreferencesKey("transcription_custom_url")
         val TRANSCRIPTION_CUSTOM_API_KEY = stringPreferencesKey("transcription_custom_api_key")
+        val TRANSCRIPTION_LOCAL_MODEL_PATH = stringPreferencesKey("transcription_local_model_path")
+        val TRANSCRIPTION_LOCAL_MODEL_NAME = stringPreferencesKey("transcription_local_model_name")
 
         // Translation config keys
         val TRANSLATION_DEFAULT_PROVIDER = stringPreferencesKey("translation_default_provider")
@@ -109,7 +111,9 @@ class SettingsRepository @Inject constructor(
                 azureRegion = preferences[Keys.TRANSCRIPTION_AZURE_REGION],
                 whisperApiKey = preferences[Keys.TRANSCRIPTION_WHISPER_API_KEY],
                 customEndpointUrl = preferences[Keys.TRANSCRIPTION_CUSTOM_URL],
-                customEndpointApiKey = preferences[Keys.TRANSCRIPTION_CUSTOM_API_KEY]
+                customEndpointApiKey = preferences[Keys.TRANSCRIPTION_CUSTOM_API_KEY],
+                localModelPath = preferences[Keys.TRANSCRIPTION_LOCAL_MODEL_PATH],
+                localModelName = preferences[Keys.TRANSCRIPTION_LOCAL_MODEL_NAME]
             ),
             translationConfig = TranslationConfig(
                 defaultProvider = preferences[Keys.TRANSLATION_DEFAULT_PROVIDER] ?: "mock",
@@ -350,6 +354,26 @@ class SettingsRepository @Inject constructor(
                 preferences.remove(Keys.TRANSCRIPTION_CUSTOM_API_KEY)
             } else {
                 preferences[Keys.TRANSCRIPTION_CUSTOM_API_KEY] = apiKey
+            }
+        }
+    }
+
+    suspend fun updateTranscriptionLocalModelPath(path: String?) {
+        context.dataStore.edit { preferences ->
+            if (path.isNullOrBlank()) {
+                preferences.remove(Keys.TRANSCRIPTION_LOCAL_MODEL_PATH)
+            } else {
+                preferences[Keys.TRANSCRIPTION_LOCAL_MODEL_PATH] = path
+            }
+        }
+    }
+
+    suspend fun updateTranscriptionLocalModelName(name: String?) {
+        context.dataStore.edit { preferences ->
+            if (name.isNullOrBlank()) {
+                preferences.remove(Keys.TRANSCRIPTION_LOCAL_MODEL_NAME)
+            } else {
+                preferences[Keys.TRANSCRIPTION_LOCAL_MODEL_NAME] = name
             }
         }
     }
