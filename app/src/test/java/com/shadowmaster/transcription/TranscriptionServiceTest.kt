@@ -1,5 +1,7 @@
 package com.shadowmaster.transcription
 
+import android.content.Context
+import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
@@ -17,7 +19,8 @@ import java.io.File
 @OptIn(ExperimentalCoroutinesApi::class)
 class TranscriptionServiceTest {
 
-    private val service = TranscriptionService()
+    private val mockContext: Context = mockk(relaxed = true)
+    private val service = TranscriptionService(mockContext)
 
     // ==================== Provider Creation Tests ====================
 
