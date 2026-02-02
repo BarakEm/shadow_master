@@ -1063,7 +1063,7 @@ private fun LocalModelDialog(
                         downloadError = null
                         downloadProgress = 0f
                         
-                        kotlinx.coroutines.launch {
+                        coroutineScope.launch {
                             val provider = com.shadowmaster.transcription.LocalModelProvider(context, null)
                             val result = provider.downloadModel(selectedModel) { progress ->
                                 downloadProgress = progress

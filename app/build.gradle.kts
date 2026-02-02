@@ -145,8 +145,10 @@ dependencies {
     // OkHttp for network requests (URL downloads)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    // Whisper.cpp for local transcription
-    implementation("com.whispercpp:whisper:1.5.5")
+    // TODO: Add Whisper.cpp for local transcription
+    // For now, LocalModelProvider uses a stub implementation
+    // Replace with actual Whisper.cpp library when available:
+    // implementation("com.github.ggerganov.whisper.cpp:whisper:v1.5.5")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

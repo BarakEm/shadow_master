@@ -2,14 +2,11 @@ package com.shadowmaster.transcription
 
 import android.content.Context
 import android.util.Log
-import com.whispercpp.whisper.WhisperContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
-import java.io.InputStream
 import java.net.URL
-import javax.inject.Inject
 
 /**
  * Local on-device transcription using Whisper.cpp.
@@ -22,6 +19,15 @@ import javax.inject.Inject
  * - No API costs
  * - Privacy-friendly (no data leaves device)
  * - On-demand model download
+ * 
+ * TODO: Integrate actual Whisper.cpp library
+ * Currently using stub implementation. To complete integration:
+ * 1. Add Whisper.cpp Android library dependency to build.gradle.kts
+ * 2. Replace stub transcription with actual WhisperContext API calls
+ * 3. Test with real audio files
+ * 
+ * Recommended library: https://github.com/ggerganov/whisper.cpp
+ * Android bindings available in the repository's android examples
  */
 class LocalModelProvider(
     private val context: Context,
@@ -31,8 +37,6 @@ class LocalModelProvider(
     override val name: String = "Local Model (Whisper.cpp)"
     override val id: String = TranscriptionProviderType.LOCAL.id
     override val requiresApiKey: Boolean = false
-
-    private var whisperContext: WhisperContext? = null
 
     companion object {
         private const val TAG = "LocalModelProvider"
@@ -129,42 +133,29 @@ class LocalModelProvider(
         try {
             Log.d(TAG, "Starting transcription with model: $modelPath")
             
-            // Initialize WhisperContext if not already done
-            if (whisperContext == null) {
-                Log.d(TAG, "Loading Whisper model...")
-                whisperContext = WhisperContext.createContextFromFile(modelPath!!)
-                Log.d(TAG, "Whisper model loaded successfully")
-            }
-
-            // Read audio file as PCM samples
-            val samples = readAudioFile(audioFile)
+            // TODO: Replace with actual Whisper.cpp integration
+            // The actual implementation should:
+            // 1. Initialize WhisperContext from the model file
+            // 2. Read and convert audio to the required format (16kHz mono PCM)
+            // 3. Call WhisperContext.transcribeData() with audio samples
+            // 4. Return the transcribed text
+            //
+            // Example pseudocode:
+            // val whisperContext = WhisperContext.createContextFromFile(modelPath!!)
+            // val samples = readAudioFile(audioFile)  // Convert to FloatArray
+            // val langCode = language.split("-").firstOrNull() ?: "en"
+            // val result = whisperContext.transcribeData(samples, langCode, null)
+            // return Result.success(result.text.trim())
             
-            if (samples.isEmpty()) {
-                return@withContext Result.failure(
-                    TranscriptionError.InvalidAudioFormat("Audio file is empty or could not be read")
+            // For now, return a placeholder indicating the feature needs library integration
+            Result.failure(
+                TranscriptionError.ProviderError(
+                    name,
+                    "Local transcription not fully implemented yet. " +
+                            "Whisper.cpp library integration is required. " +
+                            "Model is ready at: $modelPath"
                 )
-            }
-
-            Log.d(TAG, "Transcribing ${samples.size} audio samples...")
-            
-            // Perform transcription
-            // The language code needs to be converted to 2-letter ISO 639-1 format (e.g., "en-US" -> "en")
-            val langCode = language.split("-").firstOrNull() ?: "en"
-            
-            val result = whisperContext?.transcribeData(samples, langCode, null)
-            
-            if (result != null && result.text.isNotBlank()) {
-                Log.d(TAG, "Transcription successful: ${result.text}")
-                Result.success(result.text.trim())
-            } else {
-                Log.w(TAG, "Transcription returned empty result")
-                Result.failure(
-                    TranscriptionError.ProviderError(
-                        name,
-                        "Transcription returned no text. The audio might be silence or speech was not detected."
-                    )
-                )
-            }
+            )
         } catch (e: Exception) {
             Log.e(TAG, "Transcription failed", e)
             Result.failure(TranscriptionError.UnknownError(name, e))
@@ -174,6 +165,8 @@ class LocalModelProvider(
     /**
      * Read audio file and convert to Float array of samples.
      * Expected format: 16kHz mono PCM.
+     * 
+     * TODO: Implement when Whisper.cpp library is integrated
      */
     private fun readAudioFile(audioFile: File): FloatArray {
         // Whisper.cpp expects raw PCM audio at 16kHz
@@ -198,7 +191,7 @@ class LocalModelProvider(
             val samples = FloatArray((bytes.size - startOffset) / 2)
             var sampleIndex = 0
             
-            for (i in startOffset until bytes.size - 1 step 2) {
+            for (i in startOffset..bytes.size - 2 step 2) {
                 // Read 16-bit little-endian sample
                 val sample = (bytes[i].toInt() and 0xFF) or ((bytes[i + 1].toInt() and 0xFF) shl 8)
                 // Convert to signed 16-bit
@@ -275,15 +268,6 @@ class LocalModelProvider(
                 TranscriptionError.NetworkError(name, e)
             )
         }
-    }
-
-    /**
-     * Release native resources.
-     * Should be called when the provider is no longer needed.
-     */
-    fun release() {
-        whisperContext?.release()
-        whisperContext = null
     }
 
     /**
