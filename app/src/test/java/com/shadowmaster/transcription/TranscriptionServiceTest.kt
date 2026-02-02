@@ -88,8 +88,9 @@ class TranscriptionServiceTest {
         // When
         val provider = service.createProvider(TranscriptionProviderType.LOCAL, config)
 
-        // Then
-        assertNull(provider)
+        // Then - Now LOCAL provider should be created with valid config
+        assertNotNull(provider)
+        assertTrue(provider is LocalModelProvider)
     }
 
     // ==================== Provider Validation Tests ====================
@@ -211,8 +212,8 @@ class TranscriptionServiceTest {
         assertTrue(providers.contains(TranscriptionProviderType.GOOGLE))
         assertTrue(providers.contains(TranscriptionProviderType.AZURE))
         assertTrue(providers.contains(TranscriptionProviderType.WHISPER))
+        assertTrue(providers.contains(TranscriptionProviderType.LOCAL))
         assertTrue(providers.contains(TranscriptionProviderType.CUSTOM))
-        assertFalse(providers.contains(TranscriptionProviderType.LOCAL))
     }
 
     @Test
@@ -221,7 +222,7 @@ class TranscriptionServiceTest {
         val providers = service.getAvailableProviders()
 
         // Then
-        assertEquals(4, providers.size)
+        assertEquals(5, providers.size)
     }
 
     // ==================== Transcription Tests ====================

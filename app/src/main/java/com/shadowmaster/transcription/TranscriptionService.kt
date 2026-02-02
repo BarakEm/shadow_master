@@ -1,5 +1,7 @@
 package com.shadowmaster.transcription
 
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.android.scopes.ViewModelScoped
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -16,7 +18,9 @@ import javax.inject.Inject
  * - Provider fallback (future enhancement)
  */
 @ViewModelScoped
-class TranscriptionService @Inject constructor() {
+class TranscriptionService @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
 
     /**
      * Create a provider instance based on configuration.
@@ -40,8 +44,9 @@ class TranscriptionService @Inject constructor() {
                 WhisperAPIProvider(config.whisperApiKey)
             }
             TranscriptionProviderType.LOCAL -> {
-                // TODO: Implement local model provider
-                null
+                config.localModelPath?.let { modelPath ->
+                    LocalModelProvider(context, modelPath)
+                }
             }
             TranscriptionProviderType.CUSTOM -> {
                 CustomEndpointProvider(
@@ -110,14 +115,14 @@ class TranscriptionService @Inject constructor() {
     /**
      * Get list of available provider types.
      * 
-     * @return List of available provider types (excludes local model if not implemented)
+     * @return List of available provider types
      */
     fun getAvailableProviders(): List<TranscriptionProviderType> {
         return listOf(
             TranscriptionProviderType.GOOGLE,
             TranscriptionProviderType.AZURE,
             TranscriptionProviderType.WHISPER,
-            // TranscriptionProviderType.LOCAL, // Not yet implemented
+            TranscriptionProviderType.LOCAL,
             TranscriptionProviderType.CUSTOM
         )
     }

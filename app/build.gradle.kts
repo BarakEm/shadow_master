@@ -145,6 +145,9 @@ dependencies {
     // OkHttp for network requests (URL downloads)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
+    // Whisper.cpp for local transcription
+    implementation("com.whispercpp:whisper:1.5.5")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.mockito:mockito-core:5.7.0")

@@ -167,6 +167,18 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun updateTranscriptionLocalModelPath(path: String?) {
+        viewModelScope.launch {
+            settingsRepository.updateTranscriptionLocalModelPath(path)
+        }
+    }
+
+    fun updateTranscriptionLocalModelName(name: String?) {
+        viewModelScope.launch {
+            settingsRepository.updateTranscriptionLocalModelName(name)
+        }
+    }
+
     // ==================== Translation Settings ====================
 
     fun updateTranslationDefaultProvider(provider: String) {

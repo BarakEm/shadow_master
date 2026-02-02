@@ -92,7 +92,7 @@ enum class SupportedLanguage(
  * Configuration for automatic transcription services.
  */
 data class TranscriptionConfig(
-    val defaultProvider: String = "google",  // google, azure, whisper, custom
+    val defaultProvider: String = "google",  // google, azure, whisper, local, custom
     val autoTranscribeOnImport: Boolean = false,
 
     // Provider-specific settings
@@ -102,7 +102,9 @@ data class TranscriptionConfig(
     val whisperApiKey: String? = null,
     val customEndpointUrl: String? = null,
     val customEndpointApiKey: String? = null,
-    val customEndpointHeaders: Map<String, String> = emptyMap()
+    val customEndpointHeaders: Map<String, String> = emptyMap(),
+    val localModelPath: String? = null,
+    val localModelName: String? = null  // tiny, base, etc.
 )
 
 /**
