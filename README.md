@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/ninja-logo.svg" width="180" alt="Shadow Master Logo">
+  <img src="docs/ninja-logo-v3.svg" width="180" alt="Shadow Master Logo">
 </p>
 
 <h1 align="center">Shadow Master</h1>
