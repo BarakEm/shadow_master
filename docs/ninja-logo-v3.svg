@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <defs>
+    <!-- 80s Sunset Background Gradient -->
+    <linearGradient id="sunset" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2c003e" />
+      <stop offset="60%" stop-color="#7d287d" />
+      <stop offset="100%" stop-color="#ff7b9c" />
+    </linearGradient>
+
+    <!-- Neon Grid Line Glow -->
+    <filter id="gridGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1" result="blur" />
+      <feFlood flood-color="#00ffff" result="floodColor" />
+      <feComposite in="floodColor" in2="blur" operator="in" result="glow" />
+      <feMerge>
+        <feMergeNode in="glow" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Ninja Body Glow -->
+    <filter id="ninjaGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur" />
+      <feFlood flood-color="#ff7b9c" result="floodColor" />
+      <feComposite in="floodColor" in2="blur" operator="in" result="glow" />
+      <feMerge>
+        <feMergeNode in="glow" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Eye Glow -->
+    <filter id="eyeGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Chrome Text Gradient -->
+    <linearGradient id="chrome" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stop-color="#e0e0e0" />
+        <stop offset="50%" stop-color="#c0c0c0" />
+        <stop offset="100%" stop-color="#a0a0a0" />
+    </linearGradient>
+
+  </defs>
+
+  <!-- Background -->
+  <rect width="200" height="200" rx="20" fill="url(#sunset)" />
+
+  <!-- Perspective Grid -->
+  <g filter="url(#gridGlow)" stroke="#00ffff" stroke-width="0.7">
+    <line x1="0" y1="120" x2="200" y2="120" />
+    <line x1="0" y1="135" x2="200" y2="135" />
+    <line x1="0" y1="160" x2="200" y2="160" />
+    <line x1="0" y1="195" x2="200" y2="195" />
+    
+    <line x1="100" y1="120" x2="20" y2="200" />
+    <line x1="100" y1="120" x2="60" y2="200" />
+    <line x1="100" y1="120" x2="100" y2="200" />
+    <line x1="100" y1="120" x2="140" y2="200" />
+    <line x1="100" y1="120" x2="180" y2="200" />
+  </g>
+  
+  <g transform="translate(50, 40)">
+      <!-- Ninja body with glow -->
+      <g filter="url(#ninjaGlow)">
+          <path fill="#1A1A2E" d="
+            M35,110 L30,85 Q25,70 35,60 L40,55 L40,50 Q40,45 45,42
+            L50,40 L55,42 Q60,45 60,50 L60,55 L65,60 Q75,70 70,85
+            L65,110 Q60,115 50,115 Q40,115 35,110 Z"/>
+          <ellipse cx="50" cy="35" rx="18" ry="20" fill="#1A1A2E"/>
+      </g>
+
+      <!-- Headband -->
+      <path fill="#FF4081" d="M30,32 C30,30 32,28 68,28 C70,28 70,30 70,32 L70,38 C70,40 68,42 66,42 L34,42 C32,42 30,40 30,38 Z"/>
+      <path fill="#F50057" d="M28,26 L34,26 L36,36 L26,36 Z" transform="rotate(15 30 31)"/>
+      <path fill="#FF4081" d="M28,32 Q15,30 10,40 C15,38 20,38 28,34 Z"/>
+      <path fill="#F50057" d="M26,35 Q10,38 5,50 C10,45 15,42 26,38 Z"/>
+
+      <!-- Eyes - glowing red -->
+      <g filter="url(#eyeGlow)">
+          <rect x="38" y="32" width="24" height="4" rx="2" fill="#FF1744"/>
+      </g>
+      
+      <!-- Sound waves -->
+      <g stroke="#00ffff" stroke-width="2" fill="none" filter="url(#gridGlow)" stroke-linecap="round">
+          <path d="M75,45 Q85,55 75,65"/>
+          <path d="M82,38 Q95,55 82,72" stroke-opacity="0.8"/>
+          <path d="M89,32 Q105,55 89,78" stroke-opacity="0.6"/>
+      </g>
+  </g>
+  
+  <!-- Chrome Text -->
+  <text x="100" y="180" text-anchor="middle" font-family="'Arial Black', Gadget, sans-serif" font-size="18" fill="url(#chrome)" stroke="#2c003e" stroke-width="0.8" letter-spacing="1">
+    SHADOW MASTER
+  </text>
+</svg>

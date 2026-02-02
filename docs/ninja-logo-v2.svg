@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200">
+  <defs>
+    <!-- Background gradient -->
+    <radialGradient id="bgGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#2D1B4E"/>
+      <stop offset="100%" stop-color="#0F0F1A"/>
+    </radialGradient>
+    
+    <!-- Neon glow for the ninja body -->
+    <filter id="ninjaGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2" result="blur" />
+      <feFlood flood-color="#7B5EBF" result="floodColor" />
+      <feComposite in="floodColor" in2="blur" operator="in" result="glow" />
+      <feMerge>
+        <feMergeNode in="glow" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Eye glow -->
+    <filter id="eyeGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    
+    <!-- Sound wave glow -->
+    <filter id="waveGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
+    </filter>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="95" fill="url(#bgGlow)"/>
+  <circle cx="100" cy="100" r="95" fill="none" stroke="#E94560" stroke-width="2" stroke-opacity="0.3"/>
+
+  <g transform="translate(50, 45)">
+    <!-- Shadow beneath ninja -->
+    <ellipse cx="50" cy="115" rx="35" ry="8" fill="#000" fill-opacity="0.3"/>
+
+    <!-- Ninja body with glow -->
+    <g filter="url(#ninjaGlow)">
+      <path fill="#1C1C33" d="
+        M35,110 L30,85 Q25,70 35,60 L40,55 L40,50 Q40,45 45,42
+        L50,40 L55,42 Q60,45 60,50 L60,55 L65,60 Q75,70 70,85
+        L65,110 Q60,115 50,115 Q40,115 35,110 Z"/>
+      <ellipse cx="50" cy="35" rx="18" ry="20" fill="#1C1C33"/>
+    </g>
+
+    <!-- Headband -->
+    <path fill="#D84315" d="M30,32 C30,30 32,28 68,28 C70,28 70,30 70,32 L70,38 C70,40 68,42 66,42 L34,42 C32,42 30,40 30,38 Z"/>
+    
+    <!-- Headband Knot -->
+    <path fill="#BF360C" d="M28,26 L34,26 L36,36 L26,36 Z" transform="rotate(15 30 31)"/>
+
+    <!-- Headband Tails -->
+    <path fill="#D84315" d="M28,32 Q15,30 10,40 C15,38 20,38 28,34 Z"/>
+    <path fill="#BF360C" d="M26,35 Q10,38 5,50 C10,45 15,42 26,38 Z"/>
+
+    <!-- Eyes - glowing red -->
+    <g filter="url(#eyeGlow)">
+      <rect x="38" y="32" width="24" height="4" rx="2" fill="#FF1744"/>
+    </g>
+
+    <!-- Sound waves - more electric -->
+    <g filter="url(#waveGlow)">
+       <path stroke="#00BFFF" stroke-width="2.5" stroke-opacity="0.9" fill="none" stroke-linecap="round"
+            d="M75,45 Q85,55 75,65"/>
+      <path stroke="#00BFFF" stroke-width="2" stroke-opacity="0.7" fill="none" stroke-linecap="round"
+            d="M82,38 Q95,55 82,72"/>
+      <path stroke="#00BFFF" stroke-width="1.5" stroke-opacity="0.5" fill="none" stroke-linecap="round"
+            d="M89,32 Q105,55 89,78"/>
+    </g>
+  </g>
+
+  <!-- App name arc at bottom -->
+  <text x="100" y="185" text-anchor="middle" fill="#8892b0" font-family="sans-serif" font-size="12" font-weight="500">
+    SHADOW MASTER
+  </text>
+</svg>
