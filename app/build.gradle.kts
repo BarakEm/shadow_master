@@ -151,7 +151,7 @@ dependencies {
     implementation("com.alphacephei:vosk-android:0.3.47@aar")
     // JNA (Java Native Access) required by Vosk for native code access
     // When using @aar notation, transitive dependencies are not auto-included
-    implementation("net.java.dev.jna:jna:5.13.0@aar")
+    implementation("net.java.dev.jna:jna:5.13.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
