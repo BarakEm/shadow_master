@@ -350,30 +350,36 @@ class AudioImporter @Inject constructor(
                 } else {
                     val providerConfig = createProviderConfig(transcriptionConfig)
                     
-                    shadowItems.forEachIndexed { index, item ->
-                        try {
-                            val audioFile = File(item.audioFilePath)
-                            if (audioFile.exists()) {
-                                val result = transcriptionService.transcribe(
-                                    audioFile = audioFile,
-                                    language = importedAudio.language,
-                                    providerType = providerType,
-                                    config = providerConfig
-                                )
-                                
-                                result.onSuccess { transcribedText ->
-                                    // Update the item with transcription
-                                    val updatedItem = item.copy(transcription = transcribedText)
-                                    shadowItemDao.update(updatedItem)
-                                    Log.d(TAG, "Transcribed segment ${index + 1}: $transcribedText")
-                                }.onFailure { error ->
-                                    Log.w(TAG, "Failed to transcribe segment ${index + 1}: ${error.message}")
+                    // Transcribe segments concurrently for better performance
+                    val transcriptionJobs = shadowItems.mapIndexed { index, item ->
+                        async {
+                            try {
+                                val audioFile = File(item.audioFilePath)
+                                if (audioFile.exists()) {
+                                    val result = transcriptionService.transcribe(
+                                        audioFile = audioFile,
+                                        language = importedAudio.language,
+                                        providerType = providerType,
+                                        config = providerConfig
+                                    )
+                                    
+                                    result.onSuccess { transcribedText ->
+                                        // Update the item with transcription
+                                        val updatedItem = item.copy(transcription = transcribedText)
+                                        shadowItemDao.update(updatedItem)
+                                        Log.d(TAG, "Transcribed segment ${index + 1}: $transcribedText")
+                                    }.onFailure { error ->
+                                        Log.w(TAG, "Failed to transcribe segment ${index + 1}: ${error.message}")
+                                    }
                                 }
+                            } catch (e: Exception) {
+                                Log.w(TAG, "Error transcribing segment ${index + 1}: ${e.message}")
                             }
-                        } catch (e: Exception) {
-                            Log.w(TAG, "Error transcribing segment ${index + 1}: ${e.message}")
                         }
                     }
+                    
+                    // Wait for all transcription jobs to complete
+                    transcriptionJobs.awaitAll()
                 }
             }
 
@@ -1541,7 +1547,7 @@ class AudioImporter @Inject constructor(
      */
     private fun getProviderType(providerName: String): TranscriptionProviderType? {
         return try {
-            TranscriptionProviderType.valueOf(providerName.uppercase())
+            TranscriptionProviderType.valueOf(providerName.uppercase(java.util.Locale.ROOT))
         } catch (e: IllegalArgumentException) {
             Log.w(TAG, "Invalid transcription provider name: $providerName")
             null
