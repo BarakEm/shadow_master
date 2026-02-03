@@ -142,7 +142,6 @@ class LocalModelProvider(
             val audioData = readAudioFile(audioFile)
             
             if (audioData.isEmpty()) {
-                model.delete()
                 return@withContext Result.failure(
                     TranscriptionError.ProviderError(name, "Failed to read audio file")
                 )
@@ -150,15 +149,13 @@ class LocalModelProvider(
             
             // Process audio data
             recognizer.acceptWaveForm(audioData, audioData.size)
-            val resultJson = recognizer.finalResult()
+            val resultJson = recognizer.finalResult
             
             // Parse JSON result
             val jsonObject = JSONObject(resultJson)
             val transcribedText = jsonObject.optString("text", "")
             
-            // Cleanup
-            recognizer.delete()
-            model.delete()
+            // Note: Model and Recognizer are automatically cleaned up by garbage collector
             
             if (transcribedText.isBlank()) {
                 Result.failure(
