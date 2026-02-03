@@ -341,29 +341,19 @@ class AudioImporter @Inject constructor(
                 val settings = settingsRepository.config.first()
                 val transcriptionConfig = settings.transcription
                 
-                // Only transcribe if auto-transcribe is enabled or explicitly requested
-                if (transcriptionConfig.autoTranscribeOnImport || enableTranscription) {
-                    Log.i(TAG, "Starting transcription for ${shadowItems.size} segments")
+                Log.i(TAG, "Starting transcription for ${shadowItems.size} segments")
+                
+                // Get provider type safely
+                val providerType = getProviderType(transcriptionConfig.defaultProvider)
+                if (providerType == null) {
+                    Log.w(TAG, "Invalid transcription provider: ${transcriptionConfig.defaultProvider}, skipping transcription")
+                } else {
+                    val providerConfig = createProviderConfig(transcriptionConfig)
                     
                     shadowItems.forEachIndexed { index, item ->
                         try {
                             val audioFile = File(item.audioFilePath)
                             if (audioFile.exists()) {
-                                val providerType = TranscriptionProviderType.valueOf(
-                                    transcriptionConfig.defaultProvider.uppercase()
-                                )
-                                
-                                val providerConfig = ProviderConfig(
-                                    googleApiKey = transcriptionConfig.googleApiKey,
-                                    azureApiKey = transcriptionConfig.azureApiKey,
-                                    azureRegion = transcriptionConfig.azureRegion,
-                                    whisperApiKey = transcriptionConfig.whisperApiKey,
-                                    localModelPath = transcriptionConfig.localModelPath,
-                                    customEndpointUrl = transcriptionConfig.customEndpointUrl,
-                                    customEndpointApiKey = transcriptionConfig.customEndpointApiKey,
-                                    customEndpointHeaders = transcriptionConfig.customEndpointHeaders
-                                )
-                                
                                 val result = transcriptionService.transcribe(
                                     audioFile = audioFile,
                                     language = importedAudio.language,
@@ -1207,38 +1197,31 @@ class AudioImporter @Inject constructor(
                 if (transcriptionConfig.autoTranscribeOnImport) {
                     Log.d(TAG, "Auto-transcribing captured segment")
                     
-                    val providerType = TranscriptionProviderType.valueOf(
-                        transcriptionConfig.defaultProvider.uppercase()
-                    )
-                    
-                    val providerConfig = ProviderConfig(
-                        googleApiKey = transcriptionConfig.googleApiKey,
-                        azureApiKey = transcriptionConfig.azureApiKey,
-                        azureRegion = transcriptionConfig.azureRegion,
-                        whisperApiKey = transcriptionConfig.whisperApiKey,
-                        localModelPath = transcriptionConfig.localModelPath,
-                        customEndpointUrl = transcriptionConfig.customEndpointUrl,
-                        customEndpointApiKey = transcriptionConfig.customEndpointApiKey,
-                        customEndpointHeaders = transcriptionConfig.customEndpointHeaders
-                    )
-                    
-                    val result = transcriptionService.transcribe(
-                        audioFile = segmentFile,
-                        language = settings.language.code,
-                        providerType = providerType,
-                        config = providerConfig
-                    )
-                    
-                    result.onSuccess { transcribedText ->
-                        // Update the item with transcription
-                        val updatedItem = item.copy(
-                            transcription = transcribedText,
-                            language = settings.language.code
+                    // Get provider type safely
+                    val providerType = getProviderType(transcriptionConfig.defaultProvider)
+                    if (providerType == null) {
+                        Log.w(TAG, "Invalid transcription provider: ${transcriptionConfig.defaultProvider}, skipping transcription")
+                    } else {
+                        val providerConfig = createProviderConfig(transcriptionConfig)
+                        
+                        val result = transcriptionService.transcribe(
+                            audioFile = segmentFile,
+                            language = settings.language.code,
+                            providerType = providerType,
+                            config = providerConfig
                         )
-                        shadowItemDao.update(updatedItem)
-                        Log.i(TAG, "Transcribed captured segment: $transcribedText")
-                    }.onFailure { error ->
-                        Log.w(TAG, "Failed to transcribe captured segment: ${error.message}")
+                        
+                        result.onSuccess { transcribedText ->
+                            // Update the item with transcription
+                            val updatedItem = item.copy(
+                                transcription = transcribedText,
+                                language = settings.language.code
+                            )
+                            shadowItemDao.update(updatedItem)
+                            Log.i(TAG, "Transcribed captured segment: $transcribedText")
+                        }.onFailure { error ->
+                            Log.w(TAG, "Failed to transcribe captured segment: ${error.message}")
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -1531,6 +1514,36 @@ class AudioImporter @Inject constructor(
 
         } catch (e: Exception) {
             Log.e(TAG, "Failed to merge segments", e)
+            null
+        }
+    }
+
+    /**
+     * Creates a ProviderConfig from TranscriptionConfig settings.
+     * Helper method to avoid duplication when building provider configs.
+     */
+    private fun createProviderConfig(transcriptionConfig: com.shadowmaster.data.model.TranscriptionConfig): ProviderConfig {
+        return ProviderConfig(
+            googleApiKey = transcriptionConfig.googleApiKey,
+            azureApiKey = transcriptionConfig.azureApiKey,
+            azureRegion = transcriptionConfig.azureRegion,
+            whisperApiKey = transcriptionConfig.whisperApiKey,
+            localModelPath = transcriptionConfig.localModelPath,
+            customEndpointUrl = transcriptionConfig.customEndpointUrl,
+            customEndpointApiKey = transcriptionConfig.customEndpointApiKey,
+            customEndpointHeaders = transcriptionConfig.customEndpointHeaders
+        )
+    }
+
+    /**
+     * Safely gets TranscriptionProviderType from string, handling invalid values.
+     * Returns null if the provider name is not valid.
+     */
+    private fun getProviderType(providerName: String): TranscriptionProviderType? {
+        return try {
+            TranscriptionProviderType.valueOf(providerName.uppercase())
+        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "Invalid transcription provider name: $providerName")
             null
         }
     }
