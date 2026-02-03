@@ -145,10 +145,10 @@ dependencies {
     // OkHttp for network requests (URL downloads)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
-    // TODO: Add Whisper.cpp for local transcription
-    // For now, LocalModelProvider uses a stub implementation
-    // Replace with actual Whisper.cpp library when available:
-    // implementation("com.github.ggerganov.whisper.cpp:whisper:v1.5.5")
+    // Vosk for local transcription (alternative to Whisper.cpp, better Android support)
+    // Vosk is a lightweight speech recognition library that works offline
+    // Models are smaller (~50MB) and faster than Whisper on mobile devices
+    implementation("com.alphacephei:vosk-android:0.3.47@aar")
 
     // Testing
     testImplementation("junit:junit:4.13.2")

@@ -4,50 +4,48 @@ import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.vosk.Model
+import org.vosk.Recognizer
+import org.vosk.android.RecognitionListener
+import org.vosk.android.SpeechService
+import org.json.JSONObject
 import java.io.File
 import java.io.FileOutputStream
 import java.net.URL
 
 /**
- * Local on-device transcription using Whisper.cpp.
+ * Local on-device transcription using Vosk.
  * 
  * Provides offline transcription without API keys or internet connection.
- * Uses Whisper.cpp with tiny (~40MB) or base (~75MB) models.
+ * Uses Vosk models which are optimized for mobile devices.
  * 
  * Features:
  * - Completely offline after model download
  * - No API costs
  * - Privacy-friendly (no data leaves device)
  * - On-demand model download
- * 
- * TODO: Integrate actual Whisper.cpp library
- * Currently using stub implementation. To complete integration:
- * 1. Add Whisper.cpp Android library dependency to build.gradle.kts
- * 2. Replace stub transcription with actual WhisperContext API calls
- * 3. Test with real audio files
- * 
- * Recommended library: https://github.com/ggerganov/whisper.cpp
- * Android bindings available in the repository's android examples
+ * - Multiple language support
  */
 class LocalModelProvider(
     private val context: Context,
     private val modelPath: String?
 ) : TranscriptionProvider {
 
-    override val name: String = "Local Model (Whisper.cpp)"
+    override val name: String = "Local Model (Vosk)"
     override val id: String = TranscriptionProviderType.LOCAL.id
     override val requiresApiKey: Boolean = false
 
     companion object {
         private const val TAG = "LocalModelProvider"
         
-        // Model URLs from Hugging Face
-        private const val TINY_MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.bin"
-        private const val BASE_MODEL_URL = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-base.bin"
+        // Model URLs from Vosk Models (using small models optimized for mobile)
+        // Using lightweight models for better mobile performance
+        private const val TINY_MODEL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"
+        private const val BASE_MODEL_URL = "https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip"
         
-        // Model file names
-        const val TINY_MODEL_NAME = "ggml-tiny.bin"
-        const val BASE_MODEL_NAME = "ggml-base.bin"
+        // Model file names (directory names after extraction)
+        const val TINY_MODEL_NAME = "vosk-model-small-en-us-0.15"
+        const val BASE_MODEL_NAME = "vosk-model-en-us-0.22"
         
         // Model sizes (approximate)
         const val TINY_MODEL_SIZE_MB = 40
@@ -74,7 +72,8 @@ class LocalModelProvider(
          */
         fun isModelDownloaded(context: Context, modelName: String): Boolean {
             val modelFile = getModelPath(context, modelName)
-            return modelFile.exists() && modelFile.length() > 0
+            // Check if model directory exists and contains required files
+            return modelFile.exists() && modelFile.isDirectory && modelFile.listFiles()?.isNotEmpty() == true
         }
 
         /**
@@ -94,7 +93,7 @@ class LocalModelProvider(
         fun deleteModel(context: Context, modelName: String): Boolean {
             val modelFile = getModelPath(context, modelName)
             return if (modelFile.exists()) {
-                modelFile.delete()
+                modelFile.deleteRecursively()
             } else {
                 false
             }
@@ -113,11 +112,11 @@ class LocalModelProvider(
                         "Model file not found at: $modelPath. Please download a model first."
                     )
                 )
-            } else if (modelFile.length() == 0L) {
+            } else if (!modelFile.isDirectory || modelFile.listFiles()?.isEmpty() == true) {
                 Result.failure(
                     TranscriptionError.ProviderError(
                         name,
-                        "Model file is empty at: $modelPath. Please re-download the model."
+                        "Model directory is invalid at: $modelPath. Please re-download the model."
                     )
                 )
             } else {
@@ -133,29 +132,45 @@ class LocalModelProvider(
         try {
             Log.d(TAG, "Starting transcription with model: $modelPath")
             
-            // TODO: Replace with actual Whisper.cpp integration
-            // The actual implementation should:
-            // 1. Initialize WhisperContext from the model file
-            // 2. Read and convert audio to the required format (16kHz mono PCM)
-            // 3. Call WhisperContext.transcribeData() with audio samples
-            // 4. Return the transcribed text
-            //
-            // Example pseudocode:
-            // val whisperContext = WhisperContext.createContextFromFile(modelPath!!)
-            // val samples = readAudioFile(audioFile)  // Convert to FloatArray
-            // val langCode = language.split("-").firstOrNull() ?: "en"
-            // val result = whisperContext.transcribeData(samples, langCode, null)
-            // return Result.success(result.text.trim())
+            // Initialize Vosk model
+            val model = Model(modelPath!!)
             
-            // For now, return a placeholder indicating the feature needs library integration
-            Result.failure(
-                TranscriptionError.ProviderError(
-                    name,
-                    "Local transcription not fully implemented yet. " +
-                            "Whisper.cpp library integration is required. " +
-                            "Model is ready at: $modelPath"
+            // Create recognizer for 16kHz audio (our standard format)
+            val recognizer = Recognizer(model, 16000.0f)
+            
+            // Read audio file
+            val audioData = readAudioFile(audioFile)
+            
+            if (audioData.isEmpty()) {
+                model.delete()
+                return@withContext Result.failure(
+                    TranscriptionError.ProviderError(name, "Failed to read audio file")
                 )
-            )
+            }
+            
+            // Process audio data
+            recognizer.acceptWaveForm(audioData, audioData.size)
+            val resultJson = recognizer.finalResult()
+            
+            // Parse JSON result
+            val jsonObject = JSONObject(resultJson)
+            val transcribedText = jsonObject.optString("text", "")
+            
+            // Cleanup
+            recognizer.delete()
+            model.delete()
+            
+            if (transcribedText.isBlank()) {
+                Result.failure(
+                    TranscriptionError.ProviderError(
+                        name,
+                        "No speech detected in audio"
+                    )
+                )
+            } else {
+                Log.d(TAG, "Transcription successful: $transcribedText")
+                Result.success(transcribedText.trim())
+            }
         } catch (e: Exception) {
             Log.e(TAG, "Transcription failed", e)
             Result.failure(TranscriptionError.UnknownError(name, e))
@@ -163,14 +178,10 @@ class LocalModelProvider(
     }
 
     /**
-     * Read audio file and convert to Float array of samples.
+     * Read audio file and convert to byte array of samples.
      * Expected format: 16kHz mono PCM.
-     * 
-     * TODO: Implement when Whisper.cpp library is integrated
      */
-    private fun readAudioFile(audioFile: File): FloatArray {
-        // Whisper.cpp expects raw PCM audio at 16kHz
-        // If the audio file is WAV, we need to skip the header
+    private fun readAudioFile(audioFile: File): ByteArray {
         return try {
             val bytes = audioFile.readBytes()
             
@@ -187,33 +198,23 @@ class LocalModelProvider(
                 0
             }
 
-            // Convert bytes to 16-bit PCM samples, then to float
-            val samples = FloatArray((bytes.size - startOffset) / 2)
-            var sampleIndex = 0
-            
-            for (i in startOffset..bytes.size - 2 step 2) {
-                // Read 16-bit little-endian sample
-                val sample = (bytes[i].toInt() and 0xFF) or ((bytes[i + 1].toInt() and 0xFF) shl 8)
-                // Convert to signed 16-bit
-                val signedSample = if (sample > 32767) sample - 65536 else sample
-                // Normalize to [-1.0, 1.0]
-                samples[sampleIndex++] = signedSample / 32768.0f
-            }
-            
-            Log.d(TAG, "Converted audio file to ${samples.size} samples")
-            samples
+            // Return PCM data without header
+            bytes.copyOfRange(startOffset, bytes.size)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to read audio file", e)
-            FloatArray(0)
+            ByteArray(0)
         }
     }
 
     /**
-     * Download a Whisper model from Hugging Face.
+     * Download a Vosk model.
      * 
-     * @param modelName Name of the model file (e.g., TINY_MODEL_NAME, BASE_MODEL_NAME)
+     * Note: Vosk models are distributed as ZIP files that need to be extracted.
+     * This implementation downloads the ZIP and extracts it.
+     * 
+     * @param modelName Name of the model (e.g., TINY_MODEL_NAME, BASE_MODEL_NAME)
      * @param progressCallback Optional callback for download progress (0.0 to 1.0)
-     * @return Result containing the downloaded file or error
+     * @return Result containing the downloaded model directory or error
      */
     suspend fun downloadModel(
         modelName: String,
@@ -221,20 +222,24 @@ class LocalModelProvider(
     ): Result<File> = withContext(Dispatchers.IO) {
         try {
             val url = getModelUrl(modelName)
-            val destFile = getModelPath(context, modelName)
+            val destDir = getModelPath(context, modelName)
+            val zipFile = File(getModelDir(context), "$modelName.zip")
             
             Log.d(TAG, "Downloading model from: $url")
-            Log.d(TAG, "Destination: ${destFile.absolutePath}")
+            Log.d(TAG, "Destination: ${destDir.absolutePath}")
             
             // Create parent directory if needed
-            destFile.parentFile?.mkdirs()
+            destDir.parentFile?.mkdirs()
             
-            // Delete existing file if present
-            if (destFile.exists()) {
-                destFile.delete()
+            // Delete existing files if present
+            if (destDir.exists()) {
+                destDir.deleteRecursively()
+            }
+            if (zipFile.exists()) {
+                zipFile.delete()
             }
             
-            // Download the file
+            // Download the ZIP file
             val connection = URL(url).openConnection()
             connection.connect()
             
@@ -242,7 +247,7 @@ class LocalModelProvider(
             Log.d(TAG, "Model size: ${fileLength / 1024 / 1024} MB")
             
             connection.getInputStream().use { input ->
-                FileOutputStream(destFile).use { output ->
+                FileOutputStream(zipFile).use { output ->
                     val buffer = ByteArray(8192)
                     var bytesRead: Int
                     var totalBytesRead = 0L
@@ -251,17 +256,30 @@ class LocalModelProvider(
                         output.write(buffer, 0, bytesRead)
                         totalBytesRead += bytesRead
                         
-                        // Report progress
+                        // Report progress (0.0 to 0.8 for download, 0.8 to 1.0 for extraction)
                         if (fileLength > 0) {
-                            val progress = totalBytesRead.toFloat() / fileLength.toFloat()
+                            val progress = (totalBytesRead.toFloat() / fileLength.toFloat()) * 0.8f
                             progressCallback?.invoke(progress)
                         }
                     }
                 }
             }
             
-            Log.d(TAG, "Model downloaded successfully: ${destFile.absolutePath}")
-            Result.success(destFile)
+            // Extract ZIP file
+            Log.d(TAG, "Extracting model...")
+            progressCallback?.invoke(0.85f)
+            
+            extractZipFile(zipFile, getModelDir(context))
+            
+            progressCallback?.invoke(0.95f)
+            
+            // Delete ZIP file after extraction
+            zipFile.delete()
+            
+            progressCallback?.invoke(1.0f)
+            
+            Log.d(TAG, "Model downloaded and extracted successfully: ${destDir.absolutePath}")
+            Result.success(destDir)
         } catch (e: Exception) {
             Log.e(TAG, "Model download failed", e)
             Result.failure(
@@ -271,7 +289,32 @@ class LocalModelProvider(
     }
 
     /**
-     * Enum for available Whisper models.
+     * Extract a ZIP file to a destination directory.
+     */
+    private fun extractZipFile(zipFile: File, destDir: File) {
+        val zip = java.util.zip.ZipFile(zipFile)
+        try {
+            zip.entries().asSequence().forEach { entry ->
+                zip.getInputStream(entry).use { input ->
+                    val filePath = File(destDir, entry.name)
+                    
+                    if (entry.isDirectory) {
+                        filePath.mkdirs()
+                    } else {
+                        filePath.parentFile?.mkdirs()
+                        FileOutputStream(filePath).use { output ->
+                            input.copyTo(output)
+                        }
+                    }
+                }
+            }
+        } finally {
+            zip.close()
+        }
+    }
+
+    /**
+     * Enum for available Vosk models.
      */
     enum class WhisperModel(val fileName: String, val sizeMB: Int, val displayName: String) {
         TINY(TINY_MODEL_NAME, TINY_MODEL_SIZE_MB, "Tiny (~40MB, fastest)"),
