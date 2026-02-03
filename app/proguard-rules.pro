@@ -13,6 +13,13 @@
 # Keep data classes for DataStore
 -keep class com.shadowmaster.data.model.** { *; }
 
+# Keep Vosk and JNA classes (for local transcription)
+# JNA requires its classes to be preserved for native library loading
+-keep class com.sun.jna.** { *; }
+-keepclassmembers class * extends com.sun.jna.** { public *; }
+-keep class org.vosk.** { *; }
+-dontwarn java.awt.**
+
 # Standard Android rules
 -keepattributes Signature
 -keepattributes *Annotation*
