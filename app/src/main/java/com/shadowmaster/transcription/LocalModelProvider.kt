@@ -142,7 +142,6 @@ class LocalModelProvider(
             val audioData = readAudioFile(audioFile)
             
             if (audioData.isEmpty()) {
-                model.delete()
                 return@withContext Result.failure(
                     TranscriptionError.ProviderError(name, "Failed to read audio file")
                 )
@@ -150,15 +149,16 @@ class LocalModelProvider(
             
             // Process audio data
             recognizer.acceptWaveForm(audioData, audioData.size)
-            val resultJson = recognizer.finalResult()
+            val resultJson = recognizer.finalResult
             
             // Parse JSON result
             val jsonObject = JSONObject(resultJson)
             val transcribedText = jsonObject.optString("text", "")
             
-            // Cleanup
-            recognizer.delete()
-            model.delete()
+            // Note: Model and Recognizer don't have explicit cleanup methods in Vosk Android 0.3.47
+            // They are JNA PointerType objects that will be cleaned up by the garbage collector
+            // when they go out of scope. For long-running services, consider implementing
+            // a model cache to avoid repeated allocation/deallocation.
             
             if (transcribedText.isBlank()) {
                 Result.failure(
