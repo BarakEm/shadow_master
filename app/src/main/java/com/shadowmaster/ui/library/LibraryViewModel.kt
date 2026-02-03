@@ -90,10 +90,14 @@ class LibraryViewModel @Inject constructor(
 
     fun importAudioFile(uri: Uri, language: String = "auto") {
         viewModelScope.launch {
+            // Get transcription setting from config
+            val config = settingsRepository.config.first()
+            val enableTranscription = config.transcription.autoTranscribeOnImport
+            
             val result = libraryRepository.importAudioFile(
                 uri = uri,
                 language = language,
-                enableTranscription = false
+                enableTranscription = enableTranscription
             )
             result.onSuccess {
                 _importSuccess.value = "Audio import started"
@@ -144,10 +148,14 @@ class LibraryViewModel @Inject constructor(
                 importFromUrl(uriString, language)
             } else {
                 // This is a local file URI (content://, file://, etc.)
+                // Get transcription setting from config
+                val config = settingsRepository.config.first()
+                val enableTranscription = config.transcription.autoTranscribeOnImport
+                
                 val result = libraryRepository.importAudioFile(
                     uri = uri,
                     language = language,
-                    enableTranscription = false
+                    enableTranscription = enableTranscription
                 )
                 result.onSuccess {
                     _importSuccess.value = "Audio import started"
@@ -333,11 +341,15 @@ class LibraryViewModel @Inject constructor(
         config: com.shadowmaster.data.model.SegmentationConfig
     ) {
         viewModelScope.launch {
+            // Get transcription setting from config
+            val settings = settingsRepository.config.first()
+            val enableTranscription = settings.transcription.autoTranscribeOnImport
+            
             val result = libraryRepository.segmentImportedAudio(
                 importedAudioId = importedAudioId,
                 playlistName = playlistName,
                 config = config,
-                enableTranscription = false
+                enableTranscription = enableTranscription
             )
             result.onSuccess { playlistId ->
                 _importSuccess.value = "Playlist created successfully!"
