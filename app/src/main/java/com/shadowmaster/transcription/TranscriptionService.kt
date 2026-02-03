@@ -2,11 +2,11 @@ package com.shadowmaster.transcription
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.android.scopes.ViewModelScoped
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
+import javax.inject.Singleton
 
 /**
  * Service for managing transcription providers and routing transcription requests.
@@ -17,7 +17,7 @@ import javax.inject.Inject
  * - Error handling and retry logic
  * - Provider fallback (future enhancement)
  */
-@ViewModelScoped
+@Singleton
 class TranscriptionService @Inject constructor(
     @ApplicationContext private val context: Context
 ) {

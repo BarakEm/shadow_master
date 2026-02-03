@@ -12,6 +12,8 @@ import com.shadowmaster.data.local.ShadowItemDao
 import com.shadowmaster.data.local.ShadowPlaylistDao
 import com.shadowmaster.data.model.*
 import com.shadowmaster.library.AudioImportError.*
+import com.shadowmaster.transcription.ProviderConfig
+import com.shadowmaster.transcription.TranscriptionProviderType
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -35,7 +37,8 @@ class AudioImporter @Inject constructor(
     private val importedAudioDao: com.shadowmaster.data.local.ImportedAudioDao,
     private val segmentationConfigDao: com.shadowmaster.data.local.SegmentationConfigDao,
     private val audioFileUtility: AudioFileUtility,
-    private val settingsRepository: com.shadowmaster.data.repository.SettingsRepository
+    private val settingsRepository: com.shadowmaster.data.repository.SettingsRepository,
+    private val transcriptionService: com.shadowmaster.transcription.TranscriptionService
 ) {
     companion object {
         private const val TAG = "AudioImporter"
@@ -330,6 +333,59 @@ class AudioImporter @Inject constructor(
 
             // Save all items
             shadowItemDao.insertAll(shadowItems)
+
+            // Transcribe segments if enabled
+            if (enableTranscription) {
+                jobId?.let { updateImportJob(it, ImportStatus.TRANSCRIBING, 95) }
+                
+                val settings = settingsRepository.config.first()
+                val transcriptionConfig = settings.transcription
+                
+                // Only transcribe if auto-transcribe is enabled or explicitly requested
+                if (transcriptionConfig.autoTranscribeOnImport || enableTranscription) {
+                    Log.i(TAG, "Starting transcription for ${shadowItems.size} segments")
+                    
+                    shadowItems.forEachIndexed { index, item ->
+                        try {
+                            val audioFile = File(item.audioFilePath)
+                            if (audioFile.exists()) {
+                                val providerType = TranscriptionProviderType.valueOf(
+                                    transcriptionConfig.defaultProvider.uppercase()
+                                )
+                                
+                                val providerConfig = ProviderConfig(
+                                    googleApiKey = transcriptionConfig.googleApiKey,
+                                    azureApiKey = transcriptionConfig.azureApiKey,
+                                    azureRegion = transcriptionConfig.azureRegion,
+                                    whisperApiKey = transcriptionConfig.whisperApiKey,
+                                    localModelPath = transcriptionConfig.localModelPath,
+                                    customEndpointUrl = transcriptionConfig.customEndpointUrl,
+                                    customEndpointApiKey = transcriptionConfig.customEndpointApiKey,
+                                    customEndpointHeaders = transcriptionConfig.customEndpointHeaders
+                                )
+                                
+                                val result = transcriptionService.transcribe(
+                                    audioFile = audioFile,
+                                    language = importedAudio.language,
+                                    providerType = providerType,
+                                    config = providerConfig
+                                )
+                                
+                                result.onSuccess { transcribedText ->
+                                    // Update the item with transcription
+                                    val updatedItem = item.copy(transcription = transcribedText)
+                                    shadowItemDao.update(updatedItem)
+                                    Log.d(TAG, "Transcribed segment ${index + 1}: $transcribedText")
+                                }.onFailure { error ->
+                                    Log.w(TAG, "Failed to transcribe segment ${index + 1}: ${error.message}")
+                                }
+                            }
+                        } catch (e: Exception) {
+                            Log.w(TAG, "Error transcribing segment ${index + 1}: ${e.message}")
+                        }
+                    }
+                }
+            }
 
             // Update ImportedAudio tracking
             importedAudioDao.markSegmented(importedAudioId)
@@ -1142,6 +1198,52 @@ class AudioImporter @Inject constructor(
             // Save to database
             shadowItemDao.insert(item)
             Log.i(TAG, "Saved captured segment: ${segment.durationMs}ms, ${segment.samples.size} samples")
+
+            // Transcribe if auto-transcribe is enabled
+            try {
+                val settings = settingsRepository.config.first()
+                val transcriptionConfig = settings.transcription
+                
+                if (transcriptionConfig.autoTranscribeOnImport) {
+                    Log.d(TAG, "Auto-transcribing captured segment")
+                    
+                    val providerType = TranscriptionProviderType.valueOf(
+                        transcriptionConfig.defaultProvider.uppercase()
+                    )
+                    
+                    val providerConfig = ProviderConfig(
+                        googleApiKey = transcriptionConfig.googleApiKey,
+                        azureApiKey = transcriptionConfig.azureApiKey,
+                        azureRegion = transcriptionConfig.azureRegion,
+                        whisperApiKey = transcriptionConfig.whisperApiKey,
+                        localModelPath = transcriptionConfig.localModelPath,
+                        customEndpointUrl = transcriptionConfig.customEndpointUrl,
+                        customEndpointApiKey = transcriptionConfig.customEndpointApiKey,
+                        customEndpointHeaders = transcriptionConfig.customEndpointHeaders
+                    )
+                    
+                    val result = transcriptionService.transcribe(
+                        audioFile = segmentFile,
+                        language = settings.language.code,
+                        providerType = providerType,
+                        config = providerConfig
+                    )
+                    
+                    result.onSuccess { transcribedText ->
+                        // Update the item with transcription
+                        val updatedItem = item.copy(
+                            transcription = transcribedText,
+                            language = settings.language.code
+                        )
+                        shadowItemDao.update(updatedItem)
+                        Log.i(TAG, "Transcribed captured segment: $transcribedText")
+                    }.onFailure { error ->
+                        Log.w(TAG, "Failed to transcribe captured segment: ${error.message}")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Error during transcription of captured segment: ${e.message}")
+            }
 
             item
         } catch (e: Exception) {
