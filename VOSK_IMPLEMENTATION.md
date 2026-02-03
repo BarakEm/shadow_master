@@ -81,13 +81,49 @@ override suspend fun transcribe(audioFile: File, language: String): Result<Strin
 
 **File:** `app/build.gradle.kts`
 
-**Added Dependency:**
+**Added Dependencies:**
 ```kotlin
 // Vosk for local transcription (alternative to Whisper.cpp, better Android support)
 // Vosk is a lightweight speech recognition library that works offline
 // Models are smaller (~50MB) and faster than Whisper on mobile devices
 implementation("com.alphacephei:vosk-android:0.3.47@aar")
+// JNA (Java Native Access) required by Vosk for native code access
+// MUST use @aar format to ensure native libraries are properly packaged
+// Version 5.18.1 matches the official Vosk Android demo for compatibility
+implementation("net.java.dev.jna:jna:5.18.1@aar")
 ```
+
+**Native Library Configuration:**
+```kotlin
+defaultConfig {
+    // ...
+    // Native library configuration for Vosk/JNA
+    ndk {
+        // Specify supported architectures for native libraries
+        // Most Android devices use arm64-v8a (64-bit ARM), armeabi-v7a (32-bit ARM)
+        // x86/x86_64 for emulators and some tablets
+        abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+    }
+}
+```
+
+**ProGuard Rules Added:**
+```proguard
+# Keep Vosk and JNA classes (for local transcription)
+# JNA requires its classes to be preserved for native library loading
+-keep class com.sun.jna.** { *; }
+-keepclassmembers class * extends com.sun.jna.** { public *; }
+-keep class org.vosk.** { *; }
+-dontwarn java.awt.**
+```
+
+**Critical Fix (2026-02-03):**
+The initial implementation had a bug where JNA native libraries were not being properly packaged in the APK. This caused `UnsatisfiedLinkError` on real devices when trying to load `libjnidispatch.so`. The fix involved:
+1. Using JNA version 5.18.1 with `@aar` notation (matching official Vosk Android demo)
+2. Adding explicit `ndk.abiFilters` to ensure native libraries for all architectures are included
+3. Adding ProGuard rules to prevent JNA classes from being obfuscated/removed
+
+Without these changes, the app would crash with: `java.lang.UnsatisfiedLinkError: Native library (com/sun/jna/android-aarch64/libjnidispatch.so) not found in resource path (.)`
 
 ## How It Works
 
@@ -276,6 +312,28 @@ implementation("com.alphacephei:vosk-android:0.3.47@aar")
 - Thread-safe by design
 
 ## Troubleshooting
+
+### "Native library not found in resource path"
+**Error:** `java.lang.UnsatisfiedLinkError: Native library (com/sun/jna/android-aarch64/libjnidispatch.so) not found in resource path (.)`
+
+**Cause:** JNA native libraries are not properly packaged in the APK. This happens when:
+- JNA is not using the `@aar` notation in dependencies
+- NDK abiFilters are not configured
+- ProGuard/R8 is stripping JNA classes
+
+**Solution:** 
+1. Ensure JNA uses `@aar` format: `implementation("net.java.dev.jna:jna:5.18.1@aar")`
+2. Add NDK configuration to `defaultConfig`:
+   ```kotlin
+   ndk {
+       abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+   }
+   ```
+3. Add ProGuard rules to keep JNA classes:
+   ```proguard
+   -keep class com.sun.jna.** { *; }
+   -keepclassmembers class * extends com.sun.jna.** { public *; }
+   ```
 
 ### "Model file not found"
 - Download model from settings
