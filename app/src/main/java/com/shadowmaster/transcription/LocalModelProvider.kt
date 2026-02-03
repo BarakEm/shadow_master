@@ -155,7 +155,10 @@ class LocalModelProvider(
             val jsonObject = JSONObject(resultJson)
             val transcribedText = jsonObject.optString("text", "")
             
-            // Note: Model and Recognizer are automatically cleaned up by garbage collector
+            // Note: Model and Recognizer don't have explicit cleanup methods in Vosk Android 0.3.47
+            // They are JNA PointerType objects that will be cleaned up by the garbage collector
+            // when they go out of scope. For long-running services, consider implementing
+            // a model cache to avoid repeated allocation/deallocation.
             
             if (transcribedText.isBlank()) {
                 Result.failure(
