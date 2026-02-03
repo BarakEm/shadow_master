@@ -75,6 +75,9 @@ class LibraryRepository @Inject constructor(
     suspend fun getPlaylistItemCount(playlistId: String): Int =
         shadowItemDao.getItemCountByPlaylist(playlistId)
 
+    suspend fun getTranscribedItemCount(playlistId: String): Int =
+        shadowItemDao.getTranscribedItemCountByPlaylist(playlistId)
+
     // Import
     suspend fun importAudioFile(
         uri: Uri,
