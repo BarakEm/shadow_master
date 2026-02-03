@@ -4,46 +4,48 @@
     android:viewportWidth="100"
     android:viewportHeight="100">
 
-  <group android:translateY="-10">
-      <!-- Ninja body -->
-      <path
-          android:fillColor="#1A1A2E"
-          android:pathData="M35,110 L30,85 Q25,70 35,60 L40,55 L40,50 Q40,45 45,42 L50,40 L55,42 Q60,45 60,50 L60,55 L65,60 Q75,70 70,85 L65,110 Q60,115 50,115 Q40,115 35,110 Z"/>
-      <!-- Ninja head -->
-      <path
-          android:fillColor="#1A1A2E"
-          android:pathData="M50,15 A 18,20 0 1,1 50,55 A 18,20 0 1,1 50,15"/>
+    <!-- Ninja body -->
+    <path
+        android:fillColor="#1A1A2E"
+        android:pathData="M35,100 L30,75 Q25,60 35,50 L40,45 L40,40 Q40,35 45,32 L50,30 L55,32 Q60,35 60,40 L60,45 L65,50 Q75,60 70,75 L65,100 Q60,105 50,105 Q40,105 35,100 Z"/>
 
-      <!-- Headband -->
-      <path
-          android:fillColor="#FF4081"
-          android:pathData="M30,32 C30,30 32,28 68,28 C70,28 70,30 70,32 L70,38 C70,40 68,42 66,42 L34,42 C32,42 30,40 30,38 Z"/>
-      <path
-          android:fillColor="#F50057"
-          android:pathData="M28,26 L34,26 L36,36 L26,36 Z"
-          android:transformMatrix="0.9659,0.2588,-0.2588,0.9659,10.6, -6.5"/>
-      <path
-          android:fillColor="#FF4081"
-          android:pathData="M28,32 Q15,30 10,40 C15,38 20,38 28,34 Z"/>
-      
-      <!-- Eyes -->
-      <path
-          android:fillColor="#FF1744"
-          android:pathData="M38,32 L62,32 L62,36 L38,36 Z"/>
-      
-      <!-- Sound waves -->
-      <path
-          android:strokeColor="#00ffff"
-          android:strokeWidth="2"
-          android:fillColor="#00000000"
-          android:strokeLineCap="round"
-          android:pathData="M75,45 Q85,55 75,65"/>
-      <path
-          android:strokeColor="#00ffff"
-          android:strokeWidth="1.5"
-          android:strokeAlpha="0.8"
-          android:fillColor="#00000000"
-          android:strokeLineCap="round"
-          android:pathData="M82,38 Q95,55 82,72"/>
-  </group>
+    <!-- Ninja head -->
+    <path
+        android:fillColor="#1A1A2E"
+        android:pathData="M50,5 A 18,20 0 1,1 50,45 A 18,20 0 1,1 50,5"/>
+
+    <!-- Headband -->
+    <path
+        android:fillColor="#FF4081"
+        android:pathData="M30,22 C30,20 32,18 68,18 C70,18 70,20 70,22 L70,28 C70,30 68,32 66,32 L34,32 C32,32 30,30 30,28 Z"/>
+
+    <!-- Headband knot (rotated manually) -->
+    <path
+        android:fillColor="#F50057"
+        android:pathData="M28,16 L32,18 L30,26 L24,24 Z"/>
+
+    <!-- Headband tail -->
+    <path
+        android:fillColor="#FF4081"
+        android:pathData="M28,22 Q15,20 10,30 C15,28 20,28 28,24 Z"/>
+
+    <!-- Eyes -->
+    <path
+        android:fillColor="#FF1744"
+        android:pathData="M38,22 L62,22 L62,26 L38,26 Z"/>
+
+    <!-- Sound waves -->
+    <path
+        android:strokeColor="#00ffff"
+        android:strokeWidth="2"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"
+        android:pathData="M75,35 Q85,45 75,55"/>
+    <path
+        android:strokeColor="#00ffff"
+        android:strokeWidth="1.5"
+        android:strokeAlpha="0.8"
+        android:fillColor="#00000000"
+        android:strokeLineCap="round"
+        android:pathData="M82,28 Q95,45 82,62"/>
 </vector>
