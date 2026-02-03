@@ -131,6 +131,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun updateTranscriptionIvritApiKey(apiKey: String?) {
+        viewModelScope.launch {
+            settingsRepository.updateTranscriptionIvritApiKey(apiKey)
+        }
+    }
+
     fun updateTranscriptionGoogleApiKey(apiKey: String?) {
         viewModelScope.launch {
             settingsRepository.updateTranscriptionGoogleApiKey(apiKey)

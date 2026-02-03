@@ -44,6 +44,7 @@ class SettingsRepository @Inject constructor(
         // Transcription settings
         val TRANSCRIPTION_DEFAULT_PROVIDER = stringPreferencesKey("transcription_default_provider")
         val TRANSCRIPTION_AUTO_ON_IMPORT = booleanPreferencesKey("transcription_auto_on_import")
+        val TRANSCRIPTION_IVRIT_API_KEY = stringPreferencesKey("transcription_ivrit_api_key")
         val TRANSCRIPTION_GOOGLE_API_KEY = stringPreferencesKey("transcription_google_api_key")
         val TRANSCRIPTION_AZURE_API_KEY = stringPreferencesKey("transcription_azure_api_key")
         val TRANSCRIPTION_AZURE_REGION = stringPreferencesKey("transcription_azure_region")
@@ -104,8 +105,9 @@ class SettingsRepository @Inject constructor(
             },
             buildupChunkMs = preferences[Keys.BUILDUP_CHUNK_MS] ?: 1500,
             transcription = com.shadowmaster.data.model.TranscriptionConfig(
-                defaultProvider = preferences[Keys.TRANSCRIPTION_DEFAULT_PROVIDER] ?: "google",
+                defaultProvider = preferences[Keys.TRANSCRIPTION_DEFAULT_PROVIDER] ?: "ivrit",
                 autoTranscribeOnImport = preferences[Keys.TRANSCRIPTION_AUTO_ON_IMPORT] ?: false,
+                ivritApiKey = preferences[Keys.TRANSCRIPTION_IVRIT_API_KEY],
                 googleApiKey = preferences[Keys.TRANSCRIPTION_GOOGLE_API_KEY],
                 azureApiKey = preferences[Keys.TRANSCRIPTION_AZURE_API_KEY],
                 azureRegion = preferences[Keys.TRANSCRIPTION_AZURE_REGION],
@@ -295,6 +297,16 @@ class SettingsRepository @Inject constructor(
     suspend fun updateTranscriptionAutoOnImport(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[Keys.TRANSCRIPTION_AUTO_ON_IMPORT] = enabled
+        }
+    }
+
+    suspend fun updateTranscriptionIvritApiKey(apiKey: String?) {
+        context.dataStore.edit { preferences ->
+            if (apiKey.isNullOrBlank()) {
+                preferences.remove(Keys.TRANSCRIPTION_IVRIT_API_KEY)
+            } else {
+                preferences[Keys.TRANSCRIPTION_IVRIT_API_KEY] = apiKey
+            }
         }
     }
 

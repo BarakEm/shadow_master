@@ -7,6 +7,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
@@ -503,6 +505,7 @@ private fun TranscriptionServicesSection(
     config: ShadowingConfig,
     viewModel: SettingsViewModel
 ) {
+    var showIvritKeyDialog by remember { mutableStateOf(false) }
     var showGoogleKeyDialog by remember { mutableStateOf(false) }
     var showAzureKeyDialog by remember { mutableStateOf(false) }
     var showAzureRegionDialog by remember { mutableStateOf(false) }
@@ -510,6 +513,7 @@ private fun TranscriptionServicesSection(
     var showCustomUrlDialog by remember { mutableStateOf(false) }
     var showCustomKeyDialog by remember { mutableStateOf(false) }
     var showLocalModelDialog by remember { mutableStateOf(false) }
+    var showAdvancedProviders by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -524,14 +528,6 @@ private fun TranscriptionServicesSection(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
-        // Auto-transcribe on import toggle
-        SwitchSetting(
-            title = "Auto-transcribe on Import",
-            subtitle = "Automatically transcribe audio segments after importing",
-            checked = config.transcription.autoTranscribeOnImport,
-            onCheckedChange = { viewModel.updateTranscriptionAutoOnImport(it) }
-        )
-
         HorizontalDivider()
 
         // Default Provider Selector
@@ -542,47 +538,120 @@ private fun TranscriptionServicesSection(
 
         HorizontalDivider()
 
-        // Google Speech-to-Text
-        ProviderConfigSection(
-            title = "Google Speech-to-Text",
-            isConfigured = !config.transcription.googleApiKey.isNullOrBlank(),
-            onConfigureClick = { showGoogleKeyDialog = true }
+        // ========== FREE SERVICES ==========
+        Text(
+            text = "Free Services",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.secondary,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
         )
 
-        // Azure Speech Services
+        // ivrit.ai Hebrew transcription
         ProviderConfigSection(
-            title = "Azure Speech Services",
-            isConfigured = !config.transcription.azureApiKey.isNullOrBlank() &&
-                    !config.transcription.azureRegion.isNullOrBlank(),
-            onConfigureClick = { showAzureKeyDialog = true },
-            additionalInfo = if (!config.transcription.azureRegion.isNullOrBlank())
-                "Region: ${config.transcription.azureRegion}" else null
+            title = "ivrit.ai (Hebrew)",
+            isConfigured = true, // Free tier always available
+            onConfigureClick = { showIvritKeyDialog = true },
+            additionalInfo = if (!config.transcription.ivritApiKey.isNullOrBlank())
+                "Premium API Key configured" else "Free tier (no key needed)"
         )
 
-        // OpenAI Whisper
-        ProviderConfigSection(
-            title = "OpenAI Whisper",
-            isConfigured = !config.transcription.whisperApiKey.isNullOrBlank(),
-            onConfigureClick = { showWhisperKeyDialog = true }
-        )
-
-        // Local Model (Whisper.cpp)
+        // Local Model (Vosk)
         LocalModelProviderSection(
             config = config,
             viewModel = viewModel,
             onConfigureClick = { showLocalModelDialog = true }
         )
 
-        // Custom Endpoint
-        ProviderConfigSection(
-            title = "Custom Endpoint",
-            isConfigured = !config.transcription.customEndpointUrl.isNullOrBlank(),
-            onConfigureClick = { showCustomUrlDialog = true },
-            additionalInfo = config.transcription.customEndpointUrl
-        )
+        HorizontalDivider()
+
+        // ========== PAID API SERVICES ==========
+        // Collapsible section for paid services
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .clickable { showAdvancedProviders = !showAdvancedProviders },
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant
+            )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Paid API Services",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = "Requires API keys and may incur costs",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Icon(
+                    imageVector = if (showAdvancedProviders) 
+                        Icons.Default.KeyboardArrowUp 
+                    else 
+                        Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (showAdvancedProviders) "Hide" else "Show"
+                )
+            }
+        }
+
+        if (showAdvancedProviders) {
+            // Google Speech-to-Text
+            ProviderConfigSection(
+                title = "Google Speech-to-Text",
+                isConfigured = !config.transcription.googleApiKey.isNullOrBlank(),
+                onConfigureClick = { showGoogleKeyDialog = true }
+            )
+
+            // Azure Speech Services
+            ProviderConfigSection(
+                title = "Azure Speech Services",
+                isConfigured = !config.transcription.azureApiKey.isNullOrBlank() &&
+                        !config.transcription.azureRegion.isNullOrBlank(),
+                onConfigureClick = { showAzureKeyDialog = true },
+                additionalInfo = if (!config.transcription.azureRegion.isNullOrBlank())
+                    "Region: ${config.transcription.azureRegion}" else null
+            )
+
+            // OpenAI Whisper
+            ProviderConfigSection(
+                title = "OpenAI Whisper",
+                isConfigured = !config.transcription.whisperApiKey.isNullOrBlank(),
+                onConfigureClick = { showWhisperKeyDialog = true }
+            )
+
+            // Custom Endpoint
+            ProviderConfigSection(
+                title = "Custom Endpoint",
+                isConfigured = !config.transcription.customEndpointUrl.isNullOrBlank(),
+                onConfigureClick = { showCustomUrlDialog = true },
+                additionalInfo = config.transcription.customEndpointUrl
+            )
+        }
     }
 
     // Dialogs
+    if (showIvritKeyDialog) {
+        ApiKeyDialog(
+            title = "ivrit.ai API Key (Optional)",
+            currentValue = config.transcription.ivritApiKey ?: "",
+            onDismiss = { showIvritKeyDialog = false },
+            onSave = { apiKey ->
+                viewModel.updateTranscriptionIvritApiKey(apiKey.ifBlank { null })
+                showIvritKeyDialog = false
+            },
+            description = "API key is optional. Free tier works without a key, but premium API key unlocks higher limits."
+        )
+    }
+
     if (showGoogleKeyDialog) {
         ApiKeyDialog(
             title = "Google API Key",
@@ -651,10 +720,11 @@ private fun TranscriptionProviderSelector(
     var expanded by remember { mutableStateOf(false) }
 
     val providers = mapOf(
+        "ivrit" to "ivrit.ai (Hebrew - Free)",
+        "local" to "Local Model (Free)",
         "google" to "Google Speech-to-Text",
         "azure" to "Azure Speech Services",
         "whisper" to "OpenAI Whisper",
-        "local" to "Local Model (Whisper.cpp)",
         "custom" to "Custom Endpoint"
     )
 
@@ -747,11 +817,13 @@ private fun ProviderConfigSection(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+@Composable
 private fun ApiKeyDialog(
     title: String,
     currentValue: String,
     onDismiss: () -> Unit,
-    onSave: (String) -> Unit
+    onSave: (String) -> Unit,
+    description: String? = null
 ) {
     var apiKey by remember { mutableStateOf(currentValue) }
 
@@ -760,7 +832,7 @@ private fun ApiKeyDialog(
         title = { Text(title) },
         text = {
             Column {
-                Text("Enter your API key:")
+                Text(description ?: "Enter your API key:")
                 Spacer(modifier = Modifier.height(8.dp))
                 OutlinedTextField(
                     value = apiKey,

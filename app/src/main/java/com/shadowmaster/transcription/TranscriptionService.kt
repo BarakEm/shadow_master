@@ -34,6 +34,14 @@ class TranscriptionService @Inject constructor(
         config: ProviderConfig
     ): TranscriptionProvider? {
         return when (providerType) {
+            TranscriptionProviderType.IVRIT_AI -> {
+                IvritAIProvider(config.ivritApiKey)
+            }
+            TranscriptionProviderType.LOCAL -> {
+                config.localModelPath?.let { modelPath ->
+                    LocalModelProvider(context, modelPath)
+                }
+            }
             TranscriptionProviderType.GOOGLE -> {
                 GoogleSpeechProvider(config.googleApiKey)
             }
@@ -42,11 +50,6 @@ class TranscriptionService @Inject constructor(
             }
             TranscriptionProviderType.WHISPER -> {
                 WhisperAPIProvider(config.whisperApiKey)
-            }
-            TranscriptionProviderType.LOCAL -> {
-                config.localModelPath?.let { modelPath ->
-                    LocalModelProvider(context, modelPath)
-                }
             }
             TranscriptionProviderType.CUSTOM -> {
                 CustomEndpointProvider(
@@ -119,10 +122,11 @@ class TranscriptionService @Inject constructor(
      */
     fun getAvailableProviders(): List<TranscriptionProviderType> {
         return listOf(
+            TranscriptionProviderType.IVRIT_AI,
+            TranscriptionProviderType.LOCAL,
             TranscriptionProviderType.GOOGLE,
             TranscriptionProviderType.AZURE,
             TranscriptionProviderType.WHISPER,
-            TranscriptionProviderType.LOCAL,
             TranscriptionProviderType.CUSTOM
         )
     }
@@ -133,6 +137,7 @@ class TranscriptionService @Inject constructor(
  * Contains all provider-specific settings needed to instantiate providers.
  */
 data class ProviderConfig(
+    val ivritApiKey: String? = null,
     val googleApiKey: String? = null,
     val azureApiKey: String? = null,
     val azureRegion: String? = null,

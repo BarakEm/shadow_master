@@ -1530,6 +1530,7 @@ class AudioImporter @Inject constructor(
      */
     private fun createProviderConfig(transcriptionConfig: com.shadowmaster.data.model.TranscriptionConfig): ProviderConfig {
         return ProviderConfig(
+            ivritApiKey = transcriptionConfig.ivritApiKey,
             googleApiKey = transcriptionConfig.googleApiKey,
             azureApiKey = transcriptionConfig.azureApiKey,
             azureRegion = transcriptionConfig.azureRegion,
