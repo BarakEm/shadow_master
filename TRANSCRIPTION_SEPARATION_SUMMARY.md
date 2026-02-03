@@ -321,3 +321,4 @@ adb install app/build/outputs/apk/debug/app-debug.apk
 This implementation successfully separates import and transcription concerns while adding robust Hebrew support through ivrit.ai. The UI clearly distinguishes free and paid services, empowering users to choose the best option for their needs without upfront costs or commitments.
 
 The architecture is extensible, allowing easy addition of new providers while maintaining a clean separation of concerns and excellent user experience.
+# Rebased onto latest master
