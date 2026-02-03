@@ -817,7 +817,6 @@ private fun ProviderConfigSection(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-@Composable
 private fun ApiKeyDialog(
     title: String,
     currentValue: String,

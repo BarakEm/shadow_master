@@ -607,13 +607,21 @@ class LibraryViewModel @Inject constructor(
                     val errorMessage = if (error is com.shadowmaster.transcription.TranscriptionError) {
                         when (error) {
                             is com.shadowmaster.transcription.TranscriptionError.ApiKeyMissing ->
-                                "API key required for ${error.providerName}"
+                                "API key required for ${error.provider}"
                             is com.shadowmaster.transcription.TranscriptionError.NetworkError ->
                                 "Network error: ${error.cause.message}"
                             is com.shadowmaster.transcription.TranscriptionError.ProviderError ->
-                                "${error.providerName}: ${error.message}"
+                                "${error.provider}: ${error.message}"
                             is com.shadowmaster.transcription.TranscriptionError.UnknownError ->
-                                "Transcription failed: ${error.cause.message}"
+                                "Transcription failed: ${error.cause?.message ?: "Unknown error"}"
+                            is com.shadowmaster.transcription.TranscriptionError.QuotaExceeded ->
+                                "API quota exceeded for ${error.provider}"
+                            is com.shadowmaster.transcription.TranscriptionError.UnsupportedLanguage ->
+                                "Language '${error.language}' not supported by ${error.provider}"
+                            is com.shadowmaster.transcription.TranscriptionError.AudioTooLong ->
+                                "Audio too long: ${error.durationMs}ms (max: ${error.maxMs}ms)"
+                            is com.shadowmaster.transcription.TranscriptionError.InvalidAudioFormat ->
+                                "Invalid audio format: ${error.format}"
                         }
                     } else {
                         error.message ?: "Transcription failed"
