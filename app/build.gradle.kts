@@ -32,6 +32,14 @@ android {
             useSupportLibrary = true
         }
 
+        // Native library configuration for Vosk/JNA
+        ndk {
+            // Specify supported architectures for native libraries
+            // Most Android devices use arm64-v8a (64-bit ARM), armeabi-v7a (32-bit ARM)
+            // x86/x86_64 for emulators and some tablets
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        }
+
         // Azure Speech configuration
         buildConfigField(
             "String",
@@ -150,8 +158,9 @@ dependencies {
     // Models are smaller (~50MB) and faster than Whisper on mobile devices
     implementation("com.alphacephei:vosk-android:0.3.47@aar")
     // JNA (Java Native Access) required by Vosk for native code access
-    // When using @aar notation, transitive dependencies are not auto-included
-    implementation("net.java.dev.jna:jna:5.13.0")
+    // MUST use @aar format to ensure native libraries are properly packaged
+    // Version 5.18.1 matches the official Vosk Android demo for compatibility
+    implementation("net.java.dev.jna:jna:5.18.1@aar")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
