@@ -1,8 +1,10 @@
-<p align="center">
-  <img src="docs/ninja-logo-v3.svg" width="180" alt="Shadow Master Logo">
-</p>
+
 
 <h1 align="center">Shadow Master</h1>
+
+<p align="center">
+  The app icon has been updated to reflect a new theme: an old zen master meditating with headphones in the mountains, with bright and positive colours.
+</p>
 
 <p align="center">
   <strong>Language learning through audio shadowing</strong><br>
