@@ -79,7 +79,8 @@ Shadow Master is an Android app for language learning through "shadowing" - a te
 
 ## Gemini CLI Agent
 
-This project is being developed using the Gemini CLI. The CLI provides a set of tools and agents to assist with software development.
+### Development Workflow
+**Important:** The Gemini CLI agent must never commit directly to the `master` branch. All code changes must be submitted via Pull Requests (PRs) to ensure proper review and to prevent unintended dependency issues.
 
 ### Quota Limits
 Gemini CLI offers different quota limits based on your authentication method:
