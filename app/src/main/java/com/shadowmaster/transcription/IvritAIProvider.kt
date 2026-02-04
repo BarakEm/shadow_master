@@ -25,6 +25,10 @@ import java.util.concurrent.TimeUnit
  * - Optimized for Hebrew language
  * - Supports various audio formats
  * - Fast and accurate Hebrew transcription
+ * 
+ * Note: The API endpoint and response format are based on the expected
+ * ivrit.ai service design. If the API is not responding as expected,
+ * check the logs for detailed error messages and verify the service is available.
  */
 class IvritAIProvider(
     private val apiKey: String? = null
@@ -114,9 +118,14 @@ class IvritAIProvider(
                 .build()
 
             Log.d(TAG, "Sending request to ivrit.ai API...")
+            Log.d(TAG, "Request URL: $TRANSCRIBE_ENDPOINT")
+            Log.d(TAG, "Language: $language")
             
             val response = httpClient.newCall(request).execute()
             val responseBody = response.body?.string()
+            
+            Log.d(TAG, "Response code: ${response.code}")
+            Log.d(TAG, "Response body: $responseBody")
 
             if (!response.isSuccessful) {
                 Log.e(TAG, "API request failed: ${response.code} - $responseBody")
