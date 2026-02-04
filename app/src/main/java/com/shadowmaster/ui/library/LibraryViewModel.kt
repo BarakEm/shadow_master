@@ -553,6 +553,9 @@ class LibraryViewModel @Inject constructor(
 
     private val _transcriptionProgress = MutableStateFlow<Pair<Int, Int>?>(null)
     val transcriptionProgress: StateFlow<Pair<Int, Int>?> = _transcriptionProgress.asStateFlow()
+    
+    private val _transcriptionComplete = MutableStateFlow(false)
+    val transcriptionComplete: StateFlow<Boolean> = _transcriptionComplete.asStateFlow()
 
     /**
      * Transcribe a single segment using the specified provider.
@@ -566,6 +569,7 @@ class LibraryViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             _transcriptionInProgress.value = true
+            _transcriptionComplete.value = false
 
             try {
                 val config = settingsRepository.configBlocking
@@ -601,6 +605,7 @@ class LibraryViewModel @Inject constructor(
                 result.onSuccess { transcribedText ->
                     updateItemTranscription(item.id, transcribedText)
                     _importSuccess.value = "Transcription complete"
+                    _transcriptionComplete.value = true
                 }
 
                 result.onFailure { error ->
@@ -651,6 +656,7 @@ class LibraryViewModel @Inject constructor(
 
             _transcriptionInProgress.value = true
             _transcriptionProgress.value = 0 to items.size
+            _transcriptionComplete.value = false
 
             try {
                 val config = settingsRepository.configBlocking
@@ -702,6 +708,9 @@ class LibraryViewModel @Inject constructor(
                 } else {
                     "Transcribed $successCount segments"
                 }
+                
+                // Mark transcription as complete
+                _transcriptionComplete.value = true
 
             } catch (e: Exception) {
                 _importError.value = "Batch transcription failed: ${e.message}"
@@ -714,6 +723,10 @@ class LibraryViewModel @Inject constructor(
 
     fun clearTranscriptionProgress() {
         _transcriptionProgress.value = null
+    }
+    
+    fun clearTranscriptionComplete() {
+        _transcriptionComplete.value = false
     }
 
     /**

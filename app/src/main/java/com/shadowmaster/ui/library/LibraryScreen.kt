@@ -611,11 +611,13 @@ fun LibraryScreen(
     showTranscribeDialog?.let { playlist ->
         val transcriptionProgress by viewModel.transcriptionProgress.collectAsState()
         val transcriptionInProgress by viewModel.transcriptionInProgress.collectAsState()
+        val transcriptionComplete by viewModel.transcriptionComplete.collectAsState()
         
         // Auto-close dialog when transcription completes successfully
-        LaunchedEffect(transcriptionInProgress, importSuccess) {
-            if (!transcriptionInProgress && importSuccess?.contains("Transcribed") == true) {
+        LaunchedEffect(transcriptionComplete) {
+            if (transcriptionComplete) {
                 showTranscribeDialog = null
+                viewModel.clearTranscriptionComplete()
             }
         }
 
