@@ -55,7 +55,7 @@ class LocalModelProvider(
          * Get the model directory path.
          */
         fun getModelDir(context: Context): File {
-            return File(context.filesDir, "whisper_models").apply {
+            return File(context.filesDir, "vosk_models").apply {
                 if (!exists()) mkdirs()
             }
         }
@@ -316,7 +316,7 @@ class LocalModelProvider(
     /**
      * Enum for available Vosk models.
      */
-    enum class WhisperModel(val fileName: String, val sizeMB: Int, val displayName: String) {
+    enum class VoskModel(val fileName: String, val sizeMB: Int, val displayName: String) {
         TINY(TINY_MODEL_NAME, TINY_MODEL_SIZE_MB, "Tiny (~40MB, fastest)"),
         BASE(BASE_MODEL_NAME, BASE_MODEL_SIZE_MB, "Base (~75MB, more accurate)")
     }

@@ -973,7 +973,7 @@ private fun LocalModelProviderSection(
     }
     
     ProviderConfigSection(
-        title = "Local Model (Whisper.cpp)",
+        title = "Local Model (Vosk)",
         isConfigured = isConfigured,
         onConfigureClick = onConfigureClick,
         additionalInfo = statusText
@@ -1016,7 +1016,7 @@ private fun LocalModelDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
-                    text = "Select and download a Whisper model for offline transcription:",
+                    text = "Select and download a Vosk model for offline transcription:",
                     style = MaterialTheme.typography.bodyMedium
                 )
                 
@@ -1149,7 +1149,17 @@ private fun LocalModelDialog(
                                 isDownloading = false
                                 onDismiss()
                             }.onFailure { error ->
-                                downloadError = error.message
+                                downloadError = when {
+                                    error.message?.contains("UnknownHost") == true -> 
+                                        "Cannot reach download server. Please check your internet connection."
+                                    error.message?.contains("timeout") == true -> 
+                                        "Download timed out. Please try again."
+                                    error.message?.contains("space") == true -> 
+                                        "Not enough storage space. Please free up space and try again."
+                                    else -> 
+                                        "Download failed: ${error.message ?: "Unknown error"}"
+                                }
+                                android.util.Log.e("LocalModelDialog", "Model download failed", error)
                                 isDownloading = false
                             }
                         }
