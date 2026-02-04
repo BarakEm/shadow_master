@@ -569,7 +569,8 @@ class LibraryViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             _transcriptionInProgress.value = true
-            _transcriptionComplete.value = false
+            // Note: transcribeSegment doesn't use the transcription dialog,
+            // so we don't need to set _transcriptionComplete
 
             try {
                 val config = settingsRepository.configBlocking
@@ -605,7 +606,6 @@ class LibraryViewModel @Inject constructor(
                 result.onSuccess { transcribedText ->
                     updateItemTranscription(item.id, transcribedText)
                     _importSuccess.value = "Transcription complete"
-                    _transcriptionComplete.value = true
                 }
 
                 result.onFailure { error ->
@@ -709,11 +709,13 @@ class LibraryViewModel @Inject constructor(
                     "Transcribed $successCount segments"
                 }
                 
-                // Mark transcription as complete
+                // Mark transcription as complete - dialog will auto-close
+                // Note: We set this even with partial failures so user gets immediate feedback
                 _transcriptionComplete.value = true
 
             } catch (e: Exception) {
                 _importError.value = "Batch transcription failed: ${e.message}"
+                // Don't set _transcriptionComplete - keep dialog open so user can retry
             } finally {
                 _transcriptionInProgress.value = false
                 _transcriptionProgress.value = null
