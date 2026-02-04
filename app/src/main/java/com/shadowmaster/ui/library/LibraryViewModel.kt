@@ -2,6 +2,7 @@ package com.shadowmaster.ui.library
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.shadowmaster.data.model.*
@@ -643,9 +644,11 @@ class LibraryViewModel @Inject constructor(
      * Batch transcribe all segments in the current playlist.
      *
      * @param providerType Provider to use
+     * @param languageOverride Optional language code to override item languages (e.g., "he-IL", "en-US")
      */
     fun transcribeAllSegments(
-        providerType: com.shadowmaster.transcription.TranscriptionProviderType
+        providerType: com.shadowmaster.transcription.TranscriptionProviderType,
+        languageOverride: String? = null
     ) {
         viewModelScope.launch {
             val items = _playlistItems.value
@@ -685,7 +688,7 @@ class LibraryViewModel @Inject constructor(
                     } else {
                         val result = transcriptionService.transcribe(
                             audioFile = audioFile,
-                            language = item.language,
+                            language = languageOverride ?: item.language,
                             providerType = providerType,
                             config = providerConfig
                         )
@@ -693,10 +696,12 @@ class LibraryViewModel @Inject constructor(
                         result.onSuccess { transcribedText ->
                             updateItemTranscription(item.id, transcribedText)
                             successCount++
+                            Log.d("LibraryViewModel", "Transcription success for ${item.id}: $transcribedText")
                         }
 
-                        result.onFailure {
+                        result.onFailure { error ->
                             failureCount++
+                            Log.e("LibraryViewModel", "Transcription failed for ${item.id}: ${error.message}", error)
                         }
                     }
 

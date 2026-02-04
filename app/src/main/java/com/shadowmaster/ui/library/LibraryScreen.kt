@@ -613,6 +613,9 @@ fun LibraryScreen(
         val transcriptionInProgress by viewModel.transcriptionInProgress.collectAsState()
         val transcriptionComplete by viewModel.transcriptionComplete.collectAsState()
         
+        var selectedLanguage by remember { mutableStateOf(SupportedLanguage.HEBREW) }
+        var showLanguageMenu by remember { mutableStateOf(false) }
+        
         // Auto-close dialog when transcription completes successfully
         LaunchedEffect(transcriptionComplete) {
             if (transcriptionComplete) {
@@ -636,6 +639,51 @@ fun LibraryScreen(
                             )
                         }
                     } else {
+                        // Language selection
+                        Text(
+                            text = "Language:",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Box {
+                            OutlinedButton(
+                                onClick = { showLanguageMenu = true },
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(selectedLanguage.displayName)
+                                Spacer(modifier = Modifier.weight(1f))
+                                Icon(
+                                    imageVector = if (showLanguageMenu) 
+                                        Icons.Default.KeyboardArrowUp 
+                                    else 
+                                        Icons.Default.KeyboardArrowDown,
+                                    contentDescription = null
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showLanguageMenu,
+                                onDismissRequest = { showLanguageMenu = false }
+                            ) {
+                                SupportedLanguage.entries.forEach { language ->
+                                    DropdownMenuItem(
+                                        text = { Text(language.displayName) },
+                                        onClick = {
+                                            selectedLanguage = language
+                                            showLanguageMenu = false
+                                        },
+                                        trailingIcon = {
+                                            if (language == selectedLanguage) {
+                                                Icon(Icons.Default.Check, contentDescription = null)
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
                         Text("Select a transcription provider:")
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -651,7 +699,8 @@ fun LibraryScreen(
                             onClick = {
                                 viewModel.selectPlaylist(playlist)
                                 viewModel.transcribeAllSegments(
-                                    com.shadowmaster.transcription.TranscriptionProviderType.IVRIT_AI
+                                    com.shadowmaster.transcription.TranscriptionProviderType.IVRIT_AI,
+                                    selectedLanguage.code
                                 )
                             },
                             modifier = Modifier.fillMaxWidth()
@@ -665,12 +714,13 @@ fun LibraryScreen(
                             onClick = {
                                 viewModel.selectPlaylist(playlist)
                                 viewModel.transcribeAllSegments(
-                                    com.shadowmaster.transcription.TranscriptionProviderType.LOCAL
+                                    com.shadowmaster.transcription.TranscriptionProviderType.LOCAL,
+                                    selectedLanguage.code
                                 )
                             },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Local Model")
+                            Text("Local Model (Vosk)")
                         }
                         
                         Spacer(modifier = Modifier.height(16.dp))
@@ -687,7 +737,8 @@ fun LibraryScreen(
                             onClick = {
                                 viewModel.selectPlaylist(playlist)
                                 viewModel.transcribeAllSegments(
-                                    com.shadowmaster.transcription.TranscriptionProviderType.GOOGLE
+                                    com.shadowmaster.transcription.TranscriptionProviderType.GOOGLE,
+                                    selectedLanguage.code
                                 )
                             },
                             modifier = Modifier.fillMaxWidth()
