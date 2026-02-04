@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<full-backup-content>
+    <!-- Include audio library files -->
+    <include domain="file" path="imported_audio/"/>
+    <include domain="file" path="shadow_segments/"/>
+    
+    <!-- Include Vosk models (can be large, but important for offline functionality) -->
+    <include domain="file" path="vosk_models/"/>
+    
+    <!-- Include database files -->
+    <include domain="database" path="."/>
+    
+    <!-- Include shared preferences (settings) -->
+    <include domain="sharedpref" path="."/>
+    
+    <!-- Exclude cache and temporary files -->
+    <exclude domain="file" path="logs/"/>
+    <exclude domain="file" path="crash_reports/"/>
+    <exclude domain="cache" path="."/>
+</full-backup-content>
