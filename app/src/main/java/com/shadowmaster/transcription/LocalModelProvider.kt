@@ -118,13 +118,9 @@ class LocalModelProvider(
             }
             
             // Check for any other valid model directories
-            modelDir.listFiles()?.forEach { file ->
-                if (file.isDirectory && file.listFiles()?.isNotEmpty() == true) {
-                    return file.absolutePath
-                }
-            }
-            
-            return null
+            return modelDir.listFiles()?.find { file ->
+                file.isDirectory && file.listFiles()?.isNotEmpty() == true
+            }?.absolutePath
         }
     }
 

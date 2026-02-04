@@ -9,6 +9,7 @@ import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -29,6 +30,13 @@ class ShadowMasterApplication : Application() {
         initializeTranscriptionModels()
     }
     
+    override fun onTerminate() {
+        super.onTerminate()
+        // Cancel coroutine scope to prevent resource leaks
+        // Note: onTerminate() is rarely called in production (only in emulator)
+        applicationScope.cancel()
+    }
+    
     /**
      * Auto-detect and restore Vosk model path if not configured.
      * This ensures models persist across app reinstalls when backed up.
@@ -46,11 +54,12 @@ class ShadowMasterApplication : Application() {
                         Log.i(TAG, "Auto-detected Vosk model at: $detectedPath")
                         
                         // Determine model name from path
+                        // Check BASE_MODEL_NAME first to avoid false matches with paths containing 'base'
                         val modelName = when {
-                            detectedPath.contains(LocalModelProvider.TINY_MODEL_NAME) -> 
-                                LocalModelProvider.TINY_MODEL_NAME
                             detectedPath.contains(LocalModelProvider.BASE_MODEL_NAME) -> 
                                 LocalModelProvider.BASE_MODEL_NAME
+                            detectedPath.contains(LocalModelProvider.TINY_MODEL_NAME) -> 
+                                LocalModelProvider.TINY_MODEL_NAME
                             else -> null
                         }
                         
