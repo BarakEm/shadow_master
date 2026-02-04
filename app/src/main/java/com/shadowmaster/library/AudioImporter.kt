@@ -1530,6 +1530,7 @@ class AudioImporter @Inject constructor(
      */
     private fun createProviderConfig(transcriptionConfig: com.shadowmaster.data.model.TranscriptionConfig): ProviderConfig {
         return ProviderConfig(
+            ivritApiKey = transcriptionConfig.ivritApiKey,
             googleApiKey = transcriptionConfig.googleApiKey,
             azureApiKey = transcriptionConfig.azureApiKey,
             azureRegion = transcriptionConfig.azureRegion,
@@ -1546,12 +1547,11 @@ class AudioImporter @Inject constructor(
      * Returns null if the provider name is not valid.
      */
     private fun getProviderType(providerName: String): TranscriptionProviderType? {
-        return try {
-            TranscriptionProviderType.valueOf(providerName.uppercase(java.util.Locale.ROOT))
-        } catch (e: IllegalArgumentException) {
-            Log.w(TAG, "Invalid transcription provider name: $providerName")
-            null
-        }
+        return TranscriptionProviderType.entries.find { it.id == providerName }
+            ?: run {
+                Log.w(TAG, "Invalid transcription provider name: $providerName")
+                null
+            }
     }
 }
 

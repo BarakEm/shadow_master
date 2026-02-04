@@ -92,10 +92,11 @@ enum class SupportedLanguage(
  * Configuration for automatic transcription services.
  */
 data class TranscriptionConfig(
-    val defaultProvider: String = "google",  // google, azure, whisper, local, custom
+    val defaultProvider: String = "ivrit",  // ivrit, local, google, azure, whisper, custom
     val autoTranscribeOnImport: Boolean = false,
 
     // Provider-specific settings
+    val ivritApiKey: String? = null,  // Optional, free tier available
     val googleApiKey: String? = null,
     val azureApiKey: String? = null,
     val azureRegion: String? = null,

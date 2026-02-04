@@ -23,7 +23,8 @@ class LibraryViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val libraryRepository: LibraryRepository,
     private val settingsRepository: SettingsRepository,
-    private val translationService: TranslationService
+    private val translationService: TranslationService,
+    private val transcriptionService: com.shadowmaster.transcription.TranscriptionService
 ) : ViewModel() {
 
     val playlists: StateFlow<List<ShadowPlaylist>> = libraryRepository.getAllPlaylists()
@@ -543,6 +544,176 @@ class LibraryViewModel @Inject constructor(
 
     fun clearTranslationProgress() {
         _translationProgress.value = null
+    }
+
+    // Transcription functionality
+
+    private val _transcriptionInProgress = MutableStateFlow(false)
+    val transcriptionInProgress: StateFlow<Boolean> = _transcriptionInProgress.asStateFlow()
+
+    private val _transcriptionProgress = MutableStateFlow<Pair<Int, Int>?>(null)
+    val transcriptionProgress: StateFlow<Pair<Int, Int>?> = _transcriptionProgress.asStateFlow()
+
+    /**
+     * Transcribe a single segment using the specified provider.
+     *
+     * @param item The segment to transcribe
+     * @param providerType Provider to use (ivrit, local, google, azure, whisper, custom)
+     */
+    fun transcribeSegment(
+        item: ShadowItem,
+        providerType: com.shadowmaster.transcription.TranscriptionProviderType
+    ) {
+        viewModelScope.launch {
+            _transcriptionInProgress.value = true
+
+            try {
+                val config = settingsRepository.configBlocking
+                val transcriptionConfig = config.transcription
+
+                // Create provider config
+                val providerConfig = com.shadowmaster.transcription.ProviderConfig(
+                    ivritApiKey = transcriptionConfig.ivritApiKey,
+                    googleApiKey = transcriptionConfig.googleApiKey,
+                    azureApiKey = transcriptionConfig.azureApiKey,
+                    azureRegion = transcriptionConfig.azureRegion,
+                    whisperApiKey = transcriptionConfig.whisperApiKey,
+                    localModelPath = transcriptionConfig.localModelPath,
+                    customEndpointUrl = transcriptionConfig.customEndpointUrl,
+                    customEndpointApiKey = transcriptionConfig.customEndpointApiKey,
+                    customEndpointHeaders = transcriptionConfig.customEndpointHeaders
+                )
+
+                // Get audio file
+                val audioFile = java.io.File(item.audioFilePath)
+                if (!audioFile.exists()) {
+                    _importError.value = "Audio file not found"
+                    return@launch
+                }
+
+                val result = transcriptionService.transcribe(
+                    audioFile = audioFile,
+                    language = item.language,
+                    providerType = providerType,
+                    config = providerConfig
+                )
+
+                result.onSuccess { transcribedText ->
+                    updateItemTranscription(item.id, transcribedText)
+                    _importSuccess.value = "Transcription complete"
+                }
+
+                result.onFailure { error ->
+                    val errorMessage = if (error is com.shadowmaster.transcription.TranscriptionError) {
+                        when (error) {
+                            is com.shadowmaster.transcription.TranscriptionError.ApiKeyMissing ->
+                                "API key required for ${error.provider}"
+                            is com.shadowmaster.transcription.TranscriptionError.NetworkError ->
+                                "Network error: ${error.cause.message}"
+                            is com.shadowmaster.transcription.TranscriptionError.ProviderError ->
+                                "${error.provider}: ${error.message}"
+                            is com.shadowmaster.transcription.TranscriptionError.UnknownError ->
+                                "Transcription failed: ${error.cause?.message ?: "Unknown error"}"
+                            is com.shadowmaster.transcription.TranscriptionError.QuotaExceeded ->
+                                "API quota exceeded for ${error.provider}"
+                            is com.shadowmaster.transcription.TranscriptionError.UnsupportedLanguage ->
+                                "Language '${error.language}' not supported by ${error.provider}"
+                            is com.shadowmaster.transcription.TranscriptionError.AudioTooLong ->
+                                "Audio too long: ${error.durationMs}ms (max: ${error.maxMs}ms)"
+                            is com.shadowmaster.transcription.TranscriptionError.InvalidAudioFormat ->
+                                "Invalid audio format: ${error.format}"
+                        }
+                    } else {
+                        error.message ?: "Transcription failed"
+                    }
+                    _importError.value = errorMessage
+                }
+            } finally {
+                _transcriptionInProgress.value = false
+            }
+        }
+    }
+
+    /**
+     * Batch transcribe all segments in the current playlist.
+     *
+     * @param providerType Provider to use
+     */
+    fun transcribeAllSegments(
+        providerType: com.shadowmaster.transcription.TranscriptionProviderType
+    ) {
+        viewModelScope.launch {
+            val items = _playlistItems.value
+            if (items.isEmpty()) {
+                _importError.value = "No segments to transcribe"
+                return@launch
+            }
+
+            _transcriptionInProgress.value = true
+            _transcriptionProgress.value = 0 to items.size
+
+            try {
+                val config = settingsRepository.configBlocking
+                val transcriptionConfig = config.transcription
+
+                // Create provider config
+                val providerConfig = com.shadowmaster.transcription.ProviderConfig(
+                    ivritApiKey = transcriptionConfig.ivritApiKey,
+                    googleApiKey = transcriptionConfig.googleApiKey,
+                    azureApiKey = transcriptionConfig.azureApiKey,
+                    azureRegion = transcriptionConfig.azureRegion,
+                    whisperApiKey = transcriptionConfig.whisperApiKey,
+                    localModelPath = transcriptionConfig.localModelPath,
+                    customEndpointUrl = transcriptionConfig.customEndpointUrl,
+                    customEndpointApiKey = transcriptionConfig.customEndpointApiKey,
+                    customEndpointHeaders = transcriptionConfig.customEndpointHeaders
+                )
+
+                var successCount = 0
+                var failureCount = 0
+
+                items.forEachIndexed { index, item ->
+                    val audioFile = java.io.File(item.audioFilePath)
+                    if (!audioFile.exists()) {
+                        failureCount++
+                    } else {
+                        val result = transcriptionService.transcribe(
+                            audioFile = audioFile,
+                            language = item.language,
+                            providerType = providerType,
+                            config = providerConfig
+                        )
+
+                        result.onSuccess { transcribedText ->
+                            updateItemTranscription(item.id, transcribedText)
+                            successCount++
+                        }
+
+                        result.onFailure {
+                            failureCount++
+                        }
+                    }
+
+                    _transcriptionProgress.value = (index + 1) to items.size
+                }
+
+                _importSuccess.value = if (failureCount > 0) {
+                    "Transcribed $successCount segments ($failureCount failed)"
+                } else {
+                    "Transcribed $successCount segments"
+                }
+
+            } catch (e: Exception) {
+                _importError.value = "Batch transcription failed: ${e.message}"
+            } finally {
+                _transcriptionInProgress.value = false
+                _transcriptionProgress.value = null
+            }
+        }
+    }
+
+    fun clearTranscriptionProgress() {
+        _transcriptionProgress.value = null
     }
 
     /**

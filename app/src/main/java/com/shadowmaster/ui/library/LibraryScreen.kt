@@ -60,6 +60,7 @@ fun LibraryScreen(
     var showSplitDialog by remember { mutableStateOf<ShadowItem?>(null) }
     var showExportDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
     var showResegmentDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
+    var showTranscribeDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
     var mergeMode by remember { mutableStateOf(false) }
     var showUrlImportDialog by remember { mutableStateOf(false) }
     var urlToImport by remember { mutableStateOf("") }
@@ -241,6 +242,7 @@ fun LibraryScreen(
                                 viewModel.selectPlaylist(it)
                                 showResegmentDialog = it 
                             },
+                            onTranscribeClick = { showTranscribeDialog = it },
                             onStartPractice = onStartPractice,
                             onDismissFailedImport = { viewModel.dismissFailedImport(it) }
                         )
@@ -589,6 +591,104 @@ fun LibraryScreen(
         )
     }
 
+    // Transcribe dialog - provider selection
+    showTranscribeDialog?.let { playlist ->
+        val transcriptionProgress by viewModel.transcriptionProgress.collectAsState()
+        val transcriptionInProgress by viewModel.transcriptionInProgress.collectAsState()
+
+        AlertDialog(
+            onDismissRequest = { if (!transcriptionInProgress) showTranscribeDialog = null },
+            title = { Text("Transcribe Playlist") },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    if (transcriptionInProgress) {
+                        transcriptionProgress?.let { (current, total) ->
+                            Text("Transcribing segment $current of $total...")
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LinearProgressIndicator(
+                                progress = { current.toFloat() / total.toFloat() },
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    } else {
+                        Text("Select a transcription provider:")
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Free providers
+                        Text(
+                            "Free Services",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        FilledTonalButton(
+                            onClick = {
+                                viewModel.selectPlaylist(playlist)
+                                viewModel.transcribeAllSegments(
+                                    com.shadowmaster.transcription.TranscriptionProviderType.IVRIT_AI
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("ivrit.ai (Hebrew)")
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        FilledTonalButton(
+                            onClick = {
+                                viewModel.selectPlaylist(playlist)
+                                viewModel.transcribeAllSegments(
+                                    com.shadowmaster.transcription.TranscriptionProviderType.LOCAL
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Local Model")
+                        }
+                        
+                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        // Paid providers (collapsed by default, can expand if needed)
+                        Text(
+                            "Paid Services (require API key)",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        OutlinedButton(
+                            onClick = {
+                                viewModel.selectPlaylist(playlist)
+                                viewModel.transcribeAllSegments(
+                                    com.shadowmaster.transcription.TranscriptionProviderType.GOOGLE
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Google Speech")
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                if (!transcriptionInProgress) {
+                    TextButton(onClick = { showTranscribeDialog = null }) {
+                        Text("Cancel")
+                    }
+                }
+            },
+            dismissButton = {
+                if (transcriptionInProgress) {
+                    TextButton(onClick = { showTranscribeDialog = null }) {
+                        Text("Close")
+                    }
+                }
+            }
+        )
+    }
+
     // Export progress dialog
     if (exportProgress.status != ExportStatus.IDLE) {
         AlertDialog(
@@ -919,6 +1019,7 @@ private fun PlaylistsContent(
     onRenameClick: (ShadowPlaylist) -> Unit,
     onExportClick: (ShadowPlaylist) -> Unit,
     onResegmentClick: (ShadowPlaylist) -> Unit,
+    onTranscribeClick: (ShadowPlaylist) -> Unit,
     onStartPractice: (String) -> Unit,
     onDismissFailedImport: (String) -> Unit
 ) {
@@ -989,6 +1090,7 @@ private fun PlaylistsContent(
                     onRenameClick = { onRenameClick(playlist) },
                     onExportClick = { onExportClick(playlist) },
                     onResegmentClick = { onResegmentClick(playlist) },
+                    onTranscribeClick = { onTranscribeClick(playlist) },
                     onPlayClick = { onStartPractice(playlist.id) }
                 )
             }
@@ -1232,6 +1334,7 @@ private fun PlaylistCard(
     onRenameClick: () -> Unit,
     onExportClick: () -> Unit,
     onResegmentClick: () -> Unit,
+    onTranscribeClick: () -> Unit,
     onPlayClick: () -> Unit
 ) {
     // Memoize formatted date to avoid recalculating
@@ -1316,6 +1419,14 @@ private fun PlaylistCard(
                 }
 
                 // Secondary actions - less prominent
+                IconButton(onClick = onTranscribeClick, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        imageVector = Icons.Default.Subtitles,
+                        contentDescription = "Transcribe",
+                        modifier = Modifier.size(20.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 IconButton(onClick = onExportClick, modifier = Modifier.size(36.dp)) {
                     Icon(
                         imageVector = Icons.Default.Share,
@@ -1660,6 +1771,7 @@ fun PlaylistCardPreview() {
                 onRenameClick = {},
                 onExportClick = {},
                 onResegmentClick = {},
+                onTranscribeClick = {},
                 onPlayClick = {}
             )
         }
@@ -1684,6 +1796,7 @@ fun PlaylistCardNoLastPracticedPreview() {
                 onRenameClick = {},
                 onExportClick = {},
                 onResegmentClick = {},
+                onTranscribeClick = {},
                 onPlayClick = {}
             )
         }
