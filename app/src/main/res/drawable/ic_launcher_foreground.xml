@@ -1,51 +1,18 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
-    android:viewportWidth="100"
-    android:viewportHeight="100">
-
-    <!-- Ninja body -->
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Background (transparent for foreground) -->
     <path
-        android:fillColor="#1A1A2E"
-        android:pathData="M35,100 L30,75 Q25,60 35,50 L40,45 L40,40 Q40,35 45,32 L50,30 L55,32 Q60,35 60,40 L60,45 L65,50 Q75,60 70,75 L65,100 Q60,105 50,105 Q40,105 35,100 Z"/>
-
-    <!-- Ninja head -->
-    <path
-        android:fillColor="#1A1A2E"
-        android:pathData="M50,5 A 18,20 0 1,1 50,45 A 18,20 0 1,1 50,5"/>
-
-    <!-- Headband -->
-    <path
-        android:fillColor="#FF4081"
-        android:pathData="M30,22 C30,20 32,18 68,18 C70,18 70,20 70,22 L70,28 C70,30 68,32 66,32 L34,32 C32,32 30,30 30,28 Z"/>
-
-    <!-- Headband knot (rotated manually) -->
-    <path
-        android:fillColor="#F50057"
-        android:pathData="M28,16 L32,18 L30,26 L24,24 Z"/>
-
-    <!-- Headband tail -->
-    <path
-        android:fillColor="#FF4081"
-        android:pathData="M28,22 Q15,20 10,30 C15,28 20,28 28,24 Z"/>
-
-    <!-- Eyes -->
-    <path
-        android:fillColor="#FF1744"
-        android:pathData="M38,22 L62,22 L62,26 L38,26 Z"/>
-
-    <!-- Sound waves -->
-    <path
-        android:strokeColor="#00ffff"
-        android:strokeWidth="2"
         android:fillColor="#00000000"
-        android:strokeLineCap="round"
-        android:pathData="M75,35 Q85,45 75,55"/>
+        android:pathData="M0,0h108v108h-108z"/>
+    <!-- "Z" path -->
     <path
-        android:strokeColor="#00ffff"
-        android:strokeWidth="1.5"
-        android:strokeAlpha="0.8"
-        android:fillColor="#00000000"
-        android:strokeLineCap="round"
-        android:pathData="M82,28 Q95,45 82,62"/>
+        android:fillColor="#FFFFFF"
+        android:pathData="M30,40h48v8h-40l40,24h-48v-8h40l-40,-24z"/>
+    <!-- "M" path -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M24,32h8v40h-8zM76,32h8v40h-8zM32,32h8l14,24l14,-24h8l-18,32l-18,-32z"/>
 </vector>
