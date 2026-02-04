@@ -269,6 +269,22 @@ fun LibraryScreen(
                         Text(error)
                     }
                 }
+                
+                // Success snackbar
+                importSuccess?.let { success ->
+                    Snackbar(
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(16.dp),
+                        action = {
+                            TextButton(onClick = { viewModel.clearSuccess() }) {
+                                Text("Dismiss")
+                            }
+                        }
+                    ) {
+                        Text(success)
+                    }
+                }
             }
         }
     }
@@ -595,6 +611,15 @@ fun LibraryScreen(
     showTranscribeDialog?.let { playlist ->
         val transcriptionProgress by viewModel.transcriptionProgress.collectAsState()
         val transcriptionInProgress by viewModel.transcriptionInProgress.collectAsState()
+        val transcriptionComplete by viewModel.transcriptionComplete.collectAsState()
+        
+        // Auto-close dialog when transcription completes successfully
+        LaunchedEffect(transcriptionComplete) {
+            if (transcriptionComplete) {
+                showTranscribeDialog = null
+                viewModel.clearTranscriptionComplete()
+            }
+        }
 
         AlertDialog(
             onDismissRequest = { if (!transcriptionInProgress) showTranscribeDialog = null },

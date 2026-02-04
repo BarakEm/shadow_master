@@ -212,6 +212,7 @@ class TranscriptionServiceTest {
         val providers = service.getAvailableProviders()
 
         // Then
+        assertTrue(providers.contains(TranscriptionProviderType.IVRIT_AI))
         assertTrue(providers.contains(TranscriptionProviderType.GOOGLE))
         assertTrue(providers.contains(TranscriptionProviderType.AZURE))
         assertTrue(providers.contains(TranscriptionProviderType.WHISPER))
@@ -225,7 +226,7 @@ class TranscriptionServiceTest {
         val providers = service.getAvailableProviders()
 
         // Then
-        assertEquals(5, providers.size)
+        assertEquals(6, providers.size)
     }
 
     // ==================== Transcription Tests ====================
