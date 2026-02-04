@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 108 108">
+    <!-- Background - light blue sky -->
+    <rect width="108" height="108" fill="#B3E5FC"/>
+    
+    <!-- Mountain background - bright blue-green gradient feel -->
+    <!-- Far mountain -->
+    <path fill="#8B9DC3" d="M20,70 L35,45 L50,70 Z"/>
+    <path fill="#A8B5D1" d="M45,70 L60,40 L75,70 Z"/>
+    <path fill="#8B9DC3" d="M70,70 L85,50 L100,70 Z"/>
+    
+    <!-- Ground with grass - bright green -->
+    <path fill="#66BB6A" d="M0,70 L108,70 L108,108 L0,108 Z"/>
+    
+    <!-- Zen Master body - meditation pose in saffron/orange robes -->
+    <!-- Sitting legs crossed -->
+    <path fill="#FF9800" d="M44,65 Q44,75 54,75 Q64,75 64,65 L64,70 Q64,72 54,72 Q44,72 44,70 Z"/>
+    
+    <!-- Body/torso -->
+    <path fill="#FFA726" d="M46,50 L62,50 L64,65 L44,65 Z"/>
+    
+    <!-- Arms in meditation mudra -->
+    <path fill="#FF9800" d="M44,55 Q40,57 40,60 Q40,63 44,65 L46,60 Z"/>
+    <path fill="#FF9800" d="M64,55 Q68,57 68,60 Q68,63 64,65 L62,60 Z"/>
+    
+    <!-- Head - peaceful skin tone -->
+    <path fill="#FFCC80" d="M48,42 Q48,38 54,38 Q60,38 60,42 L60,48 Q60,52 54,52 Q48,52 48,48 Z"/>
+    
+    <!-- Closed peaceful eyes -->
+    <path fill="none" stroke="#5D4037" stroke-width="1" d="M50,44 Q51,45 52,44 M56,44 Q57,45 58,44"/>
+    
+    <!-- Serene smile -->
+    <path fill="none" stroke="#5D4037" stroke-width="1" d="M51,47 Q54,48 57,47"/>
+    
+    <!-- White beard -->
+    <path fill="#EEEEEE" d="M49,48 Q48,50 48,52 L50,52 Q51,50 54,50 Q57,50 58,52 L60,52 Q60,50 59,48 Z"/>
+    
+    <!-- Headphones - modern bright cyan/blue -->
+    <!-- Headband -->
+    <path fill="none" stroke="#29B6F6" stroke-width="2.5" d="M48,38 Q54,32 60,38"/>
+    
+    <!-- Left ear cup -->
+    <path fill="#4FC3F7" d="M44,42 Q42,42 42,44 L42,48 Q42,50 44,50 Q46,50 46,48 L46,44 Q46,42 44,42 Z"/>
+    <path fill="#29B6F6" d="M44,44 Q43,44 43,46 Q43,48 44,48 Q45,48 45,46 Q45,44 44,44 Z"/>
+    
+    <!-- Right ear cup -->
+    <path fill="#4FC3F7" d="M64,42 Q62,42 62,44 L62,48 Q62,50 64,50 Q66,50 66,48 L66,44 Q66,42 64,42 Z"/>
+    <path fill="#29B6F6" d="M64,44 Q63,44 63,46 Q63,48 64,48 Q65,48 65,46 Q65,44 64,44 Z"/>
+    
+    <!-- Sun/enlightenment glow - warm yellow -->
+    <path fill="#FFEB3B" opacity="0.8" d="M54,30 Q54,28 56,28 Q58,28 58,30 Q58,32 56,32 Q54,32 54,30 Z"/>
+    
+    <!-- Sun rays -->
+    <g stroke="#FFF59D" stroke-width="1" opacity="0.7">
+        <line x1="56" y1="25" x2="56" y2="27"/>
+        <line x1="60" y1="27" x2="58" y2="28"/>
+        <line x1="61" y1="31" x2="59" y2="31"/>
+        <line x1="60" y1="35" x2="58" y2="34"/>
+        <line x1="56" y1="37" x2="56" y2="35"/>
+        <line x1="52" y1="35" x2="54" y2="34"/>
+        <line x1="51" y1="31" x2="53" y2="31"/>
+        <line x1="52" y1="27" x2="54" y2="28"/>
+    </g>
+</svg>

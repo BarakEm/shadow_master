@@ -1,4 +1,7 @@
 
+<p align="center">
+  <img src="docs/zen-master-icon.svg" alt="Zen Master Icon - meditating with headphones in the mountains" width="150" height="150"/>
+</p>
 
 <h1 align="center">Shadow Master</h1>
 
