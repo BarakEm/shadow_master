@@ -1,4 +1,7 @@
 
+<p align="center">
+  <img src="docs/zen-master-icon.svg" alt="Shadow Master Icon" width="150" height="150"/>
+</p>
 
 <h1 align="center">Shadow Master</h1>
 
