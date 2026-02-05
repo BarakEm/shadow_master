@@ -13,12 +13,16 @@ The LocalModelProvider now supports 11 languages through Vosk speech recognition
 | Arabic | vosk-model-small-ar-0.22-linto | ~45MB | ar, ar-SA |
 | French | vosk-model-small-fr-0.22 | ~39MB | fr, fr-FR |
 | Spanish | vosk-model-small-es-0.42 | ~39MB | es, es-ES |
-| Chinese | vosk-model-small-cn-0.22 | ~42MB | zh, zh-CN |
+| Chinese | vosk-model-small-cn-0.22 | ~42MB | zh, zh-CN (cn also accepted) |
 | Russian | vosk-model-small-ru-0.22 | ~45MB | ru, ru-RU |
 | Italian | vosk-model-small-it-0.22 | ~48MB | it, it-IT |
 | Portuguese | vosk-model-small-pt-0.3 | ~31MB | pt, pt-BR |
 | Turkish | vosk-model-small-tr-0.3 | ~35MB | tr, tr-TR |
-| Hebrew | vosk-model-small-he-0.22 | ~38MB | he, he-IL |
+| Hebrew | vosk-model-small-he-0.22 | ~38MB | he, he-IL (iw also accepted) |
+
+**Note on Language Codes:**
+- **Chinese**: The model filename uses "cn" but the standard ISO 639-1 code is "zh". Both codes are accepted by `getModelForLanguage()` for convenience. When using the `VoskModel` enum, the `languageCode` field is "zh" (standard code).
+- **Hebrew**: The old ISO 639-1 code "iw" is still accepted alongside the current "he" code.
 
 ## Usage
 

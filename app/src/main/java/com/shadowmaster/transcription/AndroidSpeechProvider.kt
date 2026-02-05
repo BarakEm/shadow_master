@@ -49,10 +49,9 @@ class AndroidSpeechProvider(
     }
 
     override suspend fun validateConfiguration(): Result<Unit> {
-        return if (SpeechRecognizer.isRecognitionAvailable(context)) {
-            Result.success(Unit)
-        } else {
-            Result.failure(
+        // Check if speech recognition is available on the device
+        if (!SpeechRecognizer.isRecognitionAvailable(context)) {
+            return Result.failure(
                 TranscriptionError.ProviderError(
                     name,
                     "Speech recognition not available on this device. " +
@@ -60,9 +59,15 @@ class AndroidSpeechProvider(
                 )
             )
         }
+        
+        // Note: RECORD_AUDIO permission must be granted at runtime before using this provider.
+        // The permission should be checked by the calling code before creating or using
+        // this provider, as permission state can change at runtime on Android 6.0+ (API 23+).
+        
+        return Result.success(Unit)
     }
 
-    override suspend fun transcribe(audioFile: File, language: String): Result<String> = withContext(Dispatchers.Main) {
+    override suspend fun transcribe(audioFile: File, language: String): Result<String> = withContext(Dispatchers.IO) {
         // Validate configuration first
         validateConfiguration().getOrElse { return@withContext Result.failure(it) }
 
@@ -105,8 +110,12 @@ class AndroidSpeechProvider(
      * Transcribe audio directly from microphone (live transcription).
      * This is the primary use case for Android SpeechRecognizer.
      * 
+     * **Important:** This method must be called from the Main dispatcher context because
+     * SpeechRecognizer requires main thread access. The method uses `withContext(Dispatchers.Main)`
+     * internally, so callers can invoke it from any dispatcher.
+     * 
      * @param language Language code (e.g., "en-US", "he-IL")
-     * @param maxDurationMs Maximum recording duration in milliseconds
+     * @param maxDurationMs Maximum recording duration in milliseconds (enforced via timeout)
      * @return Result containing transcribed text or error
      */
     suspend fun transcribeLive(
@@ -116,118 +125,145 @@ class AndroidSpeechProvider(
         // Validate configuration first
         validateConfiguration().getOrElse { return@withContext Result.failure(it) }
 
-        suspendCancellableCoroutine { continuation ->
-            var recognizer: SpeechRecognizer? = null
-            
-            try {
-                recognizer = SpeechRecognizer.createSpeechRecognizer(context)
-                
-                recognizer.setRecognitionListener(object : RecognitionListener {
-                    override fun onReadyForSpeech(params: Bundle?) {
-                        Log.d(TAG, "Ready for speech")
-                    }
-
-                    override fun onBeginningOfSpeech() {
-                        Log.d(TAG, "Speech started")
-                    }
-
-                    override fun onRmsChanged(rmsdB: Float) {
-                        // Volume level changed
-                    }
-
-                    override fun onBufferReceived(buffer: ByteArray?) {
-                        // Partial audio buffer received
-                    }
-
-                    override fun onEndOfSpeech() {
-                        Log.d(TAG, "Speech ended")
-                    }
-
-                    override fun onError(error: Int) {
-                        val errorMessage = when (error) {
-                            SpeechRecognizer.ERROR_AUDIO -> "Audio recording error"
-                            SpeechRecognizer.ERROR_CLIENT -> "Client error"
-                            SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Insufficient permissions"
-                            SpeechRecognizer.ERROR_NETWORK -> "Network error"
-                            SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Network timeout"
-                            SpeechRecognizer.ERROR_NO_MATCH -> "No speech match"
-                            SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Recognizer busy"
-                            SpeechRecognizer.ERROR_SERVER -> "Server error"
-                            SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Speech timeout"
-                            else -> "Unknown error: $error"
-                        }
-                        Log.e(TAG, "Recognition error: $errorMessage")
-                        
-                        recognizer?.destroy()
-                        
-                        if (continuation.isActive) {
-                            continuation.resume(
-                                Result.failure(
-                                    TranscriptionError.ProviderError(name, errorMessage)
-                                )
-                            )
-                        }
-                    }
-
-                    override fun onResults(results: Bundle?) {
-                        val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                        val transcription = matches?.firstOrNull() ?: ""
-                        
-                        Log.d(TAG, "Recognition results: $transcription")
-                        
-                        recognizer?.destroy()
-                        
-                        if (continuation.isActive) {
-                            if (transcription.isBlank()) {
-                                continuation.resume(
-                                    Result.failure(
-                                        TranscriptionError.ProviderError(
-                                            name,
-                                            "No speech detected"
-                                        )
-                                    )
-                                )
-                            } else {
-                                continuation.resume(Result.success(transcription))
+        // Use withTimeoutOrNull to enforce max duration
+        try {
+            kotlinx.coroutines.withTimeout(maxDurationMs) {
+                suspendCancellableCoroutine { continuation ->
+                    var recognizer: SpeechRecognizer? = null
+                    var isCleanedUp = false
+                    
+                    // Cleanup function to ensure destroy() is only called once
+                    fun cleanup() {
+                        synchronized(this) {
+                            if (!isCleanedUp) {
+                                isCleanedUp = true
+                                recognizer?.destroy()
+                                recognizer = null
                             }
                         }
                     }
+                    
+                    try {
+                        recognizer = SpeechRecognizer.createSpeechRecognizer(context)
+                        
+                        recognizer.setRecognitionListener(object : RecognitionListener {
+                            override fun onReadyForSpeech(params: Bundle?) {
+                                Log.d(TAG, "Ready for speech")
+                            }
 
-                    override fun onPartialResults(partialResults: Bundle?) {
-                        val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                        Log.d(TAG, "Partial results: ${matches?.firstOrNull()}")
+                            override fun onBeginningOfSpeech() {
+                                Log.d(TAG, "Speech started")
+                            }
+
+                            override fun onRmsChanged(rmsdB: Float) {
+                                // Volume level changed
+                            }
+
+                            override fun onBufferReceived(buffer: ByteArray?) {
+                                // Partial audio buffer received
+                            }
+
+                            override fun onEndOfSpeech() {
+                                Log.d(TAG, "Speech ended")
+                            }
+
+                            override fun onError(error: Int) {
+                                val errorMessage = when (error) {
+                                    SpeechRecognizer.ERROR_AUDIO -> "Audio recording error"
+                                    SpeechRecognizer.ERROR_CLIENT -> "Client error"
+                                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Insufficient permissions"
+                                    SpeechRecognizer.ERROR_NETWORK -> "Network error"
+                                    SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Network timeout"
+                                    SpeechRecognizer.ERROR_NO_MATCH -> "No speech match"
+                                    SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Recognizer busy"
+                                    SpeechRecognizer.ERROR_SERVER -> "Server error"
+                                    SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Speech timeout"
+                                    else -> "Unknown error: $error"
+                                }
+                                Log.e(TAG, "Recognition error: $errorMessage")
+                                
+                                cleanup()
+                                
+                                if (continuation.isActive) {
+                                    continuation.resume(
+                                        Result.failure(
+                                            TranscriptionError.ProviderError(name, errorMessage)
+                                        )
+                                    )
+                                }
+                            }
+
+                            override fun onResults(results: Bundle?) {
+                                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                                val transcription = matches?.firstOrNull() ?: ""
+                                
+                                Log.d(TAG, "Recognition results: $transcription")
+                                
+                                cleanup()
+                                
+                                if (continuation.isActive) {
+                                    if (transcription.isBlank()) {
+                                        continuation.resume(
+                                            Result.failure(
+                                                TranscriptionError.ProviderError(
+                                                    name,
+                                                    "No speech detected"
+                                                )
+                                            )
+                                        )
+                                    } else {
+                                        continuation.resume(Result.success(transcription))
+                                    }
+                                }
+                            }
+
+                            override fun onPartialResults(partialResults: Bundle?) {
+                                val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+                                Log.d(TAG, "Partial results: ${matches?.firstOrNull()}")
+                            }
+
+                            override fun onEvent(eventType: Int, params: Bundle?) {
+                                // Custom event
+                            }
+                        })
+
+                        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                            putExtra(RecognizerIntent.EXTRA_LANGUAGE, language)
+                            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+                            // Use shorter silence timeout for better user experience (1.5 seconds of silence)
+                            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
+                            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
+                        }
+
+                        recognizer.startListening(intent)
+                        
+                        // Set up cancellation - will be called on timeout or explicit cancellation
+                        continuation.invokeOnCancellation {
+                            recognizer?.stopListening()
+                            cleanup()
+                        }
+                        
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to start recognition", e)
+                        cleanup()
+                        if (continuation.isActive) {
+                            continuation.resume(Result.failure(TranscriptionError.UnknownError(name, e)))
+                        }
                     }
-
-                    override fun onEvent(eventType: Int, params: Bundle?) {
-                        // Custom event
-                    }
-                })
-
-                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                    putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, language)
-                    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                    putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-                    // Use shorter silence timeout for better user experience (1.5 seconds of silence)
-                    putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
-                    putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
-                    // Note: maxDurationMs parameter is not directly enforced by the recognizer
-                    // For true max duration enforcement, consider implementing a timeout mechanism
                 }
-
-                recognizer.startListening(intent)
-                
-                // Set up cancellation
-                continuation.invokeOnCancellation {
-                    recognizer?.stopListening()
-                    recognizer?.destroy()
-                }
-                
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to start recognition", e)
-                recognizer?.destroy()
-                if (continuation.isActive) {
-                    continuation.resume(Result.failure(TranscriptionError.UnknownError(name, e)))
+            }
+        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+            Log.e(TAG, "Recognition timed out after ${maxDurationMs}ms")
+            return@withContext Result.failure(
+                TranscriptionError.ProviderError(
+                    name,
+                    "Recognition timed out after ${maxDurationMs}ms"
+                )
+            )
+        }
+    }
                 }
             }
         }

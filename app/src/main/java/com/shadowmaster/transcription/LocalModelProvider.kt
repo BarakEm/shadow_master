@@ -64,6 +64,8 @@ class LocalModelProvider(
         const val ES_SMALL_NAME = "vosk-model-small-es-0.42"
         
         // Chinese models
+        // Note: Model filename uses "cn" but ISO 639-1 code is "zh"
+        // Both codes are accepted in getModelForLanguage() for convenience
         private const val CN_SMALL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip"
         const val CN_SMALL_NAME = "vosk-model-small-cn-0.22"
         
@@ -92,6 +94,30 @@ class LocalModelProvider(
         const val BASE_MODEL_NAME = EN_BASE_NAME
         const val TINY_MODEL_SIZE_MB = 40
         const val BASE_MODEL_SIZE_MB = 75
+        
+        /**
+         * Map of language codes (and aliases) to their corresponding model names.
+         * This is the single source of truth for language-to-model mapping.
+         * 
+         * Note: "cn" is included as an alias for Chinese alongside the standard "zh" code.
+         * The model files use "cn" in their names (vosk-model-small-cn-0.22) but the
+         * ISO 639-1 standard code is "zh". Both are accepted for convenience.
+         */
+        private val LANGUAGE_MODEL_MAP: Map<String, String> = mapOf(
+            "en" to EN_SMALL_NAME,
+            "de" to DE_SMALL_NAME,
+            "ar" to AR_SMALL_NAME,
+            "fr" to FR_SMALL_NAME,
+            "es" to ES_SMALL_NAME,
+            "zh" to CN_SMALL_NAME,  // Standard ISO 639-1 code
+            "cn" to CN_SMALL_NAME,  // Alias matching model filename
+            "ru" to RU_SMALL_NAME,
+            "it" to IT_SMALL_NAME,
+            "pt" to PT_SMALL_NAME,
+            "tr" to TR_SMALL_NAME,
+            "he" to HE_SMALL_NAME,
+            "iw" to HE_SMALL_NAME   // Old Hebrew code (deprecated but still in use)
+        )
 
         /**
          * Get the model directory path.
@@ -185,27 +211,15 @@ class LocalModelProvider(
         fun getModelForLanguage(languageCode: String): String? {
             // Extract base language code (e.g., "en" from "en-US")
             val baseLang = languageCode.lowercase().split("-", "_").firstOrNull() ?: return null
-            
-            return when (baseLang) {
-                "en" -> EN_SMALL_NAME
-                "de" -> DE_SMALL_NAME
-                "ar" -> AR_SMALL_NAME
-                "fr" -> FR_SMALL_NAME
-                "es" -> ES_SMALL_NAME
-                "zh", "cn" -> CN_SMALL_NAME
-                "ru" -> RU_SMALL_NAME
-                "it" -> IT_SMALL_NAME
-                "pt" -> PT_SMALL_NAME
-                "tr" -> TR_SMALL_NAME
-                "he", "iw" -> HE_SMALL_NAME  // iw is old Hebrew code
-                else -> null
-            }
+            return LANGUAGE_MODEL_MAP[baseLang]
         }
         
         /**
          * Get all supported language codes.
+         * This list is derived from LANGUAGE_MODEL_MAP to ensure consistency.
          */
         fun getSupportedLanguages(): List<String> {
+            // Return only the primary codes (exclude aliases like "cn" and "iw")
             return listOf("en", "de", "ar", "fr", "es", "zh", "ru", "it", "pt", "tr", "he")
         }
     }
@@ -450,6 +464,7 @@ class LocalModelProvider(
         ES_SMALL(ES_SMALL_NAME, 39, "Spanish (Small, ~39MB)", "Español", "es"),
         
         // Chinese models
+        // Note: Enum name is CN_SMALL (matching model filename), but languageCode is "zh" (ISO 639-1 standard)
         CN_SMALL(CN_SMALL_NAME, 42, "Chinese (Small, ~42MB)", "中文", "zh"),
         
         // Russian models
@@ -492,7 +507,14 @@ class LocalModelProvider(
                 return getModelsForLanguage(languageCode).firstOrNull()
             }
             
-            // Backward compatibility aliases
+            /**
+             * Backward compatibility aliases.
+             * 
+             * Note: These are companion object properties, not enum constants.
+             * They provide convenient access to the enum values but will not appear
+             * when iterating over enum values or in exhaustive when expressions.
+             * Use EN_SMALL and EN_BASE directly for new code.
+             */
             @Deprecated("Use EN_SMALL instead", ReplaceWith("EN_SMALL"))
             val TINY = EN_SMALL
             
