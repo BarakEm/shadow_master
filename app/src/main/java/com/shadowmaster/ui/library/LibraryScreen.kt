@@ -342,14 +342,7 @@ fun LibraryScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Edit Segment")
                     Spacer(modifier = Modifier.width(8.dp))
-                    AssistChip(
-                        onClick = { },
-                        label = { Text("Experimental", style = MaterialTheme.typography.labelSmall) },
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                            labelColor = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                    )
+                    ExperimentalBadge()
                 }
             },
             text = {
@@ -671,14 +664,7 @@ fun LibraryScreen(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Transcribe Playlist")
                     Spacer(modifier = Modifier.width(8.dp))
-                    AssistChip(
-                        onClick = { },
-                        label = { Text("Experimental", style = MaterialTheme.typography.labelSmall) },
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                            labelColor = MaterialTheme.colorScheme.onTertiaryContainer
-                        )
-                    )
+                    ExperimentalBadge()
                 }
             },
             text = {
@@ -2094,4 +2080,20 @@ fun FailedImportCardPreview() {
             )
         }
     }
+}
+
+/**
+ * Experimental badge to indicate features that are still in development
+ */
+@Composable
+private fun ExperimentalBadge() {
+    SuggestionChip(
+        onClick = { },
+        label = { Text("Experimental", style = MaterialTheme.typography.labelSmall) },
+        colors = SuggestionChipDefaults.suggestionChipColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            labelColor = MaterialTheme.colorScheme.onTertiaryContainer
+        ),
+        border = null
+    )
 }

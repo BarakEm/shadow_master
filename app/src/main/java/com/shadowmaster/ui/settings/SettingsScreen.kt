@@ -531,14 +531,7 @@ private fun TranscriptionServicesSection(
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.width(8.dp))
-            AssistChip(
-                onClick = { },
-                label = { Text("Experimental", style = MaterialTheme.typography.labelSmall) },
-                colors = AssistChipDefaults.assistChipColors(
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    labelColor = MaterialTheme.colorScheme.onTertiaryContainer
-                )
-            )
+            ExperimentalBadge()
         }
 
         HorizontalDivider()
@@ -753,14 +746,7 @@ private fun TranscriptionProviderSelector(
                 style = MaterialTheme.typography.titleMedium
             )
             Spacer(modifier = Modifier.width(8.dp))
-            AssistChip(
-                onClick = { },
-                label = { Text("Experimental", style = MaterialTheme.typography.labelSmall) },
-                colors = AssistChipDefaults.assistChipColors(
-                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    labelColor = MaterialTheme.colorScheme.onTertiaryContainer
-                )
-            )
+            ExperimentalBadge()
         }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
@@ -1291,4 +1277,20 @@ fun SwitchSettingPreview() {
             )
         }
     }
+}
+
+/**
+ * Experimental badge to indicate features that are still in development
+ */
+@Composable
+private fun ExperimentalBadge() {
+    SuggestionChip(
+        onClick = { },
+        label = { Text("Experimental", style = MaterialTheme.typography.labelSmall) },
+        colors = SuggestionChipDefaults.suggestionChipColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            labelColor = MaterialTheme.colorScheme.onTertiaryContainer
+        ),
+        border = null
+    )
 }
