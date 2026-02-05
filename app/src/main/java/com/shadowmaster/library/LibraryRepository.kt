@@ -150,8 +150,9 @@ class LibraryRepository @Inject constructor(
         playlistId: String,
         playlistName: String,
         config: ShadowingConfig,
-        includeYourTurnSilence: Boolean = true
-    ): Result<String> = audioExporter.exportPlaylist(playlistId, playlistName, config, includeYourTurnSilence)
+        includeYourTurnSilence: Boolean = true,
+        format: ExportFormat = ExportFormat.MP3
+    ): Result<String> = audioExporter.exportPlaylist(playlistId, playlistName, config, includeYourTurnSilence, format)
 
     fun getExportProgress(): StateFlow<ExportProgress> = audioExporter.exportProgress
 

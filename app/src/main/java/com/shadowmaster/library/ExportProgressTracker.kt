@@ -15,6 +15,7 @@ data class ExportProgress(
     val currentSegment: Int = 0,
     val totalSegments: Int = 0,
     val outputPath: String? = null,
+    val outputUri: android.net.Uri? = null,
     val error: String? = null
 )
 
@@ -28,6 +29,14 @@ enum class ExportStatus {
     ENCODING,
     COMPLETED,
     FAILED
+}
+
+/**
+ * Audio export format.
+ */
+enum class ExportFormat {
+    WAV,
+    MP3
 }
 
 /**
@@ -80,13 +89,14 @@ class ExportProgressTracker @Inject constructor() {
     /**
      * Mark export as completed.
      */
-    fun complete(totalSegments: Int, outputPath: String) {
+    fun complete(totalSegments: Int, outputPath: String, outputUri: android.net.Uri? = null) {
         _exportProgress.value = ExportProgress(
             status = ExportStatus.COMPLETED,
             progress = 100,
             totalSegments = totalSegments,
             currentSegment = totalSegments,
-            outputPath = outputPath
+            outputPath = outputPath,
+            outputUri = outputUri
         )
     }
 

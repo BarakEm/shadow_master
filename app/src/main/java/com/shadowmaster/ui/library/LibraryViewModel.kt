@@ -285,14 +285,15 @@ class LibraryViewModel @Inject constructor(
             initialValue = ExportProgress(com.shadowmaster.library.ExportStatus.IDLE)
         )
 
-    fun exportPlaylist(playlist: ShadowPlaylist, includeYourTurnSilence: Boolean = true) {
+    fun exportPlaylist(playlist: ShadowPlaylist, includeYourTurnSilence: Boolean = true, format: com.shadowmaster.library.ExportFormat = com.shadowmaster.library.ExportFormat.MP3) {
         viewModelScope.launch {
             val config = settingsRepository.configBlocking
             val result = libraryRepository.exportPlaylist(
                 playlistId = playlist.id,
                 playlistName = playlist.name,
                 config = config,
-                includeYourTurnSilence = includeYourTurnSilence
+                includeYourTurnSilence = includeYourTurnSilence,
+                format = format
             )
             result.onSuccess { path ->
                 _importSuccess.value = "Exported to $path"
