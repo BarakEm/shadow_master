@@ -338,7 +338,13 @@ fun LibraryScreen(
         var translation by remember { mutableStateOf(item.translation ?: "") }
         AlertDialog(
             onDismissRequest = { showEditItemDialog = null },
-            title = { Text("Edit Segment") },
+            title = { 
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Edit Segment")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    ExperimentalBadge()
+                }
+            },
             text = {
                 Column {
                     Text(
@@ -654,7 +660,13 @@ fun LibraryScreen(
 
         AlertDialog(
             onDismissRequest = { if (!transcriptionInProgress) showTranscribeDialog = null },
-            title = { Text("Transcribe Playlist") },
+            title = { 
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Transcribe Playlist")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    ExperimentalBadge()
+                }
+            },
             text = {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     if (transcriptionInProgress) {
@@ -2067,5 +2079,23 @@ fun FailedImportCardPreview() {
                 onDismiss = {}
             )
         }
+    }
+}
+
+/**
+ * Experimental badge to indicate features that are still in development
+ */
+@Composable
+private fun ExperimentalBadge() {
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.tertiaryContainer
+    ) {
+        Text(
+            text = "Experimental",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onTertiaryContainer,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
     }
 }

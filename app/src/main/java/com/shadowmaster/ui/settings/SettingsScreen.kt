@@ -520,13 +520,19 @@ private fun TranscriptionServicesSection(
             .fillMaxWidth()
             .padding(vertical = 8.dp)
     ) {
-        // Section Header
-        Text(
-            text = "Transcription Services",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.primary,
+        // Section Header with Experimental badge
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
+        ) {
+            Text(
+                text = "Transcription Services",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            ExperimentalBadge()
+        }
 
         HorizontalDivider()
 
@@ -734,10 +740,14 @@ private fun TranscriptionProviderSelector(
             .clickable { expanded = true }
             .padding(16.dp)
     ) {
-        Text(
-            text = "Default Provider",
-            style = MaterialTheme.typography.titleMedium
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "Default Provider",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            ExperimentalBadge()
+        }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = providers[selectedProvider] ?: "Unknown",
@@ -1266,5 +1276,23 @@ fun SwitchSettingPreview() {
                 onCheckedChange = {}
             )
         }
+    }
+}
+
+/**
+ * Experimental badge to indicate features that are still in development
+ */
+@Composable
+private fun ExperimentalBadge() {
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.tertiaryContainer
+    ) {
+        Text(
+            text = "Experimental",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onTertiaryContainer,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
     }
 }
