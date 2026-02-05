@@ -491,12 +491,12 @@ class LocalModelProvider(
             fun getRecommendedModelForLanguage(languageCode: String): VoskModel? {
                 return getModelsForLanguage(languageCode).firstOrNull()
             }
-        }
-        
-        // Backward compatibility aliases
-        @Deprecated("Use EN_SMALL instead", ReplaceWith("EN_SMALL"))
-        companion object {
+            
+            // Backward compatibility aliases
+            @Deprecated("Use EN_SMALL instead", ReplaceWith("EN_SMALL"))
             val TINY = EN_SMALL
+            
+            @Deprecated("Use EN_BASE instead", ReplaceWith("EN_BASE"))
             val BASE = EN_BASE
         }
     }
