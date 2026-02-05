@@ -2,9 +2,6 @@ package com.shadowmaster.transcription
 
 import android.content.Context
 import android.content.Intent
-import android.media.AudioFormat
-import android.media.AudioRecord
-import android.media.MediaRecorder
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -49,11 +46,6 @@ class AndroidSpeechProvider(
 
     companion object {
         private const val TAG = "AndroidSpeechProvider"
-        
-        // Audio format matching our standard: 16kHz mono PCM
-        private const val SAMPLE_RATE = 16000
-        private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
-        private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
     }
 
     override suspend fun validateConfiguration(): Result<Unit> {
@@ -216,9 +208,11 @@ class AndroidSpeechProvider(
                     putExtra(RecognizerIntent.EXTRA_LANGUAGE, language)
                     putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
                     putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-                    // Use speech timeout to limit recording duration
-                    putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, maxDurationMs)
-                    putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 3000L)
+                    // Use shorter silence timeout for better user experience (1.5 seconds of silence)
+                    putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
+                    putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
+                    // Note: maxDurationMs parameter is not directly enforced by the recognizer
+                    // For true max duration enforcement, consider implementing a timeout mechanism
                 }
 
                 recognizer.startListening(intent)
