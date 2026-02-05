@@ -453,6 +453,7 @@ fun LibraryScreen(
     // Export dialog
     showExportDialog?.let { playlist ->
         var includeYourTurnSilence by remember { mutableStateOf(true) }
+        var selectedFormat by remember { mutableStateOf(com.shadowmaster.library.ExportFormat.MP3) }
         AlertDialog(
             onDismissRequest = { showExportDialog = null },
             title = { Text("Export Playlist") },
@@ -462,6 +463,33 @@ fun LibraryScreen(
                         text = "Export \"${playlist.name}\" as a practice audio file",
                         style = MaterialTheme.typography.bodyMedium
                     )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Format selection
+                    Text(
+                        text = "Format:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterChip(
+                            selected = selectedFormat == com.shadowmaster.library.ExportFormat.MP3,
+                            onClick = { selectedFormat = com.shadowmaster.library.ExportFormat.MP3 },
+                            label = { Text("MP3 (Smaller)") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        FilterChip(
+                            selected = selectedFormat == com.shadowmaster.library.ExportFormat.WAV,
+                            onClick = { selectedFormat = com.shadowmaster.library.ExportFormat.WAV },
+                            label = { Text("WAV (Quality)") },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "The exported file will include:",
@@ -500,7 +528,7 @@ fun LibraryScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.exportPlaylist(playlist, includeYourTurnSilence)
+                        viewModel.exportPlaylist(playlist, includeYourTurnSilence, selectedFormat)
                         showExportDialog = null
                     }
                 ) {
@@ -767,6 +795,11 @@ fun LibraryScreen(
 
     // Export progress dialog
     if (exportProgress.status != ExportStatus.IDLE) {
+        // Share launcher for exporting
+        val shareLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.StartActivityForResult()
+        ) { /* Share completed */ }
+        
         AlertDialog(
             onDismissRequest = {
                 if (exportProgress.status == ExportStatus.COMPLETED || exportProgress.status == ExportStatus.FAILED) {
@@ -805,7 +838,35 @@ fun LibraryScreen(
                 }
             },
             confirmButton = {
-                if (exportProgress.status == ExportStatus.COMPLETED || exportProgress.status == ExportStatus.FAILED) {
+                if (exportProgress.status == ExportStatus.COMPLETED) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Share button
+                        if (exportProgress.outputUri != null) {
+                            TextButton(
+                                onClick = {
+                                    val shareIntent = android.content.Intent().apply {
+                                        action = android.content.Intent.ACTION_SEND
+                                        putExtra(android.content.Intent.EXTRA_STREAM, exportProgress.outputUri)
+                                        type = "audio/*"
+                                        flags = android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                    }
+                                    shareLauncher.launch(android.content.Intent.createChooser(shareIntent, "Share Audio"))
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Share,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text("Share")
+                            }
+                        }
+                        TextButton(onClick = { viewModel.clearExportProgress() }) {
+                            Text("OK")
+                        }
+                    }
+                } else if (exportProgress.status == ExportStatus.FAILED) {
                     TextButton(onClick = { viewModel.clearExportProgress() }) {
                         Text("OK")
                     }
@@ -1425,7 +1486,7 @@ private fun PlaylistCard(
     ) {
         Column(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(20.dp)  // Increased from 16.dp
                 .fillMaxWidth()
         ) {
             // First row: Icon and playlist info
@@ -1433,11 +1494,11 @@ private fun PlaylistCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Playlist icon
+                // Playlist icon - larger
                 Icon(
                     imageVector = Icons.Default.PlaylistPlay,
                     contentDescription = null,
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier.size(56.dp),  // Increased from 48.dp
                     tint = MaterialTheme.colorScheme.primary
                 )
 
@@ -1447,7 +1508,7 @@ private fun PlaylistCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = playlist.name,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,  // Changed from titleMedium
                         fontWeight = FontWeight.Medium,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
@@ -1457,13 +1518,13 @@ private fun PlaylistCard(
                     ) {
                         Text(
                             text = playlist.language.uppercase(),
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.labelMedium,  // Changed from labelSmall
                             color = MaterialTheme.colorScheme.primary
                         )
                         lastPracticedText?.let {
                             Text(
                                 text = it,
-                                style = MaterialTheme.typography.bodySmall,
+                                style = MaterialTheme.typography.bodyMedium,  // Changed from bodySmall
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
@@ -1471,67 +1532,67 @@ private fun PlaylistCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))  // Increased from 12.dp
 
-            // Second row: Action buttons
+            // Second row: Action buttons - larger
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Primary action - Practice button
+                // Primary action - Practice button - larger
                 FilledTonalButton(
                     onClick = onPlayClick,
                     modifier = Modifier.padding(end = 8.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)  // Increased
                 ) {
                     Icon(
                         imageVector = Icons.Default.PlayArrow,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(22.dp)  // Increased from 18.dp
                     )
-                    Spacer(Modifier.width(4.dp))
-                    Text("Practice", style = MaterialTheme.typography.labelMedium)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Practice", style = MaterialTheme.typography.labelLarge)  // Changed from labelMedium
                 }
 
-                // Secondary actions - less prominent
-                IconButton(onClick = onTranscribeClick, modifier = Modifier.size(36.dp)) {
+                // Secondary actions - larger touch targets
+                IconButton(onClick = onTranscribeClick, modifier = Modifier.size(44.dp)) {  // Increased from 36.dp
                     Icon(
                         imageVector = Icons.Default.Subtitles,
                         contentDescription = "Transcribe",
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(24.dp),  // Increased from 20.dp
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                IconButton(onClick = onExportClick, modifier = Modifier.size(36.dp)) {
+                IconButton(onClick = onExportClick, modifier = Modifier.size(44.dp)) {  // Increased from 36.dp
                     Icon(
                         imageVector = Icons.Default.Share,
                         contentDescription = "Export",
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(24.dp),  // Increased from 20.dp
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                IconButton(onClick = onResegmentClick, modifier = Modifier.size(36.dp)) {
+                IconButton(onClick = onResegmentClick, modifier = Modifier.size(44.dp)) {  // Increased from 36.dp
                     Icon(
                         imageVector = Icons.Default.AutoAwesome,
                         contentDescription = "Re-segment",
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(24.dp),  // Increased from 20.dp
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                IconButton(onClick = onRenameClick, modifier = Modifier.size(36.dp)) {
+                IconButton(onClick = onRenameClick, modifier = Modifier.size(44.dp)) {  // Increased from 36.dp
                     Icon(
                         imageVector = Icons.Default.Edit,
                         contentDescription = "Rename",
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(24.dp),  // Increased from 20.dp
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                IconButton(onClick = onDeleteClick, modifier = Modifier.size(36.dp)) {
+                IconButton(onClick = onDeleteClick, modifier = Modifier.size(44.dp)) {  // Increased from 36.dp
                     Icon(
                         imageVector = Icons.Default.Delete,
                         contentDescription = "Delete",
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier.size(24.dp),  // Increased from 20.dp
                         tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
                     )
                 }

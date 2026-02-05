@@ -27,6 +27,7 @@ class AudioExporter @Inject constructor(
     private val shadowItemDao: ShadowItemDao,
     private val playlistExporter: PlaylistExporter,
     private val wavFileCreator: WavFileCreator,
+    private val mp3FileCreator: Mp3FileCreator,
     private val progressTracker: ExportProgressTracker
 ) {
     companion object {
@@ -45,12 +46,14 @@ class AudioExporter @Inject constructor(
      * @param playlistName Name for the output file
      * @param config Shadowing configuration (repeats, speed, etc.)
      * @param includeYourTurnSilence Whether to include silence gaps for user to practice
+     * @param format Export format (WAV or MP3)
      */
     suspend fun exportPlaylist(
         playlistId: String,
         playlistName: String,
         config: ShadowingConfig,
-        includeYourTurnSilence: Boolean = true
+        includeYourTurnSilence: Boolean = true,
+        format: ExportFormat = ExportFormat.MP3
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             progressTracker.startPreparing()
@@ -83,18 +86,21 @@ class AudioExporter @Inject constructor(
                 outputStream.flush()
                 outputStream.close()
 
-                // Convert to WAV and save
+                // Convert to selected format and save
                 progressTracker.startEncoding()
 
-                val outputPath = wavFileCreator.saveAsWav(tempPcmFile, playlistName)
+                val result = when (format) {
+                    ExportFormat.WAV -> wavFileCreator.saveAsWav(tempPcmFile, playlistName)
+                    ExportFormat.MP3 -> mp3FileCreator.saveAsMp3(tempPcmFile, playlistName)
+                }
 
                 // Clean up temp file
                 tempPcmFile.delete()
 
-                progressTracker.complete(items.size, outputPath)
+                progressTracker.complete(items.size, result.path, result.uri)
 
-                Log.i(TAG, "Export completed: $outputPath")
-                Result.success(outputPath)
+                Log.i(TAG, "Export completed: ${result.path}")
+                Result.success(result.path)
 
             } catch (e: Exception) {
                 outputStream.close()
