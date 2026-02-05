@@ -1284,13 +1284,16 @@ fun SwitchSettingPreview() {
  */
 @Composable
 private fun ExperimentalBadge() {
-    SuggestionChip(
-        onClick = { },
-        label = { Text("Experimental", style = MaterialTheme.typography.labelSmall) },
-        colors = SuggestionChipDefaults.suggestionChipColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-            labelColor = MaterialTheme.colorScheme.onTertiaryContainer
-        ),
-        border = null
-    )
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        modifier = Modifier.padding(0.dp)
+    ) {
+        Text(
+            text = "Experimental",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onTertiaryContainer,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
+    }
 }
