@@ -51,6 +51,7 @@ enum class TranscriptionProviderType(
 ) {
     IVRIT_AI("ivrit", "ivrit.ai (Hebrew)", isFree = true),
     LOCAL("local", "Local Model", isFree = true),
+    ANDROID_SPEECH("android_speech", "Google Speech (Free)", isFree = true),
     GOOGLE("google", "Google Speech-to-Text", isFree = false),
     AZURE("azure", "Azure Speech Services", isFree = false),
     WHISPER("whisper", "OpenAI Whisper", isFree = false),

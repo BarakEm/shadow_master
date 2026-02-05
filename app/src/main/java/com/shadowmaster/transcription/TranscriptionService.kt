@@ -46,6 +46,9 @@ class TranscriptionService @Inject constructor(
                     LocalModelProvider(context, path)
                 }
             }
+            TranscriptionProviderType.ANDROID_SPEECH -> {
+                AndroidSpeechProvider(context)
+            }
             TranscriptionProviderType.GOOGLE -> {
                 GoogleSpeechProvider(config.googleApiKey)
             }
@@ -128,6 +131,7 @@ class TranscriptionService @Inject constructor(
         return listOf(
             TranscriptionProviderType.IVRIT_AI,
             TranscriptionProviderType.LOCAL,
+            TranscriptionProviderType.ANDROID_SPEECH,
             TranscriptionProviderType.GOOGLE,
             TranscriptionProviderType.AZURE,
             TranscriptionProviderType.WHISPER,

@@ -96,6 +96,21 @@ class TranscriptionServiceTest {
         assertTrue(provider is LocalModelProvider)
     }
 
+    @Test
+    fun `createProvider creates AndroidSpeechProvider with valid config`() {
+        // Given
+        val config = ProviderConfig() // No config needed for Android Speech
+
+        // When
+        val provider = service.createProvider(TranscriptionProviderType.ANDROID_SPEECH, config)
+
+        // Then
+        assertNotNull(provider)
+        assertTrue(provider is AndroidSpeechProvider)
+        assertEquals("Google Speech (Free)", provider?.name)
+        assertFalse(provider?.requiresApiKey ?: true)
+    }
+
     // ==================== Provider Validation Tests ====================
 
     @Test
@@ -217,6 +232,7 @@ class TranscriptionServiceTest {
         assertTrue(providers.contains(TranscriptionProviderType.AZURE))
         assertTrue(providers.contains(TranscriptionProviderType.WHISPER))
         assertTrue(providers.contains(TranscriptionProviderType.LOCAL))
+        assertTrue(providers.contains(TranscriptionProviderType.ANDROID_SPEECH))
         assertTrue(providers.contains(TranscriptionProviderType.CUSTOM))
     }
 
@@ -226,7 +242,7 @@ class TranscriptionServiceTest {
         val providers = service.getAvailableProviders()
 
         // Then
-        assertEquals(6, providers.size)
+        assertEquals(7, providers.size)
     }
 
     // ==================== Transcription Tests ====================
