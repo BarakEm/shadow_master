@@ -100,11 +100,18 @@ class Mp3FileCreator @Inject constructor(
                         if (chunkSize > 0) {
                             inputBuffer.clear()
                             inputBuffer.put(pcmData, inputOffset, chunkSize)
-                            codec.queueInputBuffer(inputBufferId, 0, chunkSize, 0, 0)
                             inputOffset += chunkSize
-                        }
-                        
-                        if (inputOffset >= pcmData.size) {
+                            
+                            // Send EOS flag with the last chunk of data
+                            val isLastChunk = inputOffset >= pcmData.size
+                            val flags = if (isLastChunk) MediaCodec.BUFFER_FLAG_END_OF_STREAM else 0
+                            codec.queueInputBuffer(inputBufferId, 0, chunkSize, 0, flags)
+                            
+                            if (isLastChunk) {
+                                allInputSent = true
+                            }
+                        } else if (inputOffset >= pcmData.size) {
+                            // No more data to send, send EOS with empty buffer
                             codec.queueInputBuffer(inputBufferId, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
                             allInputSent = true
                         }
