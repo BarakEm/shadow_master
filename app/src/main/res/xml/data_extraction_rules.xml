@@ -14,10 +14,8 @@
         <!-- Include shared preferences -->
         <include domain="sharedpref" path="."/>
         
-        <!-- Exclude cache and temporary files -->
-        <exclude domain="file" path="logs/"/>
-        <exclude domain="file" path="crash_reports/"/>
-        <exclude domain="cache" path="."/>
+        <!-- Note: By default, only the explicitly included paths above are backed up.
+             All other files (logs/, crash_reports/, cache, etc.) are automatically excluded. -->
     </cloud-backup>
     
     <device-transfer>
@@ -27,8 +25,8 @@
         <include domain="file" path="vosk_models/"/>
         <include domain="database" path="."/>
         <include domain="sharedpref" path="."/>
-        <exclude domain="file" path="logs/"/>
-        <exclude domain="file" path="crash_reports/"/>
-        <exclude domain="cache" path="."/>
+        
+        <!-- Note: By default, only the explicitly included paths above are transferred.
+             All other files are automatically excluded. -->
     </device-transfer>
 </data-extraction-rules>
