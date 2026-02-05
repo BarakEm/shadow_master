@@ -1,5 +1,18 @@
 # Transcription and Model Persistence Fix
 
+## Update: Build Fix (2026-02-05)
+
+**Issue:** Initial implementation caused Android lint errors during APK build:
+- 12 lint errors related to invalid `<exclude>` statements in backup rules
+- Trying to exclude paths not in included paths (logs/, crash_reports/)
+- Using invalid domain "cache" in data_extraction_rules.xml
+
+**Solution (Commit f3fcf32):**
+- Removed all `<exclude>` statements from both XML files
+- Android's backup system automatically excludes everything not explicitly included
+- Added clarifying comments explaining this behavior
+- Build now passes lint validation
+
 ## Problem Statement
 
 Users reported that:
@@ -46,10 +59,8 @@ Created two XML files to properly configure Android backup:
     <include domain="database" path="."/>
     <include domain="sharedpref" path="."/>
     
-    <!-- Exclude temporary data -->
-    <exclude domain="file" path="logs/"/>
-    <exclude domain="file" path="crash_reports/"/>
-    <exclude domain="cache" path="."/>
+    <!-- Note: By default, only explicitly included paths are backed up.
+         All other files (logs/, crash_reports/, cache, etc.) are automatically excluded. -->
 </full-backup-content>
 ```
 
@@ -57,13 +68,16 @@ Created two XML files to properly configure Android backup:
 ```xml
 <data-extraction-rules>
     <cloud-backup>
-        <!-- Same include/exclude rules as backup_rules.xml -->
+        <!-- Same include rules as backup_rules.xml -->
+        <!-- Only explicitly included paths are backed up -->
     </cloud-backup>
     <device-transfer>
-        <!-- Same include/exclude rules for device-to-device transfer -->
+        <!-- Same include rules for device-to-device transfer -->
     </device-transfer>
 </data-extraction-rules>
 ```
+
+**Note:** The original implementation included `<exclude>` statements, but these caused Android lint errors because you can only exclude paths that are already included. Since Android's backup system automatically excludes everything not explicitly included, the exclude statements are unnecessary.
 
 Updated `AndroidManifest.xml`:
 ```xml
