@@ -38,16 +38,58 @@ class LocalModelProvider(
     companion object {
         private const val TAG = "LocalModelProvider"
         
-        // Model URLs from Vosk Models (using small models optimized for mobile)
-        // Using lightweight models for better mobile performance
-        private const val TINY_MODEL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"
-        private const val BASE_MODEL_URL = "https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip"
+        // Vosk model definitions for multiple languages
+        // Using small models optimized for mobile devices
         
-        // Model file names (directory names after extraction)
-        const val TINY_MODEL_NAME = "vosk-model-small-en-us-0.15"
-        const val BASE_MODEL_NAME = "vosk-model-en-us-0.22"
+        // English models
+        private const val EN_SMALL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"
+        private const val EN_BASE_URL = "https://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip"
+        const val EN_SMALL_NAME = "vosk-model-small-en-us-0.15"
+        const val EN_BASE_NAME = "vosk-model-en-us-0.22"
         
-        // Model sizes (approximate)
+        // German models
+        private const val DE_SMALL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-de-0.15.zip"
+        const val DE_SMALL_NAME = "vosk-model-small-de-0.15"
+        
+        // Arabic models
+        private const val AR_SMALL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-ar-0.22-linto.zip"
+        const val AR_SMALL_NAME = "vosk-model-small-ar-0.22-linto"
+        
+        // French models
+        private const val FR_SMALL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip"
+        const val FR_SMALL_NAME = "vosk-model-small-fr-0.22"
+        
+        // Spanish models
+        private const val ES_SMALL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-es-0.42.zip"
+        const val ES_SMALL_NAME = "vosk-model-small-es-0.42"
+        
+        // Chinese models
+        private const val CN_SMALL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-cn-0.22.zip"
+        const val CN_SMALL_NAME = "vosk-model-small-cn-0.22"
+        
+        // Russian models
+        private const val RU_SMALL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip"
+        const val RU_SMALL_NAME = "vosk-model-small-ru-0.22"
+        
+        // Italian models
+        private const val IT_SMALL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-it-0.22.zip"
+        const val IT_SMALL_NAME = "vosk-model-small-it-0.22"
+        
+        // Portuguese models
+        private const val PT_SMALL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-pt-0.3.zip"
+        const val PT_SMALL_NAME = "vosk-model-small-pt-0.3"
+        
+        // Turkish models
+        private const val TR_SMALL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-tr-0.3.zip"
+        const val TR_SMALL_NAME = "vosk-model-small-tr-0.3"
+        
+        // Hebrew models
+        private const val HE_SMALL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-he-0.22.zip"
+        const val HE_SMALL_NAME = "vosk-model-small-he-0.22"
+        
+        // Backward compatibility aliases
+        const val TINY_MODEL_NAME = EN_SMALL_NAME
+        const val BASE_MODEL_NAME = EN_BASE_NAME
         const val TINY_MODEL_SIZE_MB = 40
         const val BASE_MODEL_SIZE_MB = 75
 
@@ -81,9 +123,43 @@ class LocalModelProvider(
          */
         fun getModelUrl(modelName: String): String {
             return when (modelName) {
-                TINY_MODEL_NAME -> TINY_MODEL_URL
-                BASE_MODEL_NAME -> BASE_MODEL_URL
-                else -> throw IllegalArgumentException("Unknown model: $modelName")
+                // English models
+                EN_SMALL_NAME -> EN_SMALL_URL
+                EN_BASE_NAME -> EN_BASE_URL
+                
+                // German models
+                DE_SMALL_NAME -> DE_SMALL_URL
+                
+                // Arabic models
+                AR_SMALL_NAME -> AR_SMALL_URL
+                
+                // French models
+                FR_SMALL_NAME -> FR_SMALL_URL
+                
+                // Spanish models
+                ES_SMALL_NAME -> ES_SMALL_URL
+                
+                // Chinese models
+                CN_SMALL_NAME -> CN_SMALL_URL
+                
+                // Russian models
+                RU_SMALL_NAME -> RU_SMALL_URL
+                
+                // Italian models
+                IT_SMALL_NAME -> IT_SMALL_URL
+                
+                // Portuguese models
+                PT_SMALL_NAME -> PT_SMALL_URL
+                
+                // Turkish models
+                TR_SMALL_NAME -> TR_SMALL_URL
+                
+                // Hebrew models
+                HE_SMALL_NAME -> HE_SMALL_URL
+                
+                else -> throw IllegalArgumentException("Unknown model: $modelName. Available models: " +
+                        "EN_SMALL, EN_BASE, DE_SMALL, AR_SMALL, FR_SMALL, ES_SMALL, CN_SMALL, " +
+                        "RU_SMALL, IT_SMALL, PT_SMALL, TR_SMALL, HE_SMALL")
             }
         }
 
@@ -97,6 +173,40 @@ class LocalModelProvider(
             } else {
                 false
             }
+        }
+        
+        /**
+         * Get recommended model name for a language code.
+         * Returns the small model for the specified language.
+         * 
+         * @param languageCode Language code (e.g., "en-US", "de-DE", "ar-SA")
+         * @return Model name or null if language not supported
+         */
+        fun getModelForLanguage(languageCode: String): String? {
+            // Extract base language code (e.g., "en" from "en-US")
+            val baseLang = languageCode.lowercase().split("-", "_").firstOrNull() ?: return null
+            
+            return when (baseLang) {
+                "en" -> EN_SMALL_NAME
+                "de" -> DE_SMALL_NAME
+                "ar" -> AR_SMALL_NAME
+                "fr" -> FR_SMALL_NAME
+                "es" -> ES_SMALL_NAME
+                "zh", "cn" -> CN_SMALL_NAME
+                "ru" -> RU_SMALL_NAME
+                "it" -> IT_SMALL_NAME
+                "pt" -> PT_SMALL_NAME
+                "tr" -> TR_SMALL_NAME
+                "he", "iw" -> HE_SMALL_NAME  // iw is old Hebrew code
+                else -> null
+            }
+        }
+        
+        /**
+         * Get all supported language codes.
+         */
+        fun getSupportedLanguages(): List<String> {
+            return listOf("en", "de", "ar", "fr", "es", "zh", "ru", "it", "pt", "tr", "he")
         }
     }
 
@@ -314,10 +424,80 @@ class LocalModelProvider(
     }
 
     /**
-     * Enum for available Vosk models.
+     * Enum for available Vosk models by language.
      */
-    enum class VoskModel(val fileName: String, val sizeMB: Int, val displayName: String) {
-        TINY(TINY_MODEL_NAME, TINY_MODEL_SIZE_MB, "Tiny (~40MB, fastest)"),
-        BASE(BASE_MODEL_NAME, BASE_MODEL_SIZE_MB, "Base (~75MB, more accurate)")
+    enum class VoskModel(
+        val fileName: String, 
+        val sizeMB: Int, 
+        val displayName: String,
+        val language: String,
+        val languageCode: String
+    ) {
+        // English models
+        EN_SMALL(EN_SMALL_NAME, 40, "English (Small, ~40MB)", "English", "en"),
+        EN_BASE(EN_BASE_NAME, 75, "English (Base, ~75MB)", "English", "en"),
+        
+        // German models
+        DE_SMALL(DE_SMALL_NAME, 45, "German (Small, ~45MB)", "Deutsch", "de"),
+        
+        // Arabic models
+        AR_SMALL(AR_SMALL_NAME, 45, "Arabic (Small, ~45MB)", "العربية", "ar"),
+        
+        // French models
+        FR_SMALL(FR_SMALL_NAME, 39, "French (Small, ~39MB)", "Français", "fr"),
+        
+        // Spanish models
+        ES_SMALL(ES_SMALL_NAME, 39, "Spanish (Small, ~39MB)", "Español", "es"),
+        
+        // Chinese models
+        CN_SMALL(CN_SMALL_NAME, 42, "Chinese (Small, ~42MB)", "中文", "zh"),
+        
+        // Russian models
+        RU_SMALL(RU_SMALL_NAME, 45, "Russian (Small, ~45MB)", "Русский", "ru"),
+        
+        // Italian models
+        IT_SMALL(IT_SMALL_NAME, 48, "Italian (Small, ~48MB)", "Italiano", "it"),
+        
+        // Portuguese models
+        PT_SMALL(PT_SMALL_NAME, 31, "Portuguese (Small, ~31MB)", "Português", "pt"),
+        
+        // Turkish models
+        TR_SMALL(TR_SMALL_NAME, 35, "Turkish (Small, ~35MB)", "Türkçe", "tr"),
+        
+        // Hebrew models
+        HE_SMALL(HE_SMALL_NAME, 38, "Hebrew (Small, ~38MB)", "עברית", "he");
+        
+        companion object {
+            /**
+             * Get available models for a specific language code.
+             * @param languageCode Language code (e.g., "en", "de", "ar")
+             * @return List of available models for that language
+             */
+            fun getModelsForLanguage(languageCode: String): List<VoskModel> {
+                val normalizedCode = languageCode.lowercase().take(2)
+                return values().filter { it.languageCode == normalizedCode }
+            }
+            
+            /**
+             * Get all supported language codes.
+             */
+            fun getSupportedLanguages(): List<String> {
+                return values().map { it.languageCode }.distinct().sorted()
+            }
+            
+            /**
+             * Get the recommended (first) model for a language.
+             */
+            fun getRecommendedModelForLanguage(languageCode: String): VoskModel? {
+                return getModelsForLanguage(languageCode).firstOrNull()
+            }
+        }
+        
+        // Backward compatibility aliases
+        @Deprecated("Use EN_SMALL instead", ReplaceWith("EN_SMALL"))
+        companion object {
+            val TINY = EN_SMALL
+            val BASE = EN_BASE
+        }
     }
 }
