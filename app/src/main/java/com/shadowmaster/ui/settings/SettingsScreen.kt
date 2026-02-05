@@ -520,13 +520,26 @@ private fun TranscriptionServicesSection(
             .fillMaxWidth()
             .padding(vertical = 8.dp)
     ) {
-        // Section Header
-        Text(
-            text = "Transcription Services",
-            style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.primary,
+        // Section Header with Experimental badge
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-        )
+        ) {
+            Text(
+                text = "Transcription Services",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            AssistChip(
+                onClick = { },
+                label = { Text("Experimental", style = MaterialTheme.typography.labelSmall) },
+                colors = AssistChipDefaults.assistChipColors(
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    labelColor = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+            )
+        }
 
         HorizontalDivider()
 
@@ -734,10 +747,21 @@ private fun TranscriptionProviderSelector(
             .clickable { expanded = true }
             .padding(16.dp)
     ) {
-        Text(
-            text = "Default Provider",
-            style = MaterialTheme.typography.titleMedium
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "Default Provider",
+                style = MaterialTheme.typography.titleMedium
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            AssistChip(
+                onClick = { },
+                label = { Text("Experimental", style = MaterialTheme.typography.labelSmall) },
+                colors = AssistChipDefaults.assistChipColors(
+                    containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                    labelColor = MaterialTheme.colorScheme.onTertiaryContainer
+                )
+            )
+        }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = providers[selectedProvider] ?: "Unknown",

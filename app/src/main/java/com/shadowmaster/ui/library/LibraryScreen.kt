@@ -338,7 +338,20 @@ fun LibraryScreen(
         var translation by remember { mutableStateOf(item.translation ?: "") }
         AlertDialog(
             onDismissRequest = { showEditItemDialog = null },
-            title = { Text("Edit Segment") },
+            title = { 
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Edit Segment")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    AssistChip(
+                        onClick = { },
+                        label = { Text("Experimental", style = MaterialTheme.typography.labelSmall) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                            labelColor = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    )
+                }
+            },
             text = {
                 Column {
                     Text(
@@ -654,7 +667,20 @@ fun LibraryScreen(
 
         AlertDialog(
             onDismissRequest = { if (!transcriptionInProgress) showTranscribeDialog = null },
-            title = { Text("Transcribe Playlist") },
+            title = { 
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Transcribe Playlist")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    AssistChip(
+                        onClick = { },
+                        label = { Text("Experimental", style = MaterialTheme.typography.labelSmall) },
+                        colors = AssistChipDefaults.assistChipColors(
+                            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+                            labelColor = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    )
+                }
+            },
             text = {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     if (transcriptionInProgress) {
