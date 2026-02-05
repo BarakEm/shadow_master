@@ -1286,8 +1286,7 @@ fun SwitchSettingPreview() {
 private fun ExperimentalBadge() {
     Surface(
         shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.tertiaryContainer,
-        modifier = Modifier.padding(0.dp)
+        color = MaterialTheme.colorScheme.tertiaryContainer
     ) {
         Text(
             text = "Experimental",
