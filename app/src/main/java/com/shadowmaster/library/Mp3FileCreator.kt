@@ -20,7 +20,7 @@ import javax.inject.Singleton
 /**
  * Handles MP3 file creation and saving operations.
  * Uses Android's MediaCodec for AAC encoding (MP3 encoding not directly available).
- * Output files have .mp3 extension but contain AAC audio in ADTS container format.
+ * Output files have .aac extension and contain AAC audio in ADTS container format.
  */
 @Singleton
 class Mp3FileCreator @Inject constructor(
@@ -42,28 +42,35 @@ class Mp3FileCreator @Inject constructor(
      */
     fun saveAsMp3(pcmFile: File, name: String): AudioFileResult {
         val sanitizedName = name.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-        val fileName = "ShadowMaster_${sanitizedName}_${System.currentTimeMillis()}.mp3"
+        val fileName = "ShadowMaster_${sanitizedName}_${System.currentTimeMillis()}.aac"
 
         // Create temp file for encoded data
         val tempEncodedFile = File(context.cacheDir, "encoded_${System.currentTimeMillis()}.aac")
         
         try {
+            Log.d(TAG, "Starting AAC encoding for: $name")
+            
             // Encode PCM to AAC
             encodePcmToAac(pcmFile, tempEncodedFile)
+            Log.d(TAG, "AAC encoding completed, output size: ${tempEncodedFile.length()} bytes")
 
             // Save to appropriate location
             val outputPath = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                Log.d(TAG, "Saving with MediaStore (Android 10+)")
                 saveWithMediaStore(fileName, tempEncodedFile)
             } else {
+                Log.d(TAG, "Saving to external storage (Android 9 and below)")
                 saveToExternalStorage(fileName, tempEncodedFile)
             }
 
             // Clean up temp file
             tempEncodedFile.delete()
+            Log.i(TAG, "AAC file saved successfully: ${outputPath.path}")
 
             return outputPath
 
         } catch (e: Exception) {
+            Log.e(TAG, "Failed to save AAC file: ${e.message}", e)
             tempEncodedFile.delete()
             throw e
         }
@@ -73,6 +80,8 @@ class Mp3FileCreator @Inject constructor(
      * Encode PCM data to AAC format using MediaCodec.
      */
     private fun encodePcmToAac(pcmFile: File, outputFile: File) {
+        Log.d(TAG, "Creating AAC encoder for ${pcmFile.length()} bytes of PCM data")
+        
         val format = MediaFormat.createAudioFormat(MIME_TYPE, SAMPLE_RATE, 1)
         format.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC)
         format.setInteger(MediaFormat.KEY_BIT_RATE, BIT_RATE)
@@ -87,6 +96,7 @@ class Mp3FileCreator @Inject constructor(
         var allInputSent = false
         
         val bufferInfo = MediaCodec.BufferInfo()
+        Log.d(TAG, "Encoder started, processing PCM data...")
 
         try {
             while (true) {
@@ -146,6 +156,7 @@ class Mp3FileCreator @Inject constructor(
             outputStream.close()
             codec.stop()
             codec.release()
+            Log.d(TAG, "Encoder stopped and released")
         }
     }
 
@@ -155,7 +166,7 @@ class Mp3FileCreator @Inject constructor(
     private fun saveWithMediaStore(fileName: String, sourceFile: File): AudioFileResult {
         val contentValues = ContentValues().apply {
             put(MediaStore.Audio.Media.DISPLAY_NAME, fileName)
-            put(MediaStore.Audio.Media.MIME_TYPE, "audio/mpeg")
+            put(MediaStore.Audio.Media.MIME_TYPE, "audio/aac")  // Fixed: was "audio/mpeg", now correct for AAC
             put(MediaStore.Audio.Media.RELATIVE_PATH, Environment.DIRECTORY_MUSIC + "/ShadowMaster")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 put(MediaStore.Audio.Media.IS_PENDING, 1)
@@ -164,21 +175,27 @@ class Mp3FileCreator @Inject constructor(
 
         val resolver = context.contentResolver
         val uri = resolver.insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, contentValues)
-            ?: throw IOException("Failed to create media store entry")
+            ?: throw IOException("Failed to create media store entry for: $fileName")
+
+        Log.d(TAG, "MediaStore entry created with URI: $uri")
 
         resolver.openOutputStream(uri)?.use { outputStream ->
             sourceFile.inputStream().use { inputStream ->
-                inputStream.copyTo(outputStream)
+                val bytesWritten = inputStream.copyTo(outputStream)
+                Log.d(TAG, "Wrote $bytesWritten bytes to MediaStore")
             }
-        } ?: throw IOException("Failed to open output stream")
+        } ?: throw IOException("Failed to open output stream for URI: $uri")
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             contentValues.clear()
             contentValues.put(MediaStore.Audio.Media.IS_PENDING, 0)
-            resolver.update(uri, contentValues, null, null)
+            val updated = resolver.update(uri, contentValues, null, null)
+            Log.d(TAG, "Updated IS_PENDING flag, rows affected: $updated")
         }
 
-        return AudioFileResult("Music/ShadowMaster/$fileName", uri)
+        val resultPath = "Music/ShadowMaster/$fileName"
+        Log.i(TAG, "File saved to: $resultPath")
+        return AudioFileResult(resultPath, uri)
     }
 
     /**
@@ -190,10 +207,17 @@ class Mp3FileCreator @Inject constructor(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC),
             "ShadowMaster"
         )
-        musicDir.mkdirs()
+        
+        if (!musicDir.exists()) {
+            val created = musicDir.mkdirs()
+            Log.d(TAG, "Creating directory: ${musicDir.absolutePath}, success: $created")
+        }
 
         val outputFile = File(musicDir, fileName)
+        Log.d(TAG, "Saving to file: ${outputFile.absolutePath}")
+        
         sourceFile.copyTo(outputFile, overwrite = true)
+        Log.i(TAG, "File saved successfully: ${outputFile.absolutePath}")
 
         return AudioFileResult(outputFile.absolutePath, android.net.Uri.fromFile(outputFile))
     }
