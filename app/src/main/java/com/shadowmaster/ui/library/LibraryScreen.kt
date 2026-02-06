@@ -59,8 +59,6 @@ fun LibraryScreen(
     var showEditItemDialog by remember { mutableStateOf<ShadowItem?>(null) }
     var showSplitDialog by remember { mutableStateOf<ShadowItem?>(null) }
     var showExportDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
-    var showResegmentDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
-    var showTranscribeDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
     var mergeMode by remember { mutableStateOf(false) }
     var showUrlImportDialog by remember { mutableStateOf(false) }
     var urlToImport by remember { mutableStateOf("") }
@@ -238,11 +236,6 @@ fun LibraryScreen(
                             onDeleteClick = { showDeleteDialog = it },
                             onRenameClick = { showRenamePlaylistDialog = it },
                             onExportClick = { showExportDialog = it },
-                            onResegmentClick = { 
-                                viewModel.selectPlaylist(it)
-                                showResegmentDialog = it 
-                            },
-                            onTranscribeClick = { showTranscribeDialog = it },
                             onStartPractice = onStartPractice,
                             onDismissFailedImport = { viewModel.dismissFailedImport(it) }
                         )
@@ -549,261 +542,6 @@ fun LibraryScreen(
         )
     }
 
-    // Resegment dialog
-    showResegmentDialog?.let { playlist ->
-        var selectedPreset by remember { mutableStateOf<com.shadowmaster.data.model.SegmentationConfig?>(null) }
-        val presets = remember { com.shadowmaster.library.SegmentationPresets.getAllPresets() }
-        
-        // Check if any item in the playlist has an importedAudioId
-        // derivedStateOf automatically tracks playlistItems reads
-        val hasImportedAudio by derivedStateOf {
-            playlistItems.any { it.importedAudioId != null }
-        }
-        val firstImportedAudioId by derivedStateOf {
-            playlistItems.firstOrNull { it.importedAudioId != null }?.importedAudioId
-        }
-
-        AlertDialog(
-            onDismissRequest = { showResegmentDialog = null },
-            title = { Text("Re-segment Audio") },
-            text = {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    if (!hasImportedAudio) {
-                        Text(
-                            text = "Re-segmentation is only available for imported audio.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    } else {
-                        Text(
-                            text = "Choose a segmentation preset to re-process \"${playlist.name}\":",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        presets.forEach { preset ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { selectedPreset = preset }
-                                    .padding(vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                RadioButton(
-                                    selected = preset.id == selectedPreset?.id,
-                                    onClick = { selectedPreset = preset }
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Column {
-                                    Text(
-                                        text = preset.name,
-                                        style = MaterialTheme.typography.bodyLarge
-                                    )
-                                    Text(
-                                        text = "Mode: ${preset.segmentMode.name}, " +
-                                               "Min: ${preset.minSegmentDurationMs}ms, " +
-                                               "Max: ${preset.maxSegmentDurationMs}ms",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                if (hasImportedAudio) {
-                    TextButton(
-                        onClick = {
-                            selectedPreset?.let { preset ->
-                                firstImportedAudioId?.let { audioId ->
-                                    viewModel.resegmentImportedAudio(
-                                        importedAudioId = audioId,
-                                        preset = preset,
-                                        playlistName = "${playlist.name} (${preset.name})"
-                                    )
-                                    showResegmentDialog = null
-                                }
-                            }
-                        },
-                        enabled = selectedPreset != null
-                    ) {
-                        Text("Re-segment")
-                    }
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showResegmentDialog = null }) {
-                    Text(if (hasImportedAudio) "Cancel" else "OK")
-                }
-            }
-        )
-    }
-
-    // Transcribe dialog - provider selection
-    showTranscribeDialog?.let { playlist ->
-        val transcriptionProgress by viewModel.transcriptionProgress.collectAsState()
-        val transcriptionInProgress by viewModel.transcriptionInProgress.collectAsState()
-        val transcriptionComplete by viewModel.transcriptionComplete.collectAsState()
-        
-        var selectedLanguage by remember { mutableStateOf(SupportedLanguage.HEBREW) }
-        var showLanguageMenu by remember { mutableStateOf(false) }
-        
-        // Auto-close dialog when transcription completes successfully
-        LaunchedEffect(transcriptionComplete) {
-            if (transcriptionComplete) {
-                showTranscribeDialog = null
-                viewModel.clearTranscriptionComplete()
-            }
-        }
-
-        AlertDialog(
-            onDismissRequest = { if (!transcriptionInProgress) showTranscribeDialog = null },
-            title = { 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Transcribe Playlist")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    ExperimentalBadge()
-                }
-            },
-            text = {
-                Column(modifier = Modifier.fillMaxWidth()) {
-                    if (transcriptionInProgress) {
-                        transcriptionProgress?.let { (current, total) ->
-                            Text("Transcribing segment $current of $total...")
-                            Spacer(modifier = Modifier.height(8.dp))
-                            LinearProgressIndicator(
-                                progress = { current.toFloat() / total.toFloat() },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-                    } else {
-                        // Language selection
-                        Text(
-                            text = "Language:",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Box {
-                            OutlinedButton(
-                                onClick = { showLanguageMenu = true },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text(selectedLanguage.displayName)
-                                Spacer(modifier = Modifier.weight(1f))
-                                Icon(
-                                    imageVector = if (showLanguageMenu) 
-                                        Icons.Default.KeyboardArrowUp 
-                                    else 
-                                        Icons.Default.KeyboardArrowDown,
-                                    contentDescription = null
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = showLanguageMenu,
-                                onDismissRequest = { showLanguageMenu = false }
-                            ) {
-                                SupportedLanguage.entries.forEach { language ->
-                                    DropdownMenuItem(
-                                        text = { Text(language.displayName) },
-                                        onClick = {
-                                            selectedLanguage = language
-                                            showLanguageMenu = false
-                                        },
-                                        trailingIcon = {
-                                            if (language == selectedLanguage) {
-                                                Icon(Icons.Default.Check, contentDescription = null)
-                                            }
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        Text("Select a transcription provider:")
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Free providers
-                        Text(
-                            "Free Services",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        FilledTonalButton(
-                            onClick = {
-                                viewModel.selectPlaylist(playlist)
-                                viewModel.transcribeAllSegments(
-                                    com.shadowmaster.transcription.TranscriptionProviderType.IVRIT_AI,
-                                    selectedLanguage.code
-                                )
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("ivrit.ai (Hebrew)")
-                        }
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        FilledTonalButton(
-                            onClick = {
-                                viewModel.selectPlaylist(playlist)
-                                viewModel.transcribeAllSegments(
-                                    com.shadowmaster.transcription.TranscriptionProviderType.LOCAL,
-                                    selectedLanguage.code
-                                )
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Local Model (Vosk)")
-                        }
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        // Paid providers (collapsed by default, can expand if needed)
-                        Text(
-                            "Paid Services (require API key)",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.secondary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        OutlinedButton(
-                            onClick = {
-                                viewModel.selectPlaylist(playlist)
-                                viewModel.transcribeAllSegments(
-                                    com.shadowmaster.transcription.TranscriptionProviderType.GOOGLE,
-                                    selectedLanguage.code
-                                )
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Google Speech")
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                if (!transcriptionInProgress) {
-                    TextButton(onClick = { showTranscribeDialog = null }) {
-                        Text("Cancel")
-                    }
-                }
-            },
-            dismissButton = {
-                if (transcriptionInProgress) {
-                    TextButton(onClick = { showTranscribeDialog = null }) {
-                        Text("Close")
-                    }
-                }
-            }
-        )
-    }
 
     // Export progress dialog
     if (exportProgress.status != ExportStatus.IDLE) {
@@ -1005,6 +743,7 @@ fun LibraryScreen(
         var playlistName by remember { mutableStateOf(audio.sourceFileName.substringBeforeLast(".")) }
         val presets = remember { com.shadowmaster.library.SegmentationPresets.getAllPresets() }
         var selectedPreset by remember { mutableStateOf<SegmentationConfig?>(presets.firstOrNull()) }
+        var enableTranscription by remember { mutableStateOf(false) }
 
         AlertDialog(
             onDismissRequest = { showCreatePlaylistDialog = null },
@@ -1053,6 +792,42 @@ fun LibraryScreen(
                             }
                         }
                     }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Transcription option
+                    Text(
+                        text = "Transcription",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { enableTranscription = !enableTranscription }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = enableTranscription,
+                            onCheckedChange = { enableTranscription = it }
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = "Auto-transcribe segments",
+                                style = MaterialTheme.typography.bodyLarge
+                            )
+                            Text(
+                                text = "Automatically transcribe all segments after creation using your default provider",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             },
             confirmButton = {
@@ -1061,7 +836,12 @@ fun LibraryScreen(
                         val name = playlistName.trim()
                         selectedPreset?.let { preset ->
                             if (name.isNotEmpty()) {
-                                viewModel.createPlaylistFromImportedAudio(audio.id, name, preset)
+                                viewModel.createPlaylistFromImportedAudio(
+                                    audio.id, 
+                                    name, 
+                                    preset,
+                                    enableTranscription
+                                )
                                 showCreatePlaylistDialog = null
                             }
                         }
@@ -1167,8 +947,6 @@ private fun PlaylistsContent(
     onDeleteClick: (ShadowPlaylist) -> Unit,
     onRenameClick: (ShadowPlaylist) -> Unit,
     onExportClick: (ShadowPlaylist) -> Unit,
-    onResegmentClick: (ShadowPlaylist) -> Unit,
-    onTranscribeClick: (ShadowPlaylist) -> Unit,
     onStartPractice: (String) -> Unit,
     onDismissFailedImport: (String) -> Unit
 ) {
@@ -1238,8 +1016,6 @@ private fun PlaylistsContent(
                     onDeleteClick = { onDeleteClick(playlist) },
                     onRenameClick = { onRenameClick(playlist) },
                     onExportClick = { onExportClick(playlist) },
-                    onResegmentClick = { onResegmentClick(playlist) },
-                    onTranscribeClick = { onTranscribeClick(playlist) },
                     onPlayClick = { onStartPractice(playlist.id) }
                 )
             }
@@ -1482,8 +1258,6 @@ private fun PlaylistCard(
     onDeleteClick: () -> Unit,
     onRenameClick: () -> Unit,
     onExportClick: () -> Unit,
-    onResegmentClick: () -> Unit,
-    onTranscribeClick: () -> Unit,
     onPlayClick: () -> Unit
 ) {
     // Memoize formatted date to avoid recalculating
@@ -1568,26 +1342,10 @@ private fun PlaylistCard(
                 }
 
                 // Secondary actions - larger touch targets
-                IconButton(onClick = onTranscribeClick, modifier = Modifier.size(44.dp)) {  // Increased from 36.dp
-                    Icon(
-                        imageVector = Icons.Default.Subtitles,
-                        contentDescription = "Transcribe",
-                        modifier = Modifier.size(24.dp),  // Increased from 20.dp
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
                 IconButton(onClick = onExportClick, modifier = Modifier.size(44.dp)) {  // Increased from 36.dp
                     Icon(
                         imageVector = Icons.Default.Share,
                         contentDescription = "Export",
-                        modifier = Modifier.size(24.dp),  // Increased from 20.dp
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                IconButton(onClick = onResegmentClick, modifier = Modifier.size(44.dp)) {  // Increased from 36.dp
-                    Icon(
-                        imageVector = Icons.Default.AutoAwesome,
-                        contentDescription = "Re-segment",
                         modifier = Modifier.size(24.dp),  // Increased from 20.dp
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1919,8 +1677,6 @@ fun PlaylistCardPreview() {
                 onDeleteClick = {},
                 onRenameClick = {},
                 onExportClick = {},
-                onResegmentClick = {},
-                onTranscribeClick = {},
                 onPlayClick = {}
             )
         }
@@ -1944,8 +1700,6 @@ fun PlaylistCardNoLastPracticedPreview() {
                 onDeleteClick = {},
                 onRenameClick = {},
                 onExportClick = {},
-                onResegmentClick = {},
-                onTranscribeClick = {},
                 onPlayClick = {}
             )
         }
