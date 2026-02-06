@@ -222,14 +222,60 @@ class LocalModelProvider(
             // Return only the primary codes (exclude aliases like "cn" and "iw")
             return listOf("en", "de", "ar", "fr", "es", "zh", "ru", "it", "pt", "tr", "he")
         }
+        
+        /**
+         * Auto-detect any downloaded models and return the first valid one.
+         * Useful for recovering from missing settings or first-time setup.
+         * 
+         * @return Path to a valid model directory, or null if none found
+         */
+        fun autoDetectModel(context: Context): String? {
+            val modelDir = getModelDir(context)
+            if (!modelDir.exists()) return null
+            
+            // Check for known models in priority order (prefer base over tiny)
+            val modelsToCheck = listOf(BASE_MODEL_NAME, TINY_MODEL_NAME)
+            for (modelName in modelsToCheck) {
+                if (isModelDownloaded(context, modelName)) {
+                    return getModelPath(context, modelName).absolutePath
+                }
+            }
+            
+            // Check for any other valid model directories
+            return modelDir.listFiles()?.find { file ->
+                file.isDirectory && file.listFiles()?.isNotEmpty() == true
+            }?.absolutePath
+        }
     }
 
     override suspend fun validateConfiguration(): Result<Unit> {
         return if (modelPath.isNullOrBlank()) {
-            Result.failure(TranscriptionError.ProviderError(name, "Model path not configured"))
+            Log.w(TAG, "Model path not configured. Checking for auto-detected models...")
+            
+            // Try to auto-detect a model
+            val detectedPath = autoDetectModel(context)
+            if (detectedPath != null) {
+                Log.i(TAG, "Auto-detected model at: $detectedPath")
+                Log.i(TAG, "Please update settings to persist this model path")
+                Result.failure(
+                    TranscriptionError.ProviderError(
+                        name,
+                        "Model path not configured. Found model at $detectedPath - please select it in settings."
+                    )
+                )
+            } else {
+                Log.e(TAG, "No models found. Please download a model first.")
+                Result.failure(
+                    TranscriptionError.ProviderError(
+                        name,
+                        "Model path not configured and no models found. Please download a model from Settings > Transcription."
+                    )
+                )
+            }
         } else {
             val modelFile = File(modelPath)
             if (!modelFile.exists()) {
+                Log.e(TAG, "Model file not found at: $modelPath")
                 Result.failure(
                     TranscriptionError.ProviderError(
                         name,
@@ -237,6 +283,7 @@ class LocalModelProvider(
                     )
                 )
             } else if (!modelFile.isDirectory || modelFile.listFiles()?.isEmpty() == true) {
+                Log.e(TAG, "Model directory is invalid at: $modelPath")
                 Result.failure(
                     TranscriptionError.ProviderError(
                         name,
@@ -244,6 +291,7 @@ class LocalModelProvider(
                     )
                 )
             } else {
+                Log.d(TAG, "Model validated successfully at: $modelPath")
                 Result.success(Unit)
             }
         }

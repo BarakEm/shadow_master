@@ -13,6 +13,14 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
+ * Result of audio file creation.
+ */
+data class AudioFileResult(
+    val path: String,
+    val uri: android.net.Uri?
+)
+
+/**
  * Handles WAV file creation and saving operations.
  * Extracted from AudioExporter for single responsibility.
  */
@@ -30,9 +38,9 @@ class WavFileCreator @Inject constructor(
      *
      * @param pcmFile The temporary PCM file
      * @param name Base name for the output file
-     * @return Path to the saved WAV file
+     * @return Result with path and URI of the saved WAV file
      */
-    fun saveAsWav(pcmFile: File, name: String): String {
+    fun saveAsWav(pcmFile: File, name: String): AudioFileResult {
         val sanitizedName = name.replace(Regex("[^a-zA-Z0-9._-]"), "_")
         val fileName = "ShadowMaster_${sanitizedName}_${System.currentTimeMillis()}.wav"
 
@@ -49,7 +57,7 @@ class WavFileCreator @Inject constructor(
     /**
      * Save using MediaStore API (Android 10+)
      */
-    private fun saveWithMediaStore(fileName: String, data: ByteArray): String {
+    private fun saveWithMediaStore(fileName: String, data: ByteArray): AudioFileResult {
         val contentValues = ContentValues().apply {
             put(MediaStore.Audio.Media.DISPLAY_NAME, fileName)
             put(MediaStore.Audio.Media.MIME_TYPE, "audio/wav")
@@ -73,14 +81,14 @@ class WavFileCreator @Inject constructor(
             resolver.update(uri, contentValues, null, null)
         }
 
-        return "Music/ShadowMaster/$fileName"
+        return AudioFileResult("Music/ShadowMaster/$fileName", uri)
     }
 
     /**
      * Save to external storage (Android 9 and below)
      */
     @Suppress("DEPRECATION")
-    private fun saveToExternalStorage(fileName: String, data: ByteArray): String {
+    private fun saveToExternalStorage(fileName: String, data: ByteArray): AudioFileResult {
         val musicDir = File(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC),
             "ShadowMaster"
@@ -90,6 +98,6 @@ class WavFileCreator @Inject constructor(
         val outputFile = File(musicDir, fileName)
         FileOutputStream(outputFile).use { it.write(data) }
 
-        return outputFile.absolutePath
+        return AudioFileResult(outputFile.absolutePath, android.net.Uri.fromFile(outputFile))
     }
 }

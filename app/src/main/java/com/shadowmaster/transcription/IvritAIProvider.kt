@@ -26,9 +26,14 @@ import java.util.concurrent.TimeUnit
  * - Supports various audio formats
  * - Fast and accurate Hebrew transcription
  * 
- * Note: The API endpoint and response format are based on the expected
- * ivrit.ai service design. If the API is not responding as expected,
- * check the logs for detailed error messages and verify the service is available.
+ * Note: This implementation is based on the expected ivrit.ai API design.
+ * The actual API endpoint and response format may vary. If transcription fails,
+ * check the logs for detailed error messages and response format.
+ * 
+ * Common Issues:
+ * - If API endpoint has changed, update TRANSCRIBE_ENDPOINT constant
+ * - If response format is different, update JSON parsing in transcribe()
+ * - Network issues may require retry logic
  */
 class IvritAIProvider(
     private val apiKey: String? = null

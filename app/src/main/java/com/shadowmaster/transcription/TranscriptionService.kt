@@ -38,8 +38,12 @@ class TranscriptionService @Inject constructor(
                 IvritAIProvider(config.ivritApiKey)
             }
             TranscriptionProviderType.LOCAL -> {
-                config.localModelPath?.let { modelPath ->
-                    LocalModelProvider(context, modelPath)
+                // Auto-detect model path if not configured
+                val modelPath = config.localModelPath 
+                    ?: LocalModelProvider.autoDetectModel(context)
+                
+                modelPath?.let { path ->
+                    LocalModelProvider(context, path)
                 }
             }
             TranscriptionProviderType.ANDROID_SPEECH -> {
