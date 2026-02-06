@@ -10,6 +10,7 @@ import android.util.Log
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.shadowmaster.audio.BeepGenerator
 import com.shadowmaster.feedback.AudioFeedbackSystem
 import com.shadowmaster.data.model.ImportStatus
 import com.shadowmaster.data.model.PracticeMode
@@ -171,9 +172,7 @@ class PracticeViewModel @Inject constructor(
 
             // Play transition beep for next item
             if (index < itemsList.size - 1 && cfg.audioFeedbackEnabled) {
-                withContext(Dispatchers.Main) {
-                    audioFeedbackSystem.playListening()
-                }
+                playBeep(BeepGenerator.SEGMENT_END_BEEP_FREQ, cfg.beepDurationMs)
                 delay(300)
             }
         }
@@ -208,8 +207,8 @@ class PracticeViewModel @Inject constructor(
             _state.value = PracticeState.Playing(index, repeat)
 
             if (cfg.audioFeedbackEnabled) {
-                withContext(Dispatchers.Main) { audioFeedbackSystem.playPlaybackStart() }
-                delay(150)
+                playBeep(BeepGenerator.PLAYBACK_BEEP_FREQ, cfg.beepDurationMs)
+                delay(300)
             }
 
             playAudioFile(item.audioFilePath)
@@ -219,7 +218,7 @@ class PracticeViewModel @Inject constructor(
             if (busMode) {
                 delay(silenceBetweenRepeats)
                 if (repeat == repeats && cfg.audioFeedbackEnabled) {
-                    withContext(Dispatchers.Main) { audioFeedbackSystem.playListening() }
+                    playBeep(BeepGenerator.SEGMENT_END_BEEP_FREQ, cfg.beepDurationMs)
                 }
                 continue
             }
@@ -228,8 +227,8 @@ class PracticeViewModel @Inject constructor(
             _state.value = PracticeState.UserRecording(index, repeat)
 
             if (cfg.audioFeedbackEnabled) {
-                withContext(Dispatchers.Main) { audioFeedbackSystem.playRecordingStart() }
-                delay(200)
+                playDoubleBeep(BeepGenerator.YOUR_TURN_BEEP_FREQ, cfg.beepDurationMs)
+                delay(300)
             }
 
             delay(item.durationMs)
@@ -292,8 +291,8 @@ class PracticeViewModel @Inject constructor(
             _state.value = PracticeState.Playing(index, step)
 
             if (cfg.audioFeedbackEnabled) {
-                withContext(Dispatchers.Main) { audioFeedbackSystem.playPlaybackStart() }
-                delay(150)
+                playBeep(BeepGenerator.PLAYBACK_BEEP_FREQ, cfg.beepDurationMs)
+                delay(300)
             }
 
             // Play the partial audio from alignedOffset to end
@@ -306,8 +305,8 @@ class PracticeViewModel @Inject constructor(
             _state.value = PracticeState.UserRecording(index, step)
 
             if (cfg.audioFeedbackEnabled) {
-                withContext(Dispatchers.Main) { audioFeedbackSystem.playRecordingStart() }
-                delay(200)
+                playDoubleBeep(BeepGenerator.YOUR_TURN_BEEP_FREQ, cfg.beepDurationMs)
+                delay(300)
             }
 
             // Silence duration matches the portion just played
@@ -316,6 +315,31 @@ class PracticeViewModel @Inject constructor(
         }
 
         libraryRepository.markItemPracticed(item.id)
+    }
+
+    /**
+     * Play a beep using AudioTrack (same audio stream as speech for audibility).
+     */
+    private suspend fun playBeep(frequency: Double, durationMs: Int) {
+        try {
+            val beepData = BeepGenerator.generateBeep(frequency, durationMs)
+            playAudioData(beepData, 0, beepData.size)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error playing beep", e)
+        }
+    }
+
+    /**
+     * Play double beep (for "your turn" indicator).
+     */
+    private suspend fun playDoubleBeep(frequency: Double, durationMs: Int, gapMs: Long = 100) {
+        try {
+            playBeep(frequency, durationMs)
+            delay(gapMs)
+            playBeep(frequency, durationMs)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error playing double beep", e)
+        }
     }
 
     /**
