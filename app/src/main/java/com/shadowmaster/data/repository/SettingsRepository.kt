@@ -12,7 +12,9 @@ import com.shadowmaster.data.model.SupportedLanguage
 import com.shadowmaster.data.model.TranslationConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -68,8 +70,9 @@ class SettingsRepository @Inject constructor(
     }
 
     // Blocking access for initial value (use sparingly)
+    // Reads actual config from DataStore synchronously
     val configBlocking: ShadowingConfig
-        get() = ShadowingConfig()
+        get() = runBlocking { config.first() }
 
     val config: Flow<ShadowingConfig> = context.dataStore.data.map { preferences ->
         ShadowingConfig(
