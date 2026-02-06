@@ -69,9 +69,10 @@ class SettingsRepository @Inject constructor(
         val TRANSLATION_CUSTOM_ENABLED = booleanPreferencesKey("translation_custom_enabled")
     }
 
-    // Blocking access for initial value (use sparingly - only for StateFlow initialValue)
+    // Blocking access for StateFlow initialValue only
     // Reads actual config from DataStore synchronously using runBlocking
-    // WARNING: Do NOT call from main/UI thread. Prefer using config.first() in coroutine contexts.
+    // ONLY use for StateFlow's initialValue parameter during ViewModel initialization
+    // For all other cases, use config.first() within a coroutine context
     val configBlocking: ShadowingConfig
         get() = runBlocking { config.first() }
 
