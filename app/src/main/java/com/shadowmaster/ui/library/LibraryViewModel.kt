@@ -341,13 +341,10 @@ class LibraryViewModel @Inject constructor(
     fun createPlaylistFromImportedAudio(
         importedAudioId: String,
         playlistName: String,
-        config: com.shadowmaster.data.model.SegmentationConfig
+        config: com.shadowmaster.data.model.SegmentationConfig,
+        enableTranscription: Boolean = false
     ) {
         viewModelScope.launch {
-            // Get transcription setting from config
-            val settings = settingsRepository.config.first()
-            val enableTranscription = settings.transcription.autoTranscribeOnImport
-            
             val result = libraryRepository.segmentImportedAudio(
                 importedAudioId = importedAudioId,
                 playlistName = playlistName,
