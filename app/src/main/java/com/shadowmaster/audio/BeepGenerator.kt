@@ -17,6 +17,10 @@ object BeepGenerator {
     const val YOUR_TURN_BEEP_FREQ = 1047.0 // C6 - your turn
     const val SEGMENT_END_BEEP_FREQ = 660.0 // E5 - segment done
 
+    // Timing constants (ms)
+    const val DOUBLE_BEEP_GAP_MS = 100L  // Gap between double beeps
+    const val PRE_BEEP_PAUSE_MS = 300L   // Pause before playing segment after beep
+
     /**
      * Generate a beep tone as PCM audio data.
      *

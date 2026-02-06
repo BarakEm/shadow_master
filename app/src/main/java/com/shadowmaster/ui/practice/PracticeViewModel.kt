@@ -208,7 +208,7 @@ class PracticeViewModel @Inject constructor(
 
             if (cfg.audioFeedbackEnabled) {
                 playBeep(BeepGenerator.PLAYBACK_BEEP_FREQ, cfg.beepDurationMs)
-                delay(300)
+                delay(BeepGenerator.PRE_BEEP_PAUSE_MS)
             }
 
             playAudioFile(item.audioFilePath)
@@ -228,7 +228,7 @@ class PracticeViewModel @Inject constructor(
 
             if (cfg.audioFeedbackEnabled) {
                 playDoubleBeep(BeepGenerator.YOUR_TURN_BEEP_FREQ, cfg.beepDurationMs)
-                delay(300)
+                delay(BeepGenerator.PRE_BEEP_PAUSE_MS)
             }
 
             delay(item.durationMs)
@@ -292,7 +292,7 @@ class PracticeViewModel @Inject constructor(
 
             if (cfg.audioFeedbackEnabled) {
                 playBeep(BeepGenerator.PLAYBACK_BEEP_FREQ, cfg.beepDurationMs)
-                delay(300)
+                delay(BeepGenerator.PRE_BEEP_PAUSE_MS)
             }
 
             // Play the partial audio from alignedOffset to end
@@ -306,7 +306,7 @@ class PracticeViewModel @Inject constructor(
 
             if (cfg.audioFeedbackEnabled) {
                 playDoubleBeep(BeepGenerator.YOUR_TURN_BEEP_FREQ, cfg.beepDurationMs)
-                delay(300)
+                delay(BeepGenerator.PRE_BEEP_PAUSE_MS)
             }
 
             // Silence duration matches the portion just played
@@ -332,7 +332,7 @@ class PracticeViewModel @Inject constructor(
     /**
      * Play double beep (for "your turn" indicator).
      */
-    private suspend fun playDoubleBeep(frequency: Double, durationMs: Int, gapMs: Long = 100) {
+    private suspend fun playDoubleBeep(frequency: Double, durationMs: Int, gapMs: Long = BeepGenerator.DOUBLE_BEEP_GAP_MS) {
         try {
             playBeep(frequency, durationMs)
             delay(gapMs)
