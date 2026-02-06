@@ -20,6 +20,9 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.*
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -798,6 +801,7 @@ class AudioImporter @Inject constructor(
     /** Save a captured audio segment from live capture into the "Captured Audio" playlist. */
     suspend fun saveCapturedSegment(segment: AudioSegment): ShadowItem? = withContext(Dispatchers.IO) {
         var segmentFile: File? = null
+        var pcmFile: File? = null
         try {
             // Validate sample rate
             if (segment.sampleRate != TARGET_SAMPLE_RATE) {
@@ -810,9 +814,9 @@ class AudioImporter @Inject constructor(
             // Get current item count for ordering
             val itemCount = shadowItemDao.getItemCountByPlaylist(playlistId)
 
-            // Save segment audio to file
-            segmentFile = File(segmentsDir, "${UUID.randomUUID()}.pcm")
-            FileOutputStream(segmentFile).use { output ->
+            // Save full PCM audio to importedAudioDir for re-segmentation
+            pcmFile = File(importedAudioDir, "${UUID.randomUUID()}.pcm")
+            FileOutputStream(pcmFile).use { output ->
                 val byteBuffer = ByteArray(segment.samples.size * 2)
                 for (i in segment.samples.indices) {
                     val sample = segment.samples[i]
@@ -822,17 +826,36 @@ class AudioImporter @Inject constructor(
                 output.write(byteBuffer)
             }
 
+            // Create ImportedAudio entry for re-segmentation capability
+            val importedAudio = ImportedAudio(
+                sourceUri = "mic://recording",
+                sourceFileName = "Mic Recording ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date())}",
+                originalFormat = "pcm",
+                pcmFilePath = pcmFile.absolutePath,
+                durationMs = segment.durationMs,
+                sampleRate = TARGET_SAMPLE_RATE,
+                channels = 1,
+                fileSizeBytes = pcmFile.length(),
+                language = "unknown"
+            )
+            importedAudioDao.insert(importedAudio)
+
+            // Save segment audio to file (copy of the PCM for this specific segment)
+            segmentFile = File(segmentsDir, "${UUID.randomUUID()}.pcm")
+            pcmFile.copyTo(segmentFile, overwrite = false)
+
             // Create ShadowItem
             val item = ShadowItem(
-                sourceFileUri = "captured://audio",
-                sourceFileName = "Captured Audio",
+                sourceFileUri = importedAudio.sourceUri,
+                sourceFileName = importedAudio.sourceFileName,
                 sourceStartMs = 0L,
                 sourceEndMs = segment.durationMs,
                 audioFilePath = segmentFile.absolutePath,
                 durationMs = segment.durationMs,
                 language = "unknown",
                 playlistId = playlistId,
-                orderInPlaylist = itemCount
+                orderInPlaylist = itemCount,
+                importedAudioId = importedAudio.id
             )
 
             // Save to database
@@ -881,8 +904,9 @@ class AudioImporter @Inject constructor(
             item
         } catch (e: Exception) {
             Log.e(TAG, "Failed to save captured segment", e)
-            // Clean up orphaned file on failure
+            // Clean up orphaned files on failure
             segmentFile?.delete()
+            pcmFile?.delete()
             null
         }
     }
