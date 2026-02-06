@@ -264,8 +264,4 @@ class AndroidSpeechProvider(
             )
         }
     }
-                }
-            }
-        }
-    }
 }
