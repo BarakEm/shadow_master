@@ -45,15 +45,16 @@ interface TranscriptionProvider {
  * Enum of supported transcription provider types.
  */
 enum class TranscriptionProviderType(
-    val id: String, 
+    val id: String,
     val displayName: String,
-    val isFree: Boolean = false
+    val isFree: Boolean = false,
+    val isImplemented: Boolean = true
 ) {
     IVRIT_AI("ivrit", "ivrit.ai (Hebrew)", isFree = true),
     LOCAL("local", "Local Model", isFree = true),
     ANDROID_SPEECH("android_speech", "Google Speech (Free)", isFree = true),
-    GOOGLE("google", "Google Speech-to-Text", isFree = false),
-    AZURE("azure", "Azure Speech Services", isFree = false),
-    WHISPER("whisper", "OpenAI Whisper", isFree = false),
+    GOOGLE("google", "Google Speech-to-Text", isFree = false, isImplemented = false),
+    AZURE("azure", "Azure Speech Services", isFree = false, isImplemented = false),
+    WHISPER("whisper", "OpenAI Whisper", isFree = false, isImplemented = false),
     CUSTOM("custom", "Custom Endpoint", isFree = false)
 }

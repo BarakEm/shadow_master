@@ -506,12 +506,7 @@ private fun TranscriptionServicesSection(
     viewModel: SettingsViewModel
 ) {
     var showIvritKeyDialog by remember { mutableStateOf(false) }
-    var showGoogleKeyDialog by remember { mutableStateOf(false) }
-    var showAzureKeyDialog by remember { mutableStateOf(false) }
-    var showAzureRegionDialog by remember { mutableStateOf(false) }
-    var showWhisperKeyDialog by remember { mutableStateOf(false) }
     var showCustomUrlDialog by remember { mutableStateOf(false) }
-    var showCustomKeyDialog by remember { mutableStateOf(false) }
     var showLocalModelDialog by remember { mutableStateOf(false) }
     var showAdvancedProviders by remember { mutableStateOf(false) }
 
@@ -610,30 +605,6 @@ private fun TranscriptionServicesSection(
         }
 
         if (showAdvancedProviders) {
-            // Google Speech-to-Text
-            ProviderConfigSection(
-                title = "Google Speech-to-Text",
-                isConfigured = !config.transcription.googleApiKey.isNullOrBlank(),
-                onConfigureClick = { showGoogleKeyDialog = true }
-            )
-
-            // Azure Speech Services
-            ProviderConfigSection(
-                title = "Azure Speech Services",
-                isConfigured = !config.transcription.azureApiKey.isNullOrBlank() &&
-                        !config.transcription.azureRegion.isNullOrBlank(),
-                onConfigureClick = { showAzureKeyDialog = true },
-                additionalInfo = if (!config.transcription.azureRegion.isNullOrBlank())
-                    "Region: ${config.transcription.azureRegion}" else null
-            )
-
-            // OpenAI Whisper
-            ProviderConfigSection(
-                title = "OpenAI Whisper",
-                isConfigured = !config.transcription.whisperApiKey.isNullOrBlank(),
-                onConfigureClick = { showWhisperKeyDialog = true }
-            )
-
             // Custom Endpoint
             ProviderConfigSection(
                 title = "Custom Endpoint",
@@ -655,43 +626,6 @@ private fun TranscriptionServicesSection(
                 showIvritKeyDialog = false
             },
             description = "API key is optional. Free tier works without a key, but premium API key unlocks higher limits."
-        )
-    }
-
-    if (showGoogleKeyDialog) {
-        ApiKeyDialog(
-            title = "Google API Key",
-            currentValue = config.transcription.googleApiKey ?: "",
-            onDismiss = { showGoogleKeyDialog = false },
-            onSave = { apiKey ->
-                viewModel.updateTranscriptionGoogleApiKey(apiKey.ifBlank { null })
-                showGoogleKeyDialog = false
-            }
-        )
-    }
-
-    if (showAzureKeyDialog) {
-        AzureConfigDialog(
-            currentApiKey = config.transcription.azureApiKey ?: "",
-            currentRegion = config.transcription.azureRegion ?: "",
-            onDismiss = { showAzureKeyDialog = false },
-            onSave = { apiKey, region ->
-                viewModel.updateTranscriptionAzureApiKey(apiKey.ifBlank { null })
-                viewModel.updateTranscriptionAzureRegion(region.ifBlank { null })
-                showAzureKeyDialog = false
-            }
-        )
-    }
-
-    if (showWhisperKeyDialog) {
-        ApiKeyDialog(
-            title = "OpenAI API Key",
-            currentValue = config.transcription.whisperApiKey ?: "",
-            onDismiss = { showWhisperKeyDialog = false },
-            onSave = { apiKey ->
-                viewModel.updateTranscriptionWhisperApiKey(apiKey.ifBlank { null })
-                showWhisperKeyDialog = false
-            }
         )
     }
 
@@ -725,14 +659,9 @@ private fun TranscriptionProviderSelector(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    val providers = mapOf(
-        "ivrit" to "ivrit.ai (Hebrew - Free)",
-        "local" to "Local Model (Free)",
-        "google" to "Google Speech-to-Text",
-        "azure" to "Azure Speech Services",
-        "whisper" to "OpenAI Whisper",
-        "custom" to "Custom Endpoint"
-    )
+    val providers = com.shadowmaster.transcription.TranscriptionProviderType.entries
+        .filter { it.isImplemented }
+        .associate { it.id to if (it.isFree) "${it.displayName} (Free)" else it.displayName }
 
     Column(
         modifier = Modifier

@@ -452,11 +452,11 @@ fun LibraryScreen(
     // Export dialog
     showExportDialog?.let { playlist ->
         var includeYourTurnSilence by remember { mutableStateOf(true) }
-        var selectedFormat by remember { mutableStateOf(com.shadowmaster.library.ExportFormat.MP3) }
+        var selectedFormat by remember { mutableStateOf(com.shadowmaster.library.ExportFormat.AAC) }
         
         // Generate filename information to display to user
         val sanitizedName = playlist.name.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-        val fileExtension = if (selectedFormat == com.shadowmaster.library.ExportFormat.MP3) "aac" else "wav"
+        val fileExtension = if (selectedFormat == com.shadowmaster.library.ExportFormat.AAC) "aac" else "wav"
         val saveLocation = "Music/ShadowMaster/"
         
         AlertDialog(
@@ -482,8 +482,8 @@ fun LibraryScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         FilterChip(
-                            selected = selectedFormat == com.shadowmaster.library.ExportFormat.MP3,
-                            onClick = { selectedFormat = com.shadowmaster.library.ExportFormat.MP3 },
+                            selected = selectedFormat == com.shadowmaster.library.ExportFormat.AAC,
+                            onClick = { selectedFormat = com.shadowmaster.library.ExportFormat.AAC },
                             label = { Text("AAC (Smaller)") },
                             modifier = Modifier.weight(1f)
                         )

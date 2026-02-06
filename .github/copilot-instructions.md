@@ -228,6 +228,33 @@ AZURE_SPEECH_REGION=your_azure_region
 - **Issue Tracker:** Use GitHub Issues for bugs and feature requests
 - **Copilot Tasks:** See `COPILOT_TASKS.md` for delegatable tasks
 
+## Mandatory Quality Rules
+
+These rules exist because past AI-generated code drifted on them. Follow strictly.
+
+### Comments & Documentation
+- KDoc: max 1-3 lines for private/internal methods. NO examples, NO thread-safety notes, NO step-by-step process descriptions.
+- Only add `@param`/`@return` when the signature isn't self-documenting.
+- Don't add comments to code you didn't change.
+
+### Naming Accuracy
+- Name things for what they actually do. If it produces AAC files, call it `AacFileCreator`, not `Mp3FileCreator`.
+- Export format enum: `ExportFormat.AAC` and `ExportFormat.WAV` only.
+
+### Resource Management
+- Always clean up `MediaCodec`, `MediaExtractor`, `ParcelFileDescriptor` in `finally` blocks, not inline on the happy path.
+- Cancel previous coroutine `Job` before launching a new collection on the same `StateFlow`.
+
+### Stubs & Unimplemented Features
+- NEVER expose unimplemented providers/features in the UI.
+- Stub providers must have `isImplemented = false` on their enum entry.
+- UI dropdowns must filter to `isImplemented == true` entries only.
+- Derive provider lists from the enum - don't hardcode separate maps.
+
+### Dead Code
+- Delete unused methods entirely. Don't comment them out or add `_` prefixes.
+- If a method is superseded by a better version, delete the old one.
+
 ## Tips for Copilot
 
 1. **When suggesting audio code:** Always consider 16kHz mono PCM format
@@ -236,5 +263,7 @@ AZURE_SPEECH_REGION=your_azure_region
 4. **When adding dependencies:** Check for existing alternatives first
 5. **When writing tests:** Follow existing test patterns in the codebase
 6. **When handling errors:** Use sealed classes for structured error types
-7. **When using coroutines:** Be mindful of dispatcher choice
+7. **When using coroutines:** Be mindful of dispatcher choice, cancel previous jobs before relaunching
 8. **When modifying database:** Remember to create and test migrations
+9. **When adding KDoc:** Keep it to 1-3 lines max for private methods
+10. **When adding features:** If not fully implemented, don't expose in UI

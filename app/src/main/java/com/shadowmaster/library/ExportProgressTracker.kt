@@ -36,7 +36,7 @@ enum class ExportStatus {
  */
 enum class ExportFormat {
     WAV,
-    MP3
+    AAC
 }
 
 /**

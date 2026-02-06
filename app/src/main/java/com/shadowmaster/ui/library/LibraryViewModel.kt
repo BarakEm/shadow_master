@@ -14,6 +14,7 @@ import com.shadowmaster.translation.TranslationService
 import com.shadowmaster.translation.toUserMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.net.URLDecoder
@@ -75,9 +76,12 @@ class LibraryViewModel @Inject constructor(
     private val _importSuccess = MutableStateFlow<String?>(null)
     val importSuccess: StateFlow<String?> = _importSuccess.asStateFlow()
 
+    private var playlistItemsJob: Job? = null
+
     fun selectPlaylist(playlist: ShadowPlaylist) {
         _selectedPlaylist.value = playlist
-        viewModelScope.launch {
+        playlistItemsJob?.cancel()
+        playlistItemsJob = viewModelScope.launch {
             libraryRepository.getItemsByPlaylist(playlist.id)
                 .collect { items ->
                     _playlistItems.value = items
@@ -285,7 +289,7 @@ class LibraryViewModel @Inject constructor(
             initialValue = ExportProgress(com.shadowmaster.library.ExportStatus.IDLE)
         )
 
-    fun exportPlaylist(playlist: ShadowPlaylist, includeYourTurnSilence: Boolean = true, format: com.shadowmaster.library.ExportFormat = com.shadowmaster.library.ExportFormat.MP3) {
+    fun exportPlaylist(playlist: ShadowPlaylist, includeYourTurnSilence: Boolean = true, format: com.shadowmaster.library.ExportFormat = com.shadowmaster.library.ExportFormat.AAC) {
         viewModelScope.launch {
             val config = settingsRepository.config.first()
             val result = libraryRepository.exportPlaylist(

@@ -18,38 +18,38 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Handles MP3 file creation and saving operations.
- * Uses Android's MediaCodec for AAC encoding (MP3 encoding not directly available).
+ * Handles AAC file creation and saving operations.
+ * Uses Android's MediaCodec for AAC encoding.
  * Output files have .aac extension and contain AAC audio in ADTS container format.
  */
 @Singleton
-class Mp3FileCreator @Inject constructor(
+class AacFileCreator @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     companion object {
-        private const val TAG = "Mp3FileCreator"
+        private const val TAG = "AacFileCreator"
         private const val SAMPLE_RATE = 16000
         private const val BIT_RATE = 64000 // 64 kbps for speech
         private const val MIME_TYPE = "audio/mp4a-latm" // AAC
     }
 
     /**
-     * Convert raw PCM data to MP3 format and save to Music folder.
+     * Convert raw PCM data to AAC format and save to Music folder.
      *
      * @param pcmFile The temporary PCM file
      * @param name Base name for the output file
-     * @return Result with path and URI of the saved MP3 file
+     * @return Result with path and URI of the saved AAC file
      */
-    fun saveAsMp3(pcmFile: File, name: String): AudioFileResult {
+    fun saveAsAac(pcmFile: File, name: String): AudioFileResult {
         val sanitizedName = name.replace(Regex("[^a-zA-Z0-9._-]"), "_")
         val fileName = "ShadowMaster_${sanitizedName}_${System.currentTimeMillis()}.aac"
 
         // Create temp file for encoded data
         val tempEncodedFile = File.createTempFile("encoded_", ".aac", context.cacheDir)
-        
+
         try {
             Log.d(TAG, "Starting AAC encoding for: $name")
-            
+
             // Encode PCM to AAC
             encodePcmToAac(pcmFile, tempEncodedFile)
             Log.d(TAG, "AAC encoding completed, output size: ${tempEncodedFile.length()} bytes")
@@ -81,7 +81,7 @@ class Mp3FileCreator @Inject constructor(
      */
     private fun encodePcmToAac(pcmFile: File, outputFile: File) {
         Log.d(TAG, "Creating AAC encoder for ${pcmFile.length()} bytes of PCM data")
-        
+
         val format = MediaFormat.createAudioFormat(MIME_TYPE, SAMPLE_RATE, 1)
         format.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC)
         format.setInteger(MediaFormat.KEY_BIT_RATE, BIT_RATE)
@@ -94,7 +94,7 @@ class Mp3FileCreator @Inject constructor(
         val pcmData = pcmFile.readBytes()
         var inputOffset = 0
         var allInputSent = false
-        
+
         val bufferInfo = MediaCodec.BufferInfo()
         Log.d(TAG, "Encoder started, processing PCM data...")
 
@@ -106,17 +106,17 @@ class Mp3FileCreator @Inject constructor(
                     if (inputBufferId >= 0) {
                         val inputBuffer = codec.getInputBuffer(inputBufferId)!!
                         val chunkSize = minOf(inputBuffer.remaining(), pcmData.size - inputOffset)
-                        
+
                         if (chunkSize > 0) {
                             inputBuffer.clear()
                             inputBuffer.put(pcmData, inputOffset, chunkSize)
                             inputOffset += chunkSize
-                            
+
                             // Send EOS flag with the last chunk of data
                             val isLastChunk = inputOffset >= pcmData.size
                             val flags = if (isLastChunk) MediaCodec.BUFFER_FLAG_END_OF_STREAM else 0
                             codec.queueInputBuffer(inputBufferId, 0, chunkSize, 0, flags)
-                            
+
                             if (isLastChunk) {
                                 allInputSent = true
                             }
@@ -139,7 +139,7 @@ class Mp3FileCreator @Inject constructor(
                             outputStream.write(chunk)
                         }
                         codec.releaseOutputBuffer(outputBufferId, false)
-                        
+
                         if ((bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                             break
                         }
@@ -166,7 +166,7 @@ class Mp3FileCreator @Inject constructor(
     private fun saveWithMediaStore(fileName: String, sourceFile: File): AudioFileResult {
         val contentValues = ContentValues().apply {
             put(MediaStore.Audio.Media.DISPLAY_NAME, fileName)
-            put(MediaStore.Audio.Media.MIME_TYPE, "audio/aac")  // Fixed: was "audio/mpeg", now correct for AAC
+            put(MediaStore.Audio.Media.MIME_TYPE, "audio/aac")
             put(MediaStore.Audio.Media.RELATIVE_PATH, Environment.DIRECTORY_MUSIC + "/ShadowMaster")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 put(MediaStore.Audio.Media.IS_PENDING, 1)
@@ -207,7 +207,7 @@ class Mp3FileCreator @Inject constructor(
             Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC),
             "ShadowMaster"
         )
-        
+
         if (!musicDir.exists()) {
             val created = musicDir.mkdirs()
             Log.d(TAG, "Creating directory: ${musicDir.absolutePath}, success: $created")
@@ -215,7 +215,7 @@ class Mp3FileCreator @Inject constructor(
 
         val outputFile = File(musicDir, fileName)
         Log.d(TAG, "Saving to file: ${outputFile.absolutePath}")
-        
+
         sourceFile.copyTo(outputFile, overwrite = true)
         Log.i(TAG, "File saved successfully: ${outputFile.absolutePath}")
 

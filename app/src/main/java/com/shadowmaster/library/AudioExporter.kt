@@ -27,7 +27,7 @@ class AudioExporter @Inject constructor(
     private val shadowItemDao: ShadowItemDao,
     private val playlistExporter: PlaylistExporter,
     private val wavFileCreator: WavFileCreator,
-    private val mp3FileCreator: Mp3FileCreator,
+    private val aacFileCreator: AacFileCreator,
     private val progressTracker: ExportProgressTracker
 ) {
     companion object {
@@ -53,7 +53,7 @@ class AudioExporter @Inject constructor(
         playlistName: String,
         config: ShadowingConfig,
         includeYourTurnSilence: Boolean = true,
-        format: ExportFormat = ExportFormat.MP3
+        format: ExportFormat = ExportFormat.AAC
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             progressTracker.startPreparing()
@@ -91,7 +91,7 @@ class AudioExporter @Inject constructor(
 
                 val result = when (format) {
                     ExportFormat.WAV -> wavFileCreator.saveAsWav(tempPcmFile, playlistName)
-                    ExportFormat.MP3 -> mp3FileCreator.saveAsMp3(tempPcmFile, playlistName)
+                    ExportFormat.AAC -> aacFileCreator.saveAsAac(tempPcmFile, playlistName)
                 }
 
                 // Clean up temp file
