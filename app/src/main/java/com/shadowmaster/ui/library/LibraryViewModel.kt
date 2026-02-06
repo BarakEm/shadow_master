@@ -287,7 +287,7 @@ class LibraryViewModel @Inject constructor(
 
     fun exportPlaylist(playlist: ShadowPlaylist, includeYourTurnSilence: Boolean = true, format: com.shadowmaster.library.ExportFormat = com.shadowmaster.library.ExportFormat.MP3) {
         viewModelScope.launch {
-            val config = settingsRepository.configBlocking
+            val config = settingsRepository.config.first()
             val result = libraryRepository.exportPlaylist(
                 playlistId = playlist.id,
                 playlistName = playlist.name,
@@ -396,7 +396,7 @@ class LibraryViewModel @Inject constructor(
             _translationInProgress.value = true
 
             try {
-                val config = settingsRepository.configBlocking
+                val config = settingsRepository.config.first()
                 val translationConfig = config.translationConfig
                 val targetLang = targetLanguage ?: translationConfig.targetLanguage
                 val sourceLanguage = normalizeLanguageCode(item.language)
@@ -476,7 +476,7 @@ class LibraryViewModel @Inject constructor(
             _translationProgress.value = 0 to itemsToTranslate.size
 
             try {
-                val config = settingsRepository.configBlocking
+                val config = settingsRepository.config.first()
                 val translationConfig = config.translationConfig
                 val targetLang = targetLanguage ?: translationConfig.targetLanguage
 
@@ -572,7 +572,7 @@ class LibraryViewModel @Inject constructor(
             // so we don't need to set _transcriptionComplete
 
             try {
-                val config = settingsRepository.configBlocking
+                val config = settingsRepository.config.first()
                 val transcriptionConfig = config.transcription
 
                 // Create provider config
@@ -660,7 +660,7 @@ class LibraryViewModel @Inject constructor(
             _transcriptionComplete.value = false
 
             try {
-                val config = settingsRepository.configBlocking
+                val config = settingsRepository.config.first()
                 val transcriptionConfig = config.transcription
 
                 // Create provider config
