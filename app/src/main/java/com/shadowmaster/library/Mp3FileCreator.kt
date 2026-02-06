@@ -45,7 +45,7 @@ class Mp3FileCreator @Inject constructor(
         val fileName = "ShadowMaster_${sanitizedName}_${System.currentTimeMillis()}.aac"
 
         // Create temp file for encoded data
-        val tempEncodedFile = File(context.cacheDir, "encoded_${System.currentTimeMillis()}.aac")
+        val tempEncodedFile = File.createTempFile("encoded_", ".aac", context.cacheDir)
         
         try {
             Log.d(TAG, "Starting AAC encoding for: $name")

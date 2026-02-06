@@ -461,10 +461,9 @@ fun LibraryScreen(
         var includeYourTurnSilence by remember { mutableStateOf(true) }
         var selectedFormat by remember { mutableStateOf(com.shadowmaster.library.ExportFormat.MP3) }
         
-        // Generate suggested filename based on playlist name
+        // Generate filename information to display to user
         val sanitizedName = playlist.name.replace(Regex("[^a-zA-Z0-9._-]"), "_")
         val fileExtension = if (selectedFormat == com.shadowmaster.library.ExportFormat.MP3) "aac" else "wav"
-        val suggestedFileName = "ShadowMaster_${sanitizedName}_${System.currentTimeMillis()}.$fileExtension"
         val saveLocation = "Music/ShadowMaster/"
         
         AlertDialog(

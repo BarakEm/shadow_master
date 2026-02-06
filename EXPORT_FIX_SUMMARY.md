@@ -39,9 +39,10 @@ The user reported: "export mp3 still fails, and doesn't suggest directory nor fi
 ## Changes Made
 
 ### Mp3FileCreator.kt
-1. **Changed file extension**: .mp3 → .aac (lines 45, 48)
+1. **Changed file extension**: .mp3 → .aac (line 45)
 2. **Fixed MIME type**: "audio/mpeg" → "audio/aac" (line 169)
-3. **Added encoding logs**:
+3. **Improved temp file creation**: Use File.createTempFile() for uniqueness (line 48)
+4. **Added encoding logs**:
    - Start of encoding with source name (line 51)
    - Completion with output size (line 55)
    - Encoder lifecycle (line 92, 159)
