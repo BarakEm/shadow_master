@@ -1,12 +1,12 @@
 
 <p align="center">
-  <img src="docs/zen-master-icon.svg" alt="Zen Master Icon - meditating with headphones in the mountains" width="150" height="150"/>
+  <img src="app/src/main/ic_launcher-playstore.png" alt="Shadow Master Icon - colorful parrot with headphones" width="150" height="150"/>
 </p>
 
 <h1 align="center">Shadow Master</h1>
 
 <p align="center">
-  The app icon has been updated to reflect a new theme: an old zen master meditating with headphones in the mountains, with bright and positive colours.
+  <em>Listen. Repeat. Master.</em>
 </p>
 
 <p align="center">
@@ -246,7 +246,7 @@ gh pr list
 - **[COPILOT_TASKS.md](COPILOT_TASKS.md)** - Task list template
 - **[.github/copilot-instructions.md](.github/copilot-instructions.md)** - Guidelines for Copilot
 
-**Current Status:** ⚠️ **20/20 tasks completed but CRITICAL BUG** - Audio import broken (Issue #75), playlist appears empty after import. Copilot working on fix (PR #76 in draft).
+**Current Status:** All v1.1 tasks completed. Codebase stabilized (resource leaks, coroutine leaks, naming inconsistencies fixed).
 
 ## License
 
