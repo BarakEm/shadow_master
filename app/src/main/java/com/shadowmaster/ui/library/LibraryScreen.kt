@@ -460,6 +460,12 @@ fun LibraryScreen(
     showExportDialog?.let { playlist ->
         var includeYourTurnSilence by remember { mutableStateOf(true) }
         var selectedFormat by remember { mutableStateOf(com.shadowmaster.library.ExportFormat.MP3) }
+        
+        // Generate filename information to display to user
+        val sanitizedName = playlist.name.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+        val fileExtension = if (selectedFormat == com.shadowmaster.library.ExportFormat.MP3) "aac" else "wav"
+        val saveLocation = "Music/ShadowMaster/"
+        
         AlertDialog(
             onDismissRequest = { showExportDialog = null },
             title = { Text("Export Playlist") },
@@ -485,7 +491,7 @@ fun LibraryScreen(
                         FilterChip(
                             selected = selectedFormat == com.shadowmaster.library.ExportFormat.MP3,
                             onClick = { selectedFormat = com.shadowmaster.library.ExportFormat.MP3 },
-                            label = { Text("MP3 (Smaller)") },
+                            label = { Text("AAC (Smaller)") },
                             modifier = Modifier.weight(1f)
                         )
                         FilterChip(
@@ -494,6 +500,41 @@ fun LibraryScreen(
                             label = { Text("WAV (Quality)") },
                             modifier = Modifier.weight(1f)
                         )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Save location information
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = "File will be saved to:",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = saveLocation,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Filename pattern:",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "ShadowMaster_${sanitizedName}_<timestamp>.$fileExtension",
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace
+                            )
+                        }
                     }
                     
                     Spacer(modifier = Modifier.height(16.dp))
