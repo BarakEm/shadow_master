@@ -136,6 +136,10 @@ class AacFileCreator @Inject constructor(
                         if (bufferInfo.size > 0) {
                             val chunk = ByteArray(bufferInfo.size)
                             outputBuffer.get(chunk)
+
+                            // Write ADTS header before each AAC frame so the .aac file is playable
+                            val adtsHeader = createAdtsHeader(bufferInfo.size)
+                            outputStream.write(adtsHeader)
                             outputStream.write(chunk)
                         }
                         codec.releaseOutputBuffer(outputBufferId, false)
@@ -158,6 +162,41 @@ class AacFileCreator @Inject constructor(
             codec.release()
             Log.d(TAG, "Encoder stopped and released")
         }
+    }
+
+    /**
+     * Create an ADTS header for a single AAC frame.
+     * Without ADTS framing, raw AAC output from MediaCodec cannot be played by media players.
+     */
+    private fun createAdtsHeader(frameLength: Int): ByteArray {
+        val packetLength = frameLength + 7 // ADTS header is 7 bytes (no CRC)
+        val header = ByteArray(7)
+
+        // Syncword 0xFFF, MPEG-4, Layer 0, no CRC
+        header[0] = 0xFF.toByte()
+        header[1] = 0xF9.toByte() // 1111 1001 = syncword(4) + ID=1(MPEG-4) + layer=00 + protection_absent=1
+
+        // Profile: AAC-LC = 1 (2 bits), Sampling freq index: 16kHz = 8 (4 bits),
+        // private_bit = 0 (1 bit), channel_config high bit = 0 (1 bit)
+        val profile = 1 // AAC-LC (profile - 1 in ADTS)
+        val freqIndex = 8 // 16000 Hz
+        val channelConfig = 1 // mono
+        header[2] = ((profile shl 6) or (freqIndex shl 2) or (channelConfig shr 2)).toByte()
+
+        // channel_config low 2 bits (2 bits), originality=0, home=0, copyright_id=0, copyright_start=0,
+        // frame_length high 2 bits
+        header[3] = (((channelConfig and 0x3) shl 6) or (packetLength shr 11)).toByte()
+
+        // frame_length middle 8 bits
+        header[4] = ((packetLength shr 3) and 0xFF).toByte()
+
+        // frame_length low 3 bits, buffer_fullness high 5 bits (0x7FF = VBR)
+        header[5] = (((packetLength and 0x7) shl 5) or 0x1F).toByte()
+
+        // buffer_fullness low 6 bits, number_of_raw_data_blocks = 0
+        header[6] = 0xFC.toByte() // 111111 00
+
+        return header
     }
 
     /**

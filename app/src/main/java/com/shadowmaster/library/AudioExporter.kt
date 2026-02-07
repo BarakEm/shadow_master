@@ -46,7 +46,7 @@ class AudioExporter @Inject constructor(
      * @param playlistName Name for the output file
      * @param config Shadowing configuration (repeats, speed, etc.)
      * @param includeYourTurnSilence Whether to include silence gaps for user to practice
-     * @param format Export format (WAV or MP3)
+     * @param format Export format (WAV or AAC)
      */
     suspend fun exportPlaylist(
         playlistId: String,

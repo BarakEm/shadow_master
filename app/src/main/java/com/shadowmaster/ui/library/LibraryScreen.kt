@@ -241,8 +241,11 @@ fun LibraryScreen(
                         )
                         1 -> ImportedAudioContent(
                             importedAudio = importedAudio,
+                            activeImports = activeImports,
+                            failedImports = recentFailedImports,
                             onCreatePlaylist = { showCreatePlaylistDialog = it },
-                            onDeleteAudio = { showDeleteAudioDialog = it }
+                            onDeleteAudio = { showDeleteAudioDialog = it },
+                            onDismissFailedImport = { viewModel.dismissFailedImport(it) }
                         )
                     }
                 }
@@ -1067,10 +1070,13 @@ private fun PlaylistsContent(
 @Composable
 private fun ImportedAudioContent(
     importedAudio: List<ImportedAudio>,
+    activeImports: List<ImportJob>,
+    failedImports: List<ImportJob>,
     onCreatePlaylist: (ImportedAudio) -> Unit,
-    onDeleteAudio: (ImportedAudio) -> Unit
+    onDeleteAudio: (ImportedAudio) -> Unit,
+    onDismissFailedImport: (String) -> Unit
 ) {
-    if (importedAudio.isEmpty()) {
+    if (importedAudio.isEmpty() && activeImports.isEmpty() && failedImports.isEmpty()) {
         Box(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
@@ -1105,6 +1111,47 @@ private fun ImportedAudioContent(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // Active imports section
+            if (activeImports.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "Importing...",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+                items(activeImports, key = { it.id }) { job ->
+                    ImportJobCard(job = job)
+                }
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
+            // Failed imports section
+            if (failedImports.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "Import Errors",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+                items(failedImports, key = { it.id }) { job ->
+                    FailedImportCard(
+                        job = job,
+                        onDismiss = { onDismissFailedImport(job.id) }
+                    )
+                }
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
+            // Imported audio files
             items(importedAudio, key = { it.id }) { audio ->
                 ImportedAudioCard(
                     audio = audio,
