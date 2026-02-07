@@ -161,6 +161,12 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
+    fun updateTranscriptionWhisperBaseUrl(url: String?) {
+        viewModelScope.launch {
+            settingsRepository.updateTranscriptionWhisperBaseUrl(url)
+        }
+    }
+
     fun updateTranscriptionCustomUrl(url: String?) {
         viewModelScope.launch {
             settingsRepository.updateTranscriptionCustomUrl(url)

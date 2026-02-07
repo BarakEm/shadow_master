@@ -2,6 +2,7 @@ package com.shadowmaster.transcription
 
 import android.content.Context
 import com.shadowmaster.data.model.SupportedLanguage
+import com.shadowmaster.library.AudioFileUtility
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -19,11 +20,12 @@ import java.io.File
 class LanguageSupportTest {
 
     private val mockContext: Context = mockk(relaxed = true)
+    private val audioFileUtility = AudioFileUtility()
     private lateinit var service: TranscriptionService
 
     @Before
     fun setup() {
-        service = TranscriptionService(mockContext)
+        service = TranscriptionService(mockContext, audioFileUtility)
     }
 
     // ==================== SupportedLanguage Enum Tests ====================
@@ -247,7 +249,11 @@ class LanguageSupportTest {
     fun `stub providers are not implemented`() {
         assertFalse(TranscriptionProviderType.GOOGLE.isImplemented)
         assertFalse(TranscriptionProviderType.AZURE.isImplemented)
-        assertFalse(TranscriptionProviderType.WHISPER.isImplemented)
+    }
+
+    @Test
+    fun `whisper provider is implemented`() {
+        assertTrue(TranscriptionProviderType.WHISPER.isImplemented)
     }
 
     @Test
