@@ -463,14 +463,13 @@ class AudioImporter @Inject constructor(
         }
     }
 
-    /** Import audio and create a segmented playlist using default config. Combines [importAudioOnly] + [segmentImportedAudio]. */
+    /** Import audio file and store as ImportedAudio. Does not segment or create playlists. */
     suspend fun importAudioFile(
         uri: Uri,
         playlistName: String? = null,
         language: String = "auto",
         enableTranscription: Boolean = false
     ): Result<String> = withContext(Dispatchers.IO) {
-        // Create import job for progress tracking
         val fileName = audioFileUtility.getFileName(uri, context) ?: "Unknown"
         val job = ImportJob(
             sourceUri = uri.toString(),
@@ -480,62 +479,28 @@ class AudioImporter @Inject constructor(
             enableTranscription = enableTranscription
         )
         importJobDao.insert(job)
-        
+
         try {
-            // Phase 1: Import audio with progress tracking
             updateImportJob(job.id, ImportStatus.EXTRACTING_AUDIO, 0)
-            
+
             val importResult = importAudioOnly(uri, language, job.id)
             if (importResult.isFailure) {
-                updateImportJob(job.id, ImportStatus.FAILED, 0, 
+                updateImportJob(job.id, ImportStatus.FAILED, 0,
                     errorMessage = importResult.exceptionOrNull()?.message ?: "Import failed")
                 return@withContext Result.failure(
                     importResult.exceptionOrNull() ?: Exception("Import failed")
                 )
             }
 
-            val importedAudio = importResult.getOrThrow()
-
-            // Phase 2: Segment with default config and progress tracking
-            updateImportJob(job.id, ImportStatus.DETECTING_SEGMENTS, 50)
-
-            // Get current user settings for segment mode
-            val currentSettings = settingsRepository.config.first()
-
-            val defaultConfig = segmentationConfigDao.getById("default-config")
-                ?: SegmentationConfig(
-                    id = "default-config",
-                    name = "Default"
-                ).also { segmentationConfigDao.insert(it) }
-
-            // Apply user's segment mode preference to the config
-            val configWithUserSettings = defaultConfig.copy(
-                segmentMode = currentSettings.segmentMode
-            )
-
-            val segmentResult = segmentImportedAudio(
-                importedAudioId = importedAudio.id,
-                playlistName = playlistName,
-                config = configWithUserSettings,
-                enableTranscription = enableTranscription,
-                jobId = job.id
-            )
-            
-            if (segmentResult.isSuccess) {
-                updateImportJob(job.id, ImportStatus.COMPLETED, 100)
-            } else {
-                updateImportJob(job.id, ImportStatus.FAILED, 50,
-                    errorMessage = segmentResult.exceptionOrNull()?.message ?: "Segmentation failed")
-            }
-            
-            return@withContext segmentResult
+            updateImportJob(job.id, ImportStatus.COMPLETED, 100)
+            Result.success(importResult.getOrThrow().id)
 
         } catch (e: AudioImportError) {
-            Log.e(TAG, "Import and segment failed", e)
+            Log.e(TAG, "Import failed", e)
             updateImportJob(job.id, ImportStatus.FAILED, 0, errorMessage = e.message)
             Result.failure(e)
         } catch (e: Exception) {
-            Log.e(TAG, "Import and segment failed - unexpected error", e)
+            Log.e(TAG, "Import failed - unexpected error", e)
             updateImportJob(job.id, ImportStatus.FAILED, 0, errorMessage = e.message ?: "Unexpected error")
             Result.failure(StorageError("Unexpected error: ${e.message}"))
         }
