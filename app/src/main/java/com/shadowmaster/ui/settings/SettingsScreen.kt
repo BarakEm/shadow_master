@@ -63,14 +63,6 @@ fun SettingsScreen(
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Language Selection
-            LanguageSelector(
-                selectedLanguage = config.language,
-                onLanguageSelected = { viewModel.updateLanguage(it) }
-            )
-
-            HorizontalDivider()
-
             // Playback Speed
             SliderSetting(
                 title = stringResource(R.string.playback_speed),
@@ -528,6 +520,14 @@ private fun TranscriptionServicesSection(
             Spacer(modifier = Modifier.width(8.dp))
             ExperimentalBadge()
         }
+
+        HorizontalDivider()
+
+        // Language Selection (determines transcription language)
+        LanguageSelector(
+            selectedLanguage = config.language,
+            onLanguageSelected = { viewModel.updateLanguage(it) }
+        )
 
         HorizontalDivider()
 

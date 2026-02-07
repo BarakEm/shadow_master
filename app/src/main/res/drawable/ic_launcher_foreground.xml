@@ -3,102 +3,86 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    
-    <!-- Mountain background - bright blue-green gradient feel -->
-    <!-- Far mountain -->
+
+    <!-- Parrot body - large teal/green, fills center area -->
     <path
-        android:fillColor="#8B9DC3"
-        android:pathData="M20,70 L35,45 L50,70 Z"/>
+        android:fillColor="#00897B"
+        android:pathData="M54,28 C40,28 30,40 30,54 C30,68 38,78 50,80 L58,80 C70,78 78,68 78,54 C78,40 68,28 54,28 Z"/>
+
+    <!-- Belly - lighter green/yellow gradient area -->
     <path
-        android:fillColor="#A8B5D1"
-        android:pathData="M45,70 L60,40 L75,70 Z"/>
+        android:fillColor="#4DB6AC"
+        android:pathData="M46,48 C42,52 42,62 46,70 L54,74 L62,70 C66,62 66,52 62,48 Z"/>
+
+    <!-- Chest plumage - vibrant orange/red -->
     <path
-        android:fillColor="#8B9DC3"
-        android:pathData="M70,70 L85,50 L100,70 Z"/>
-    
-    <!-- Ground with grass - bright green -->
+        android:fillColor="#FF7043"
+        android:pathData="M46,44 C44,48 44,56 48,62 L54,64 L60,62 C64,56 64,48 62,44 L54,40 Z"/>
+
+    <!-- Inner chest highlight -->
     <path
-        android:fillColor="#66BB6A"
-        android:pathData="M0,70 L108,70 L108,108 L0,108 Z"/>
-    
-    <!-- Zen Master body - meditation pose in saffron/orange robes -->
-    <!-- Sitting legs crossed -->
+        android:fillColor="#FFAB91"
+        android:pathData="M50,48 C48,52 48,56 50,58 L54,60 L58,58 C60,56 60,52 58,48 L54,46 Z"/>
+
+    <!-- Head - slightly darker teal -->
+    <path
+        android:fillColor="#00796B"
+        android:pathData="M54,24 C44,24 36,30 36,38 C36,46 42,50 54,50 C66,50 72,46 72,38 C72,30 64,24 54,24 Z"/>
+
+    <!-- Eye - left -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M44,36 C44,33 47,31 49,33 C51,35 50,38 47,38 C44,38 44,37 44,36 Z"/>
+    <path
+        android:fillColor="#212121"
+        android:pathData="M46,35 A2,2 0 1,1 46.01,35 Z"/>
+
+    <!-- Eye - right -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M59,36 C59,33 62,31 64,33 C66,35 65,38 62,38 C59,38 59,37 59,36 Z"/>
+    <path
+        android:fillColor="#212121"
+        android:pathData="M61,35 A2,2 0 1,1 61.01,35 Z"/>
+
+    <!-- Beak - bright orange, prominent -->
     <path
         android:fillColor="#FF9800"
-        android:pathData="M44,65 Q44,75 54,75 Q64,75 64,65 L64,70 Q64,72 54,72 Q44,72 44,70 Z"/>
-    
-    <!-- Body/torso -->
+        android:pathData="M50,40 L54,48 L58,40 Q54,38 50,40 Z"/>
+    <!-- Beak upper part / ridge -->
     <path
-        android:fillColor="#FFA726"
-        android:pathData="M46,50 L62,50 L64,65 L44,65 Z"/>
-    
-    <!-- Arms in meditation mudra -->
+        android:fillColor="#F57C00"
+        android:pathData="M50,40 L54,44 L58,40 Q54,37 50,40 Z"/>
+
+    <!-- Headphones band - bright blue, prominent -->
     <path
-        android:fillColor="#FF9800"
-        android:pathData="M44,55 Q40,57 40,60 Q40,63 44,65 L46,60 Z"/>
+        android:fillColor="#1E88E5"
+        android:pathData="M36,34 Q54,18 72,34"
+        android:strokeWidth="4"
+        android:strokeColor="#1E88E5"/>
+
+    <!-- Headphone - left ear cup -->
     <path
-        android:fillColor="#FF9800"
-        android:pathData="M64,55 Q68,57 68,60 Q68,63 64,65 L62,60 Z"/>
-    
-    <!-- Head - peaceful skin tone -->
+        android:fillColor="#1565C0"
+        android:pathData="M30,32 Q28,32 28,36 L28,42 Q28,46 32,46 Q36,46 36,42 L36,36 Q36,32 34,32 Z"/>
     <path
-        android:fillColor="#FFCC80"
-        android:pathData="M48,42 Q48,38 54,38 Q60,38 60,42 L60,48 Q60,52 54,52 Q48,52 48,48 Z"/>
-    
-    <!-- Closed peaceful eyes -->
+        android:fillColor="#42A5F5"
+        android:pathData="M30,35 Q29,35 29,38 Q29,41 30,41 L33,41 Q34,41 34,38 Q34,35 33,35 Z"/>
+
+    <!-- Headphone - right ear cup -->
     <path
-        android:fillColor="#5D4037"
-        android:pathData="M50,44 Q51,45 52,44 M56,44 Q57,45 58,44"
-        android:strokeWidth="1"
-        android:strokeColor="#5D4037"/>
-    
-    <!-- Serene smile -->
+        android:fillColor="#1565C0"
+        android:pathData="M74,32 Q72,32 72,36 L72,42 Q72,46 76,46 Q80,46 80,42 L80,36 Q80,32 78,32 Z"/>
     <path
-        android:fillColor="#00000000"
-        android:pathData="M51,47 Q54,48 57,47"
-        android:strokeWidth="1"
-        android:strokeColor="#5D4037"/>
-    
-    <!-- White beard -->
+        android:fillColor="#42A5F5"
+        android:pathData="M75,35 Q74,35 74,38 Q74,41 75,41 L78,41 Q79,41 79,38 Q79,35 78,35 Z"/>
+
+    <!-- Wing hints on sides -->
     <path
-        android:fillColor="#EEEEEE"
-        android:pathData="M49,48 Q48,50 48,52 L50,52 Q51,50 54,50 Q57,50 58,52 L60,52 Q60,50 59,48 Z"/>
-    
-    <!-- Headphones - modern bright cyan/blue -->
-    <!-- Headband -->
+        android:fillColor="#00695C"
+        android:pathData="M30,54 Q26,58 28,66 L34,72 L38,66 Q36,58 30,54 Z"/>
     <path
-        android:fillColor="#29B6F6"
-        android:pathData="M48,38 Q54,32 60,38"
-        android:strokeWidth="2.5"
-        android:strokeColor="#29B6F6"/>
-    
-    <!-- Left ear cup -->
-    <path
-        android:fillColor="#4FC3F7"
-        android:pathData="M44,42 Q42,42 42,44 L42,48 Q42,50 44,50 Q46,50 46,48 L46,44 Q46,42 44,42 Z"/>
-    <path
-        android:fillColor="#29B6F6"
-        android:pathData="M44,44 Q43,44 43,46 Q43,48 44,48 Q45,48 45,46 Q45,44 44,44 Z"/>
-    
-    <!-- Right ear cup -->
-    <path
-        android:fillColor="#4FC3F7"
-        android:pathData="M64,42 Q62,42 62,44 L62,48 Q62,50 64,50 Q66,50 66,48 L66,44 Q66,42 64,42 Z"/>
-    <path
-        android:fillColor="#29B6F6"
-        android:pathData="M64,44 Q63,44 63,46 Q63,48 64,48 Q65,48 65,46 Q65,44 64,44 Z"/>
-    
-    <!-- Sun/enlightenment glow - warm yellow -->
-    <path
-        android:fillColor="#FFEB3B"
-        android:pathData="M54,30 Q54,28 56,28 Q58,28 58,30 Q58,32 56,32 Q54,32 54,30 Z"
-        android:alpha="0.8"/>
-    
-    <!-- Sun rays -->
-    <path
-        android:fillColor="#FFF59D"
-        android:pathData="M56,25 L56,27 M60,27 L58,28 M61,31 L59,31 M60,35 L58,34 M56,37 L56,35 M52,35 L54,34 M51,31 L53,31 M52,27 L54,28"
-        android:strokeWidth="1"
-        android:strokeColor="#FFF59D"
-        android:alpha="0.7"/>
+        android:fillColor="#00695C"
+        android:pathData="M78,54 Q82,58 80,66 L74,72 L70,66 Q72,58 78,54 Z"/>
+
 </vector>
