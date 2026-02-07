@@ -5,7 +5,7 @@
     <color name="primary_dark">#1A1A2E</color>
     <color name="accent">#FF6B6B</color>
     <color name="ninja_shadow">#0F0F1A</color>
-    <color name="ic_launcher_background">#B3E5FC</color><!-- Light blue sky for zen mountain scene -->
+    <color name="ic_launcher_background">#9095BC</color><!-- Lavender to match parrot icon background -->
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
     <color name="background">#F5F5F5</color>
