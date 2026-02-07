@@ -28,7 +28,8 @@ class AudioExporter @Inject constructor(
     private val playlistExporter: PlaylistExporter,
     private val wavFileCreator: WavFileCreator,
     private val aacFileCreator: AacFileCreator,
-    private val progressTracker: ExportProgressTracker
+    private val progressTracker: ExportProgressTracker,
+    private val lyricsExporter: LyricsExporter
 ) {
     companion object {
         private const val TAG = "AudioExporter"
@@ -96,6 +97,13 @@ class AudioExporter @Inject constructor(
 
                 // Clean up temp file
                 tempPcmFile.delete()
+
+                // Generate LRC + SRT lyrics files alongside audio
+                try {
+                    lyricsExporter.exportLyrics(items, config, includeYourTurnSilence, playlistName)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Lyrics export failed (non-fatal)", e)
+                }
 
                 progressTracker.complete(items.size, result.path, result.uri)
 

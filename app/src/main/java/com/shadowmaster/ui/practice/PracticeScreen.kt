@@ -240,38 +240,46 @@ private fun SegmentInfo(item: ShadowItem) {
             .padding(horizontal = 32.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Duration
-            Text(
-                text = formatDuration(item.durationMs),
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Transcription if available
-            item.transcription?.let { text ->
+            if (item.transcription != null) {
+                // Karaoke layout: transcription is the dominant element
                 Text(
-                    text = text,
-                    style = MaterialTheme.typography.bodyLarge,
+                    text = item.transcription,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 16.dp)
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
                 )
-            }
 
-            // Translation if available
-            item.translation?.let { text ->
-                Spacer(modifier = Modifier.height(8.dp))
+                // Translation below transcription
+                item.translation?.let { text ->
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = text,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Duration as secondary info
                 Text(
-                    text = text,
+                    text = formatDuration(item.durationMs),
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 16.dp)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            } else {
+                // No transcription: duration-focused layout
+                Text(
+                    text = formatDuration(item.durationMs),
+                    style = MaterialTheme.typography.displaySmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
 

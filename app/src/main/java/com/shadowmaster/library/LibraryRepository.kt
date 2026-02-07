@@ -168,9 +168,10 @@ class LibraryRepository @Inject constructor(
         importedAudioId: String,
         playlistName: String? = null,
         config: SegmentationConfig,
-        enableTranscription: Boolean = false
+        enableTranscription: Boolean = false,
+        providerOverride: String? = null
     ): Result<String> = audioImporter.segmentImportedAudio(
-        importedAudioId, playlistName, config, enableTranscription
+        importedAudioId, playlistName, config, enableTranscription, providerOverride = providerOverride
     )
 
     // Convenience method for re-segmentation

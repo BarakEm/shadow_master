@@ -347,7 +347,8 @@ class LibraryViewModel @Inject constructor(
         playlistName: String,
         config: com.shadowmaster.data.model.SegmentationConfig,
         enableTranscription: Boolean = false,
-        language: String? = null
+        language: String? = null,
+        providerOverride: String? = null
     ) {
         viewModelScope.launch {
             if (language != null) {
@@ -357,7 +358,8 @@ class LibraryViewModel @Inject constructor(
                 importedAudioId = importedAudioId,
                 playlistName = playlistName,
                 config = config,
-                enableTranscription = enableTranscription
+                enableTranscription = enableTranscription,
+                providerOverride = providerOverride
             )
             result.onSuccess { playlistId ->
                 _importSuccess.value = "Playlist created successfully!"

@@ -4,6 +4,12 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
+    <group
+        android:scaleX="1.25"
+        android:scaleY="1.25"
+        android:pivotX="54"
+        android:pivotY="54">
+
     <!-- Parrot body - large teal/green, fills center area -->
     <path
         android:fillColor="#00897B"
@@ -84,5 +90,7 @@
     <path
         android:fillColor="#00695C"
         android:pathData="M78,54 Q82,58 80,66 L74,72 L70,66 Q72,58 78,54 Z"/>
+
+    </group>
 
 </vector>

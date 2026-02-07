@@ -1,26 +1,28 @@
 package com.shadowmaster.transcription
 
 import android.content.Context
+import android.util.Log
+import com.shadowmaster.library.AudioFileUtility
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.io.FileOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
  * Service for managing transcription providers and routing transcription requests.
- * 
- * This service acts as a facade for all transcription operations, handling:
- * - Provider selection and instantiation
- * - Configuration validation
- * - Error handling and retry logic
- * - Provider fallback (future enhancement)
+ * Wraps raw PCM files in WAV headers before sending to API-based providers.
  */
 @Singleton
 class TranscriptionService @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val audioFileUtility: AudioFileUtility
 ) {
+    companion object {
+        private const val TAG = "TranscriptionService"
+    }
 
     /**
      * Create a provider instance based on configuration.
@@ -96,8 +98,36 @@ class TranscriptionService @Inject constructor(
             return@withContext Result.failure(error)
         }
 
-        // Perform transcription
-        provider.transcribe(audioFile, language)
+        // API-based providers can't handle raw PCM — wrap in WAV header
+        val needsWavWrapper = audioFile.extension.equals("pcm", ignoreCase = true)
+                && providerType != TranscriptionProviderType.LOCAL
+        var tempWavFile: File? = null
+
+        try {
+            val fileToTranscribe = if (needsWavWrapper) {
+                tempWavFile = wrapPcmAsWav(audioFile)
+                Log.d(TAG, "Wrapped PCM as WAV for ${providerType.displayName}: ${tempWavFile.length()} bytes")
+                tempWavFile
+            } else {
+                audioFile
+            }
+
+            provider.transcribe(fileToTranscribe, language)
+        } finally {
+            tempWavFile?.delete()
+        }
+    }
+
+    /** Wrap raw 16kHz mono PCM in a WAV header so API providers can parse it. */
+    private fun wrapPcmAsWav(pcmFile: File): File {
+        val pcmBytes = pcmFile.readBytes()
+        val wavHeader = audioFileUtility.createWavHeader(pcmBytes.size)
+        val tempWav = File(context.cacheDir, "transcribe_${System.currentTimeMillis()}.wav")
+        FileOutputStream(tempWav).use { out ->
+            out.write(wavHeader)
+            out.write(pcmBytes)
+        }
+        return tempWav
     }
 
     /**

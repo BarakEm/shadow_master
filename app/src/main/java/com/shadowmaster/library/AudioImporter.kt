@@ -144,7 +144,8 @@ class AudioImporter @Inject constructor(
         playlistName: String? = null,
         config: SegmentationConfig,
         enableTranscription: Boolean = false,
-        jobId: String? = null
+        jobId: String? = null,
+        providerOverride: String? = null
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             // Get imported audio
@@ -242,13 +243,14 @@ class AudioImporter @Inject constructor(
                 
                 Log.i(TAG, "Starting transcription for ${shadowItems.size} segments")
                 
-                // Get provider type safely
-                val providerType = getProviderType(transcriptionConfig.defaultProvider)
+                // Use provider override if specified, otherwise use default
+                val providerName = providerOverride ?: transcriptionConfig.defaultProvider
+                val providerType = getProviderType(providerName)
                 if (providerType == null) {
-                    Log.w(TAG, "Invalid transcription provider: ${transcriptionConfig.defaultProvider}, skipping transcription")
+                    Log.w(TAG, "Invalid transcription provider: $providerName, skipping transcription")
                 } else {
                     val providerConfig = createProviderConfig(transcriptionConfig)
-                    
+
                     // Transcribe segments concurrently for better performance
                     val transcriptionJobs = shadowItems.mapIndexed { index, item ->
                         async {
@@ -261,7 +263,7 @@ class AudioImporter @Inject constructor(
                                         providerType = providerType,
                                         config = providerConfig
                                     )
-                                    
+
                                     result.onSuccess { transcribedText ->
                                         // Update the item with transcription
                                         val updatedItem = item.copy(transcription = transcribedText)
@@ -276,7 +278,7 @@ class AudioImporter @Inject constructor(
                             }
                         }
                     }
-                    
+
                     // Wait for all transcription jobs to complete
                     transcriptionJobs.awaitAll()
                 }

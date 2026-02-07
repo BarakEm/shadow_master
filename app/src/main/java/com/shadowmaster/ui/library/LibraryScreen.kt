@@ -29,6 +29,7 @@ import com.shadowmaster.data.model.*
 import com.shadowmaster.library.ExportStatus
 import com.shadowmaster.library.InputValidator
 import com.shadowmaster.library.UrlImportStatus
+import com.shadowmaster.transcription.TranscriptionProviderType
 import com.shadowmaster.ui.components.TextInputDialog
 import com.shadowmaster.ui.theme.ShadowMasterTheme
 import java.text.SimpleDateFormat
@@ -796,6 +797,10 @@ fun LibraryScreen(
                     ?: SupportedLanguage.ENGLISH_US
             )
         }
+        val implementedProviders = remember {
+            TranscriptionProviderType.entries.filter { it.isImplemented }
+        }
+        var selectedProvider by remember { mutableStateOf(implementedProviders.first()) }
 
         AlertDialog(
             onDismissRequest = { showCreatePlaylistDialog = null },
@@ -848,23 +853,16 @@ fun LibraryScreen(
                             }
                         }
                     }
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
                     HorizontalDivider()
                     Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // Transcription option
-                    Text(
-                        text = "Transcription",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Transcription section
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { enableTranscription = !enableTranscription }
-                            .padding(vertical = 8.dp),
+                            .clickable { enableTranscription = !enableTranscription },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(
@@ -872,23 +870,17 @@ fun LibraryScreen(
                             onCheckedChange = { enableTranscription = it }
                         )
                         Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = "Auto-transcribe segments",
-                                style = MaterialTheme.typography.bodyLarge
-                            )
-                            Text(
-                                text = "Automatically transcribe all segments after creation using your default provider",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
+                        Text(
+                            text = "Transcription",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
 
-                    // Language selector (shown when transcription is enabled)
                     AnimatedVisibility(visible = enableTranscription) {
-                        var languageExpanded by remember { mutableStateOf(false) }
-                        Column(modifier = Modifier.padding(start = 48.dp, top = 4.dp)) {
+                        Column(modifier = Modifier.padding(top = 8.dp)) {
+                            // Language dropdown
+                            var languageExpanded by remember { mutableStateOf(false) }
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -930,6 +922,55 @@ fun LibraryScreen(
                                     )
                                 }
                             }
+
+                            // Provider dropdown
+                            var providerExpanded by remember { mutableStateOf(false) }
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { providerExpanded = true }
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Provider",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = selectedProvider.displayName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = providerExpanded,
+                                onDismissRequest = { providerExpanded = false }
+                            ) {
+                                implementedProviders.forEach { provider ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Text(
+                                                if (provider.isFree) "${provider.displayName} (Free)"
+                                                else provider.displayName
+                                            )
+                                        },
+                                        onClick = {
+                                            selectedProvider = provider
+                                            providerExpanded = false
+                                        },
+                                        leadingIcon = {
+                                            if (provider == selectedProvider) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -945,7 +986,8 @@ fun LibraryScreen(
                                     name,
                                     preset,
                                     enableTranscription,
-                                    language = if (enableTranscription) selectedLanguage.code else null
+                                    language = if (enableTranscription) selectedLanguage.code else null,
+                                    providerOverride = if (enableTranscription) selectedProvider.id else null
                                 )
                                 showCreatePlaylistDialog = null
                             }

@@ -523,14 +523,6 @@ private fun TranscriptionServicesSection(
 
         HorizontalDivider()
 
-        // Language Selection (determines transcription language)
-        LanguageSelector(
-            selectedLanguage = config.language,
-            onLanguageSelected = { viewModel.updateLanguage(it) }
-        )
-
-        HorizontalDivider()
-
         // Default Provider Selector
         TranscriptionProviderSelector(
             selectedProvider = config.transcription.defaultProvider,
