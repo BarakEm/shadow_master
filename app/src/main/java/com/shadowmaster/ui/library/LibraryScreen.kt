@@ -29,7 +29,6 @@ import com.shadowmaster.data.model.*
 import com.shadowmaster.library.ExportStatus
 import com.shadowmaster.library.InputValidator
 import com.shadowmaster.library.UrlImportStatus
-import com.shadowmaster.transcription.TranscriptionProviderType
 import com.shadowmaster.ui.components.TextInputDialog
 import com.shadowmaster.ui.theme.ShadowMasterTheme
 import java.text.SimpleDateFormat
@@ -59,7 +58,6 @@ fun LibraryScreen(
     var selectedTab by remember { mutableStateOf(0) }
     var showDeleteDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
     var showRenamePlaylistDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
-    var showEditItemDialog by remember { mutableStateOf<ShadowItem?>(null) }
     var showSplitDialog by remember { mutableStateOf<ShadowItem?>(null) }
     var showExportDialog by remember { mutableStateOf<ShadowPlaylist?>(null) }
     var mergeMode by remember { mutableStateOf(false) }
@@ -222,7 +220,6 @@ fun LibraryScreen(
                     PlaylistDetailContent(
                         items = playlistItems,
                         onToggleFavorite = { viewModel.toggleFavorite(it) },
-                        onEditItem = { showEditItemDialog = it },
                         onSplitItem = { showSplitDialog = it },
                         mergeMode = mergeMode,
                         selectedForMerge = selectedForMerge,
@@ -328,71 +325,6 @@ fun LibraryScreen(
                 showRenamePlaylistDialog = null
             },
             onDismiss = { showRenamePlaylistDialog = null }
-        )
-    }
-
-    // Edit item dialog (transcription/translation)
-    showEditItemDialog?.let { item ->
-        var transcription by remember { mutableStateOf(item.transcription ?: "") }
-        var translation by remember { mutableStateOf(item.translation ?: "") }
-        AlertDialog(
-            onDismissRequest = { showEditItemDialog = null },
-            title = { 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Edit Segment")
-                    Spacer(modifier = Modifier.width(8.dp))
-                    ExperimentalBadge()
-                }
-            },
-            text = {
-                Column {
-                    Text(
-                        text = "Segment ${item.orderInPlaylist + 1} (${formatDuration(item.durationMs)})",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    OutlinedTextField(
-                        value = transcription,
-                        onValueChange = { transcription = it },
-                        label = { Text("Transcription (original text)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 2,
-                        maxLines = 4
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = translation,
-                        onValueChange = { translation = it },
-                        label = { Text("Translation") },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 2,
-                        maxLines = 4
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.updateItemTranscription(
-                            item.id,
-                            transcription.ifBlank { null }
-                        )
-                        viewModel.updateItemTranslation(
-                            item.id,
-                            translation.ifBlank { null }
-                        )
-                        showEditItemDialog = null
-                    }
-                ) {
-                    Text("Save")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showEditItemDialog = null }) {
-                    Text("Cancel")
-                }
-            }
         )
     }
 
@@ -790,17 +722,6 @@ fun LibraryScreen(
         var playlistName by remember { mutableStateOf(audio.sourceFileName.substringBeforeLast(".")) }
         val presets = remember { com.shadowmaster.library.SegmentationPresets.getAllPresets() }
         var selectedPreset by remember { mutableStateOf<SegmentationConfig?>(presets.firstOrNull()) }
-        var enableTranscription by remember { mutableStateOf(false) }
-        var selectedLanguage by remember {
-            mutableStateOf(
-                SupportedLanguage.entries.find { it.code == audio.language }
-                    ?: SupportedLanguage.ENGLISH_US
-            )
-        }
-        val implementedProviders = remember {
-            TranscriptionProviderType.entries.filter { it.isImplemented }
-        }
-        var selectedProvider by remember { mutableStateOf(implementedProviders.first()) }
 
         AlertDialog(
             onDismissRequest = { showCreatePlaylistDialog = null },
@@ -853,126 +774,6 @@ fun LibraryScreen(
                             }
                         }
                     }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider()
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Transcription section
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { enableTranscription = !enableTranscription },
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Checkbox(
-                            checked = enableTranscription,
-                            onCheckedChange = { enableTranscription = it }
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Transcription",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-
-                    AnimatedVisibility(visible = enableTranscription) {
-                        Column(modifier = Modifier.padding(top = 8.dp)) {
-                            // Language dropdown
-                            var languageExpanded by remember { mutableStateOf(false) }
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { languageExpanded = true }
-                                    .padding(vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = "Language",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Text(
-                                    text = selectedLanguage.displayName,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = languageExpanded,
-                                onDismissRequest = { languageExpanded = false }
-                            ) {
-                                SupportedLanguage.entries.forEach { language ->
-                                    DropdownMenuItem(
-                                        text = { Text(language.displayName) },
-                                        onClick = {
-                                            selectedLanguage = language
-                                            languageExpanded = false
-                                        },
-                                        leadingIcon = {
-                                            if (language == selectedLanguage) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Check,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
-                                        }
-                                    )
-                                }
-                            }
-
-                            // Provider dropdown
-                            var providerExpanded by remember { mutableStateOf(false) }
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { providerExpanded = true }
-                                    .padding(vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(
-                                    text = "Provider",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Text(
-                                    text = selectedProvider.displayName,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                            }
-                            DropdownMenu(
-                                expanded = providerExpanded,
-                                onDismissRequest = { providerExpanded = false }
-                            ) {
-                                implementedProviders.forEach { provider ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                if (provider.isFree) "${provider.displayName} (Free)"
-                                                else provider.displayName
-                                            )
-                                        },
-                                        onClick = {
-                                            selectedProvider = provider
-                                            providerExpanded = false
-                                        },
-                                        leadingIcon = {
-                                            if (provider == selectedProvider) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Check,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
-                                            }
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
                 }
             },
             confirmButton = {
@@ -984,10 +785,7 @@ fun LibraryScreen(
                                 viewModel.createPlaylistFromImportedAudio(
                                     audio.id,
                                     name,
-                                    preset,
-                                    enableTranscription,
-                                    language = if (enableTranscription) selectedLanguage.code else null,
-                                    providerOverride = if (enableTranscription) selectedProvider.id else null
+                                    preset
                                 )
                                 showCreatePlaylistDialog = null
                             }
@@ -1378,7 +1176,6 @@ private fun ImportJobCard(job: ImportJob) {
                         text = when (job.status) {
                             ImportStatus.EXTRACTING_AUDIO -> "Extracting audio..."
                             ImportStatus.DETECTING_SEGMENTS -> "Detecting speech segments..."
-                            ImportStatus.TRANSCRIBING -> "Transcribing..."
                             else -> "Processing..."
                         },
                         style = MaterialTheme.typography.bodySmall,
@@ -1566,7 +1363,6 @@ private fun PlaylistCard(
 private fun PlaylistDetailContent(
     items: List<ShadowItem>,
     onToggleFavorite: (ShadowItem) -> Unit,
-    onEditItem: (ShadowItem) -> Unit,
     onSplitItem: (ShadowItem) -> Unit,
     mergeMode: Boolean,
     selectedForMerge: Set<String>,
@@ -1619,7 +1415,6 @@ private fun PlaylistDetailContent(
                 ShadowItemCard(
                     item = item,
                     onToggleFavorite = { onToggleFavorite(item) },
-                    onEditClick = { onEditItem(item) },
                     onSplitClick = { onSplitItem(item) },
                     mergeMode = mergeMode,
                     isSelectedForMerge = item.id in selectedForMerge,
@@ -1634,7 +1429,6 @@ private fun PlaylistDetailContent(
 private fun ShadowItemCard(
     item: ShadowItem,
     onToggleFavorite: () -> Unit,
-    onEditClick: () -> Unit,
     onSplitClick: () -> Unit,
     mergeMode: Boolean,
     isSelectedForMerge: Boolean,
@@ -1642,8 +1436,8 @@ private fun ShadowItemCard(
 ) {
     // Memoize computed values to avoid recalculating on each recomposition
     val durationText = remember(item.durationMs) { formatDuration(item.durationMs) }
-    val displayText = remember(item.transcription, item.orderInPlaylist) {
-        item.transcription ?: "Segment ${item.orderInPlaylist + 1}"
+    val displayText = remember(item.orderInPlaylist) {
+        "Segment ${item.orderInPlaylist + 1}"
     }
     
     Card(
@@ -1701,54 +1495,21 @@ private fun ShadowItemCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                // Show translation if available
-                item.translation?.let { translation ->
-                    Text(
-                        text = translation,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    if (item.practiceCount > 0) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = null,
-                                modifier = Modifier.size(12.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = " ${item.practiceCount}x",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-                    // Transcription indicator
-                    if (item.transcription != null) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.TextFields,
-                                contentDescription = "Has transcription",
-                                modifier = Modifier.size(12.dp),
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Text(
-                                text = " Transcribed",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
+                if (item.practiceCount > 0) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = " ${item.practiceCount}x",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
@@ -1764,15 +1525,6 @@ private fun ShadowItemCard(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                }
-
-                // Edit button
-                IconButton(onClick = onEditClick) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
 
                 // Favorite button
@@ -1911,15 +1663,12 @@ fun ShadowItemCardPreview() {
                     sourceEndMs = 3500,
                     audioFilePath = "/path/to/audio",
                     durationMs = 3500,
-                    transcription = "Hello, how are you?",
-                    translation = "Hola, ¿cómo estás?",
                     language = "en-US",
                     practiceCount = 12,
                     isFavorite = true,
                     orderInPlaylist = 0
                 ),
                 onToggleFavorite = {},
-                onEditClick = {},
                 onSplitClick = {},
                 mergeMode = false,
                 isSelectedForMerge = false,
@@ -1949,7 +1698,6 @@ fun ShadowItemCardNoTranscriptionPreview() {
                     orderInPlaylist = 5
                 ),
                 onToggleFavorite = {},
-                onEditClick = {},
                 onSplitClick = {},
                 mergeMode = false,
                 isSelectedForMerge = false,
@@ -1973,12 +1721,10 @@ fun ShadowItemCardMergeModePreview() {
                     sourceEndMs = 1500,
                     audioFilePath = "/path/to/audio",
                     durationMs = 1500,
-                    transcription = "This is a test segment",
                     language = "en-US",
                     orderInPlaylist = 2
                 ),
                 onToggleFavorite = {},
-                onEditClick = {},
                 onSplitClick = {},
                 mergeMode = true,
                 isSelectedForMerge = true,
@@ -2027,20 +1773,4 @@ fun FailedImportCardPreview() {
     }
 }
 
-/**
- * Experimental badge to indicate features that are still in development
- */
-@Composable
-private fun ExperimentalBadge() {
-    Surface(
-        shape = MaterialTheme.shapes.small,
-        color = MaterialTheme.colorScheme.tertiaryContainer
-    ) {
-        Text(
-            text = "Experimental",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onTertiaryContainer,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-        )
-    }
-}
+

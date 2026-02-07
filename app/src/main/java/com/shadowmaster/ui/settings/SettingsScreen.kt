@@ -178,13 +178,6 @@ fun SettingsScreen(
                 onCheckedChange = { viewModel.updatePauseForNavigation(it) }
             )
 
-            HorizontalDivider()
-
-            // Transcription Services Section
-            TranscriptionServicesSection(
-                config = config,
-                viewModel = viewModel
-            )
         }
     }
 }
