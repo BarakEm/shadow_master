@@ -209,6 +209,11 @@ class LibraryRepository @Inject constructor(
     suspend fun getImportedAudio(id: String): ImportedAudio? =
         importedAudioDao.getById(id)
 
+    suspend fun updateImportedAudioLanguage(audioId: String, language: String) {
+        val audio = importedAudioDao.getById(audioId) ?: return
+        importedAudioDao.update(audio.copy(language = language))
+    }
+
     suspend fun deleteImportedAudio(audio: ImportedAudio) {
         File(audio.pcmFilePath).delete()
         importedAudioDao.delete(audio)

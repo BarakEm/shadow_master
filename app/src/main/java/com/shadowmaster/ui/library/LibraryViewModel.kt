@@ -346,9 +346,13 @@ class LibraryViewModel @Inject constructor(
         importedAudioId: String,
         playlistName: String,
         config: com.shadowmaster.data.model.SegmentationConfig,
-        enableTranscription: Boolean = false
+        enableTranscription: Boolean = false,
+        language: String? = null
     ) {
         viewModelScope.launch {
+            if (language != null) {
+                libraryRepository.updateImportedAudioLanguage(importedAudioId, language)
+            }
             val result = libraryRepository.segmentImportedAudio(
                 importedAudioId = importedAudioId,
                 playlistName = playlistName,

@@ -8,6 +8,8 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -788,12 +790,22 @@ fun LibraryScreen(
         val presets = remember { com.shadowmaster.library.SegmentationPresets.getAllPresets() }
         var selectedPreset by remember { mutableStateOf<SegmentationConfig?>(presets.firstOrNull()) }
         var enableTranscription by remember { mutableStateOf(false) }
+        var selectedLanguage by remember {
+            mutableStateOf(
+                SupportedLanguage.entries.find { it.code == audio.language }
+                    ?: SupportedLanguage.ENGLISH_US
+            )
+        }
 
         AlertDialog(
             onDismissRequest = { showCreatePlaylistDialog = null },
             title = { Text("Create Playlist") },
             text = {
-                Column(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                ) {
                     OutlinedTextField(
                         value = playlistName,
                         onValueChange = { playlistName = it },
@@ -872,6 +884,54 @@ fun LibraryScreen(
                             )
                         }
                     }
+
+                    // Language selector (shown when transcription is enabled)
+                    AnimatedVisibility(visible = enableTranscription) {
+                        var languageExpanded by remember { mutableStateOf(false) }
+                        Column(modifier = Modifier.padding(start = 48.dp, top = 4.dp)) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { languageExpanded = true }
+                                    .padding(vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "Language",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    text = selectedLanguage.displayName,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = languageExpanded,
+                                onDismissRequest = { languageExpanded = false }
+                            ) {
+                                SupportedLanguage.entries.forEach { language ->
+                                    DropdownMenuItem(
+                                        text = { Text(language.displayName) },
+                                        onClick = {
+                                            selectedLanguage = language
+                                            languageExpanded = false
+                                        },
+                                        leadingIcon = {
+                                            if (language == selectedLanguage) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Check,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary
+                                                )
+                                            }
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {
@@ -881,10 +941,11 @@ fun LibraryScreen(
                         selectedPreset?.let { preset ->
                             if (name.isNotEmpty()) {
                                 viewModel.createPlaylistFromImportedAudio(
-                                    audio.id, 
-                                    name, 
+                                    audio.id,
+                                    name,
                                     preset,
-                                    enableTranscription
+                                    enableTranscription,
+                                    language = if (enableTranscription) selectedLanguage.code else null
                                 )
                                 showCreatePlaylistDialog = null
                             }
