@@ -55,6 +55,6 @@ enum class TranscriptionProviderType(
     ANDROID_SPEECH("android_speech", "Google Speech (Free)", isFree = true),
     GOOGLE("google", "Google Speech-to-Text", isFree = false, isImplemented = false),
     AZURE("azure", "Azure Speech Services", isFree = false, isImplemented = false),
-    WHISPER("whisper", "OpenAI Whisper", isFree = false, isImplemented = false),
+    WHISPER("whisper", "OpenAI Whisper", isFree = false),
     CUSTOM("custom", "Custom Endpoint", isFree = false)
 }

@@ -498,6 +498,7 @@ private fun TranscriptionServicesSection(
     viewModel: SettingsViewModel
 ) {
     var showIvritKeyDialog by remember { mutableStateOf(false) }
+    var showWhisperDialog by remember { mutableStateOf(false) }
     var showCustomUrlDialog by remember { mutableStateOf(false) }
     var showLocalModelDialog by remember { mutableStateOf(false) }
     var showAdvancedProviders by remember { mutableStateOf(false) }
@@ -597,6 +598,21 @@ private fun TranscriptionServicesSection(
         }
 
         if (showAdvancedProviders) {
+            // OpenAI Whisper / Faster Whisper
+            ProviderConfigSection(
+                title = "OpenAI Whisper",
+                isConfigured = !config.transcription.whisperApiKey.isNullOrBlank()
+                        || !config.transcription.whisperBaseUrl.isNullOrBlank(),
+                onConfigureClick = { showWhisperDialog = true },
+                additionalInfo = when {
+                    !config.transcription.whisperBaseUrl.isNullOrBlank() ->
+                        "Faster Whisper: ${config.transcription.whisperBaseUrl}"
+                    !config.transcription.whisperApiKey.isNullOrBlank() ->
+                        "OpenAI API key configured"
+                    else -> null
+                }
+            )
+
             // Custom Endpoint
             ProviderConfigSection(
                 title = "Custom Endpoint",
@@ -618,6 +634,19 @@ private fun TranscriptionServicesSection(
                 showIvritKeyDialog = false
             },
             description = "API key is optional. Free tier works without a key, but premium API key unlocks higher limits."
+        )
+    }
+
+    if (showWhisperDialog) {
+        WhisperConfigDialog(
+            currentApiKey = config.transcription.whisperApiKey ?: "",
+            currentBaseUrl = config.transcription.whisperBaseUrl ?: "",
+            onDismiss = { showWhisperDialog = false },
+            onSave = { apiKey, baseUrl ->
+                viewModel.updateTranscriptionWhisperApiKey(apiKey.ifBlank { null })
+                viewModel.updateTranscriptionWhisperBaseUrl(baseUrl.ifBlank { null })
+                showWhisperDialog = false
+            }
         )
     }
 
@@ -871,6 +900,61 @@ private fun CustomEndpointDialog(
         },
         confirmButton = {
             TextButton(onClick = { onSave(url, apiKey) }) {
+                Text("Save")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WhisperConfigDialog(
+    currentApiKey: String,
+    currentBaseUrl: String,
+    onDismiss: () -> Unit,
+    onSave: (String, String) -> Unit
+) {
+    var apiKey by remember { mutableStateOf(currentApiKey) }
+    var baseUrl by remember { mutableStateOf(currentBaseUrl) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("OpenAI Whisper / Faster Whisper") },
+        text = {
+            Column {
+                Text("For OpenAI Whisper, enter your API key. For Faster Whisper or other compatible servers, set the base URL and leave the API key blank.")
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = apiKey,
+                    onValueChange = { apiKey = it },
+                    label = { Text("OpenAI API Key") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = baseUrl,
+                    onValueChange = { baseUrl = it },
+                    label = { Text("Base URL (optional)") },
+                    placeholder = { Text("e.g. http://192.168.1.100:8000") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Leave blank for OpenAI. Set for Faster Whisper servers.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(apiKey, baseUrl) }) {
                 Text("Save")
             }
         },

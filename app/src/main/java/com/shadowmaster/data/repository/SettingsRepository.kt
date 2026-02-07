@@ -51,6 +51,7 @@ class SettingsRepository @Inject constructor(
         val TRANSCRIPTION_AZURE_API_KEY = stringPreferencesKey("transcription_azure_api_key")
         val TRANSCRIPTION_AZURE_REGION = stringPreferencesKey("transcription_azure_region")
         val TRANSCRIPTION_WHISPER_API_KEY = stringPreferencesKey("transcription_whisper_api_key")
+        val TRANSCRIPTION_WHISPER_BASE_URL = stringPreferencesKey("transcription_whisper_base_url")
         val TRANSCRIPTION_CUSTOM_URL = stringPreferencesKey("transcription_custom_url")
         val TRANSCRIPTION_CUSTOM_API_KEY = stringPreferencesKey("transcription_custom_api_key")
         val TRANSCRIPTION_LOCAL_MODEL_PATH = stringPreferencesKey("transcription_local_model_path")
@@ -117,6 +118,7 @@ class SettingsRepository @Inject constructor(
                 azureApiKey = preferences[Keys.TRANSCRIPTION_AZURE_API_KEY],
                 azureRegion = preferences[Keys.TRANSCRIPTION_AZURE_REGION],
                 whisperApiKey = preferences[Keys.TRANSCRIPTION_WHISPER_API_KEY],
+                whisperBaseUrl = preferences[Keys.TRANSCRIPTION_WHISPER_BASE_URL],
                 customEndpointUrl = preferences[Keys.TRANSCRIPTION_CUSTOM_URL],
                 customEndpointApiKey = preferences[Keys.TRANSCRIPTION_CUSTOM_API_KEY],
                 localModelPath = preferences[Keys.TRANSCRIPTION_LOCAL_MODEL_PATH],
@@ -351,6 +353,16 @@ class SettingsRepository @Inject constructor(
                 preferences.remove(Keys.TRANSCRIPTION_WHISPER_API_KEY)
             } else {
                 preferences[Keys.TRANSCRIPTION_WHISPER_API_KEY] = apiKey
+            }
+        }
+    }
+
+    suspend fun updateTranscriptionWhisperBaseUrl(url: String?) {
+        context.dataStore.edit { preferences ->
+            if (url.isNullOrBlank()) {
+                preferences.remove(Keys.TRANSCRIPTION_WHISPER_BASE_URL)
+            } else {
+                preferences[Keys.TRANSCRIPTION_WHISPER_BASE_URL] = url
             }
         }
     }

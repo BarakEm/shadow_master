@@ -1,6 +1,7 @@
 package com.shadowmaster.transcription
 
 import android.content.Context
+import com.shadowmaster.library.AudioFileUtility
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runTest
@@ -20,7 +21,8 @@ import java.io.File
 class TranscriptionServiceTest {
 
     private val mockContext: Context = mockk(relaxed = true)
-    private val service = TranscriptionService(mockContext)
+    private val audioFileUtility = AudioFileUtility()
+    private val service = TranscriptionService(mockContext, audioFileUtility)
 
     // ==================== Provider Creation Tests ====================
 

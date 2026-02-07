@@ -101,6 +101,7 @@ data class TranscriptionConfig(
     val azureApiKey: String? = null,
     val azureRegion: String? = null,
     val whisperApiKey: String? = null,
+    val whisperBaseUrl: String? = null,  // Custom base URL for Faster Whisper or compatible servers
     val customEndpointUrl: String? = null,
     val customEndpointApiKey: String? = null,
     val customEndpointHeaders: Map<String, String> = emptyMap(),

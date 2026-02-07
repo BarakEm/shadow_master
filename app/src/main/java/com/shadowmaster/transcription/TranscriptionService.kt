@@ -58,7 +58,7 @@ class TranscriptionService @Inject constructor(
                 AzureSpeechProvider(config.azureApiKey, config.azureRegion)
             }
             TranscriptionProviderType.WHISPER -> {
-                WhisperAPIProvider(config.whisperApiKey)
+                WhisperAPIProvider(config.whisperApiKey, config.whisperBaseUrl)
             }
             TranscriptionProviderType.CUSTOM -> {
                 CustomEndpointProvider(
@@ -180,6 +180,7 @@ data class ProviderConfig(
     val azureApiKey: String? = null,
     val azureRegion: String? = null,
     val whisperApiKey: String? = null,
+    val whisperBaseUrl: String? = null,
     val localModelPath: String? = null,
     val customEndpointUrl: String? = null,
     val customEndpointApiKey: String? = null,

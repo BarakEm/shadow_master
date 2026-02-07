@@ -1110,6 +1110,7 @@ class AudioImporter @Inject constructor(
             azureApiKey = transcriptionConfig.azureApiKey,
             azureRegion = transcriptionConfig.azureRegion,
             whisperApiKey = transcriptionConfig.whisperApiKey,
+            whisperBaseUrl = transcriptionConfig.whisperBaseUrl,
             localModelPath = transcriptionConfig.localModelPath,
             customEndpointUrl = transcriptionConfig.customEndpointUrl,
             customEndpointApiKey = transcriptionConfig.customEndpointApiKey,
