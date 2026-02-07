@@ -10,10 +10,11 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.BufferedInputStream
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
-import java.nio.ByteBuffer
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -78,66 +79,78 @@ class AacFileCreator @Inject constructor(
 
     /**
      * Encode PCM data to AAC format using MediaCodec.
+     * Streams PCM from file to avoid loading entire file into memory.
      */
     private fun encodePcmToAac(pcmFile: File, outputFile: File) {
-        Log.d(TAG, "Creating AAC encoder for ${pcmFile.length()} bytes of PCM data")
+        val pcmSize = pcmFile.length()
+        Log.d(TAG, "Creating AAC encoder for $pcmSize bytes of PCM data")
+
+        if (pcmSize == 0L) {
+            throw IOException("PCM file is empty, nothing to encode")
+        }
 
         val format = MediaFormat.createAudioFormat(MIME_TYPE, SAMPLE_RATE, 1)
         format.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC)
         format.setInteger(MediaFormat.KEY_BIT_RATE, BIT_RATE)
+        format.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 16384)
 
         val codec = MediaCodec.createEncoderByType(MIME_TYPE)
-        codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
-        codec.start()
-
-        val outputStream = FileOutputStream(outputFile)
-        val pcmData = pcmFile.readBytes()
-        var inputOffset = 0
-        var allInputSent = false
-
-        val bufferInfo = MediaCodec.BufferInfo()
-        Log.d(TAG, "Encoder started, processing PCM data...")
+        var outputStream: FileOutputStream? = null
+        var inputStream: BufferedInputStream? = null
 
         try {
+            codec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE)
+            codec.start()
+
+            outputStream = FileOutputStream(outputFile)
+            inputStream = BufferedInputStream(FileInputStream(pcmFile), 65536)
+            var allInputSent = false
+            var totalBytesRead = 0L
+            // Track presentation time for proper encoder behavior (16-bit mono = 2 bytes per sample)
+            var presentationTimeUs = 0L
+
+            val bufferInfo = MediaCodec.BufferInfo()
+            val readBuffer = ByteArray(16384)
+            Log.d(TAG, "Encoder started, processing PCM data...")
+
             while (true) {
-                // Feed input if available
+                // Feed input from file stream
                 if (!allInputSent) {
                     val inputBufferId = codec.dequeueInputBuffer(10000)
                     if (inputBufferId >= 0) {
                         val inputBuffer = codec.getInputBuffer(inputBufferId)!!
-                        val chunkSize = minOf(inputBuffer.remaining(), pcmData.size - inputOffset)
+                        val maxRead = minOf(inputBuffer.remaining(), readBuffer.size)
+                        val bytesRead = inputStream.read(readBuffer, 0, maxRead)
 
-                        if (chunkSize > 0) {
+                        if (bytesRead > 0) {
                             inputBuffer.clear()
-                            inputBuffer.put(pcmData, inputOffset, chunkSize)
-                            inputOffset += chunkSize
+                            inputBuffer.put(readBuffer, 0, bytesRead)
+                            totalBytesRead += bytesRead
 
-                            // Send EOS flag with the last chunk of data
-                            val isLastChunk = inputOffset >= pcmData.size
-                            val flags = if (isLastChunk) MediaCodec.BUFFER_FLAG_END_OF_STREAM else 0
-                            codec.queueInputBuffer(inputBufferId, 0, chunkSize, 0, flags)
+                            val isLast = totalBytesRead >= pcmSize
+                            val flags = if (isLast) MediaCodec.BUFFER_FLAG_END_OF_STREAM else 0
+                            codec.queueInputBuffer(inputBufferId, 0, bytesRead, presentationTimeUs, flags)
+                            // Advance timestamp: bytesRead / 2 bytes per sample / 16000 Hz * 1_000_000
+                            presentationTimeUs += (bytesRead / 2) * 1_000_000L / SAMPLE_RATE
 
-                            if (isLastChunk) {
-                                allInputSent = true
-                            }
-                        } else if (inputOffset >= pcmData.size) {
-                            // No more data to send, send EOS with empty buffer
-                            codec.queueInputBuffer(inputBufferId, 0, 0, 0, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
+                            if (isLast) allInputSent = true
+                        } else {
+                            // EOF reached
+                            codec.queueInputBuffer(inputBufferId, 0, 0, presentationTimeUs, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
                             allInputSent = true
                         }
                     }
                 }
 
-                // Get encoded output
+                // Drain encoded output
                 val outputBufferId = codec.dequeueOutputBuffer(bufferInfo, 10000)
                 when {
                     outputBufferId >= 0 -> {
-                        val outputBuffer = codec.getOutputBuffer(outputBufferId)!!
                         if (bufferInfo.size > 0) {
+                            val outputBuffer = codec.getOutputBuffer(outputBufferId)!!
                             val chunk = ByteArray(bufferInfo.size)
                             outputBuffer.get(chunk)
 
-                            // Write ADTS header before each AAC frame so the .aac file is playable
                             val adtsHeader = createAdtsHeader(bufferInfo.size)
                             outputStream.write(adtsHeader)
                             outputStream.write(chunk)
@@ -151,15 +164,14 @@ class AacFileCreator @Inject constructor(
                     outputBufferId == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
                         Log.d(TAG, "Output format changed: ${codec.outputFormat}")
                     }
-                    outputBufferId == MediaCodec.INFO_TRY_AGAIN_LATER -> {
-                        // No output available yet
-                    }
+                    // INFO_TRY_AGAIN_LATER: continue loop
                 }
             }
         } finally {
-            outputStream.close()
-            codec.stop()
-            codec.release()
+            try { inputStream?.close() } catch (_: Exception) {}
+            try { outputStream?.close() } catch (_: Exception) {}
+            try { codec.stop() } catch (_: Exception) {}
+            try { codec.release() } catch (_: Exception) {}
             Log.d(TAG, "Encoder stopped and released")
         }
     }
