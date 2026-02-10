@@ -21,13 +21,22 @@ val keystorePropertiesFile = rootProject.file("keystore.properties")
 var keystoreConfigured = false
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(keystorePropertiesFile.inputStream())
-    // Validate all required properties are present
+    // Validate all required properties are present and non-empty
     val storeFilePath = keystoreProperties.getProperty("storeFile")
     val storePass = keystoreProperties.getProperty("storePassword")
     val alias = keystoreProperties.getProperty("keyAlias")
     val keyPass = keystoreProperties.getProperty("keyPassword")
-    keystoreConfigured = storeFilePath != null && storePass != null && alias != null && keyPass != null
-    if (!keystoreConfigured) {
+    keystoreConfigured = !storeFilePath.isNullOrBlank() && !storePass.isNullOrBlank() && 
+                         !alias.isNullOrBlank() && !keyPass.isNullOrBlank()
+    
+    if (keystoreConfigured) {
+        // Verify keystore file exists
+        val keystoreFile = file(storeFilePath)
+        if (!keystoreFile.exists()) {
+            println("WARNING: keystore file not found at: $storeFilePath")
+            keystoreConfigured = false
+        }
+    } else {
         println("WARNING: keystore.properties exists but is missing required properties")
     }
 }
