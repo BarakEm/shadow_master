@@ -15,6 +15,32 @@ if (localPropertiesFile.exists()) {
     localProperties.load(localPropertiesFile.inputStream())
 }
 
+// Load keystore.properties for release signing
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+var keystoreConfigured = false
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(keystorePropertiesFile.inputStream())
+    // Validate all required properties are present and non-empty
+    val storeFilePath = keystoreProperties.getProperty("storeFile")
+    val storePass = keystoreProperties.getProperty("storePassword")
+    val alias = keystoreProperties.getProperty("keyAlias")
+    val keyPass = keystoreProperties.getProperty("keyPassword")
+    keystoreConfigured = !storeFilePath.isNullOrBlank() && !storePass.isNullOrBlank() && 
+                         !alias.isNullOrBlank() && !keyPass.isNullOrBlank()
+    
+    if (keystoreConfigured) {
+        // Verify keystore file exists
+        val keystoreFile = file(storeFilePath)
+        if (!keystoreFile.exists()) {
+            println("WARNING: keystore file not found at: $storeFilePath")
+            keystoreConfigured = false
+        }
+    } else {
+        println("WARNING: keystore.properties exists but is missing required properties")
+    }
+}
+
 android {
     namespace = "com.shadowmaster"
     compileSdk = 35
@@ -53,6 +79,18 @@ android {
         )
     }
 
+    signingConfigs {
+        create("release") {
+            // Only configure signing if all required properties are present
+            if (keystoreConfigured) {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -60,6 +98,10 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Apply signing config only if keystore was properly configured
+            if (keystoreConfigured) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
         debug {
             isMinifyEnabled = false
