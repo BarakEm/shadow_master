@@ -106,18 +106,21 @@ class AacFileCreator @Inject constructor(
             inputStream = BufferedInputStream(FileInputStream(pcmFile), 65536)
             var allInputSent = false
             var totalBytesRead = 0L
-            // Track presentation time for proper encoder behavior (16-bit mono = 2 bytes per sample)
             var presentationTimeUs = 0L
+            var noProgressCount = 0
 
             val bufferInfo = MediaCodec.BufferInfo()
             val readBuffer = ByteArray(16384)
             Log.d(TAG, "Encoder started, processing PCM data...")
 
             while (true) {
+                var madeProgress = false
+
                 // Feed input from file stream
                 if (!allInputSent) {
-                    val inputBufferId = codec.dequeueInputBuffer(10000)
+                    val inputBufferId = codec.dequeueInputBuffer(1000)
                     if (inputBufferId >= 0) {
+                        madeProgress = true
                         val inputBuffer = codec.getInputBuffer(inputBufferId)!!
                         val maxRead = minOf(inputBuffer.remaining(), readBuffer.size)
                         val bytesRead = inputStream.read(readBuffer, 0, maxRead)
@@ -143,9 +146,10 @@ class AacFileCreator @Inject constructor(
                 }
 
                 // Drain encoded output
-                val outputBufferId = codec.dequeueOutputBuffer(bufferInfo, 10000)
+                val outputBufferId = codec.dequeueOutputBuffer(bufferInfo, 1000)
                 when {
                     outputBufferId >= 0 -> {
+                        madeProgress = true
                         if (bufferInfo.size > 0) {
                             val outputBuffer = codec.getOutputBuffer(outputBufferId)!!
                             val chunk = ByteArray(bufferInfo.size)
@@ -162,9 +166,20 @@ class AacFileCreator @Inject constructor(
                         }
                     }
                     outputBufferId == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
+                        madeProgress = true
                         Log.d(TAG, "Output format changed: ${codec.outputFormat}")
                     }
                     // INFO_TRY_AGAIN_LATER: continue loop
+                }
+
+                // Detect encoder stalls
+                if (!madeProgress) {
+                    noProgressCount++
+                    if (noProgressCount > 500) {
+                        throw IOException("AAC encoder stalled after 500 iterations with no progress")
+                    }
+                } else {
+                    noProgressCount = 0
                 }
             }
         } finally {
