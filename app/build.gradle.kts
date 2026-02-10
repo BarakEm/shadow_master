@@ -18,8 +18,18 @@ if (localPropertiesFile.exists()) {
 // Load keystore.properties for release signing
 val keystoreProperties = Properties()
 val keystorePropertiesFile = rootProject.file("keystore.properties")
+var keystoreConfigured = false
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(keystorePropertiesFile.inputStream())
+    // Validate all required properties are present
+    val storeFilePath = keystoreProperties.getProperty("storeFile")
+    val storePass = keystoreProperties.getProperty("storePassword")
+    val alias = keystoreProperties.getProperty("keyAlias")
+    val keyPass = keystoreProperties.getProperty("keyPassword")
+    keystoreConfigured = storeFilePath != null && storePass != null && alias != null && keyPass != null
+    if (!keystoreConfigured) {
+        println("WARNING: keystore.properties exists but is missing required properties")
+    }
 }
 
 android {
@@ -62,21 +72,12 @@ android {
 
     signingConfigs {
         create("release") {
-            // Only configure signing if keystore.properties exists and has required properties
-            if (keystorePropertiesFile.exists()) {
-                val storeFilePath = keystoreProperties.getProperty("storeFile")
-                val storePass = keystoreProperties.getProperty("storePassword")
-                val alias = keystoreProperties.getProperty("keyAlias")
-                val keyPass = keystoreProperties.getProperty("keyPassword")
-                
-                if (storeFilePath != null && storePass != null && alias != null && keyPass != null) {
-                    storeFile = file(storeFilePath)
-                    storePassword = storePass
-                    keyAlias = alias
-                    keyPassword = keyPass
-                } else {
-                    println("WARNING: keystore.properties exists but is missing required properties")
-                }
+            // Only configure signing if all required properties are present
+            if (keystoreConfigured) {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
             }
         }
     }
@@ -88,8 +89,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            // Apply signing config if keystore.properties exists
-            if (keystorePropertiesFile.exists()) {
+            // Apply signing config only if keystore was properly configured
+            if (keystoreConfigured) {
                 signingConfig = signingConfigs.getByName("release")
             }
         }

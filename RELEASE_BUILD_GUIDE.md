@@ -22,7 +22,7 @@ You can create a keystore using Android Studio or the command line:
    - **Password**: Choose a strong password for the keystore
    - **Alias**: A name for the key (e.g., `shadowmaster-key`)
    - **Key password**: Choose a strong password for the key
-   - **Validity**: 25 years (recommended for Android apps)
+   - **Validity**: 10000 days (~27 years, recommended for Android apps)
    - **Certificate details**: Fill in your information
 
 ### Using Command Line
@@ -30,6 +30,8 @@ You can create a keystore using Android Studio or the command line:
 keytool -genkey -v -keystore ~/keystores/shadowmaster.jks \
   -alias shadowmaster-key -keyalg RSA -keysize 2048 -validity 10000
 ```
+
+**Note:** The validity period (10000 days) ensures you can update the app for many years. Google recommends at least 25 years.
 
 **Important:** Keep your keystore file and passwords secure! If you lose them, you cannot update your app on Google Play.
 
