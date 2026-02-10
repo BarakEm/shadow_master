@@ -113,6 +113,9 @@ class AacFileCreator @Inject constructor(
             val readBuffer = ByteArray(16384)
             Log.d(TAG, "Encoder started, processing PCM data...")
 
+            var noProgressCount = 0
+            val maxNoProgressIterations = 500
+
             while (true) {
                 var madeProgress = false
 
@@ -133,14 +136,14 @@ class AacFileCreator @Inject constructor(
                             val isLast = totalBytesRead >= pcmSize
                             val flags = if (isLast) MediaCodec.BUFFER_FLAG_END_OF_STREAM else 0
                             codec.queueInputBuffer(inputBufferId, 0, bytesRead, presentationTimeUs, flags)
-                            // Advance timestamp: bytesRead / 2 bytes per sample / 16000 Hz * 1_000_000
                             presentationTimeUs += (bytesRead / 2) * 1_000_000L / SAMPLE_RATE
 
                             if (isLast) allInputSent = true
+                            madeProgress = true
                         } else {
-                            // EOF reached
                             codec.queueInputBuffer(inputBufferId, 0, 0, presentationTimeUs, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
                             allInputSent = true
+                            madeProgress = true
                         }
                     }
                 }
@@ -160,6 +163,7 @@ class AacFileCreator @Inject constructor(
                             outputStream.write(chunk)
                         }
                         codec.releaseOutputBuffer(outputBufferId, false)
+                        madeProgress = true
 
                         if ((bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                             break
@@ -168,8 +172,17 @@ class AacFileCreator @Inject constructor(
                     outputBufferId == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
                         madeProgress = true
                         Log.d(TAG, "Output format changed: ${codec.outputFormat}")
+                        madeProgress = true
                     }
-                    // INFO_TRY_AGAIN_LATER: continue loop
+                }
+
+                if (!madeProgress) {
+                    noProgressCount++
+                    if (noProgressCount >= maxNoProgressIterations) {
+                        throw IOException("Encoder stalled: no progress after $maxNoProgressIterations iterations")
+                    }
+                } else {
+                    noProgressCount = 0
                 }
 
                 // Detect encoder stalls
