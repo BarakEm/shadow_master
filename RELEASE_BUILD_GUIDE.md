@@ -101,8 +101,8 @@ Important classes preserved:
 
 ## Troubleshooting
 
-### Build fails with "Could not find keystore.properties"
-This is expected if you haven't created `keystore.properties` yet. The build will still work but the APK won't be signed. Follow Step 2 to configure signing.
+### keystore.properties not configured
+If you haven't created `keystore.properties`, the build will proceed without signing configuration and produce an unsigned APK. This is normal and expected. To create a signed APK, follow Step 2 to configure signing.
 
 ### App crashes after installing release APK
 Check ProGuard rules in `app/proguard-rules.pro`. You may need to add `-keep` rules for classes that are accessed via reflection.

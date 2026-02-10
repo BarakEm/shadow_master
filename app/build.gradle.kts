@@ -62,12 +62,21 @@ android {
 
     signingConfigs {
         create("release") {
-            // Only configure signing if keystore.properties exists
+            // Only configure signing if keystore.properties exists and has required properties
             if (keystorePropertiesFile.exists()) {
-                storeFile = file(keystoreProperties.getProperty("storeFile"))
-                storePassword = keystoreProperties.getProperty("storePassword")
-                keyAlias = keystoreProperties.getProperty("keyAlias")
-                keyPassword = keystoreProperties.getProperty("keyPassword")
+                val storeFilePath = keystoreProperties.getProperty("storeFile")
+                val storePass = keystoreProperties.getProperty("storePassword")
+                val alias = keystoreProperties.getProperty("keyAlias")
+                val keyPass = keystoreProperties.getProperty("keyPassword")
+                
+                if (storeFilePath != null && storePass != null && alias != null && keyPass != null) {
+                    storeFile = file(storeFilePath)
+                    storePassword = storePass
+                    keyAlias = alias
+                    keyPassword = keyPass
+                } else {
+                    println("WARNING: keystore.properties exists but is missing required properties")
+                }
             }
         }
     }
