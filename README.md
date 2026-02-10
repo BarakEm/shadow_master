@@ -70,6 +70,10 @@ cd shadow_master
 
 # The APK will be at:
 # app/build/outputs/apk/debug/app-debug.apk
+
+# Build release APK (requires keystore configuration)
+# See RELEASE_BUILD_GUIDE.md for detailed instructions
+./gradlew assembleRelease
 ```
 
 ### Option 3: Install via ADB
