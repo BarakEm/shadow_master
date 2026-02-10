@@ -111,10 +111,8 @@ class AacFileCreator @Inject constructor(
 
             val bufferInfo = MediaCodec.BufferInfo()
             val readBuffer = ByteArray(16384)
-            Log.d(TAG, "Encoder started, processing PCM data...")
-
-            var noProgressCount = 0
             val maxNoProgressIterations = 500
+            Log.d(TAG, "Encoder started, processing PCM data...")
 
             while (true) {
                 var madeProgress = false
@@ -180,16 +178,6 @@ class AacFileCreator @Inject constructor(
                     noProgressCount++
                     if (noProgressCount >= maxNoProgressIterations) {
                         throw IOException("Encoder stalled: no progress after $maxNoProgressIterations iterations")
-                    }
-                } else {
-                    noProgressCount = 0
-                }
-
-                // Detect encoder stalls
-                if (!madeProgress) {
-                    noProgressCount++
-                    if (noProgressCount > 500) {
-                        throw IOException("AAC encoder stalled after 500 iterations with no progress")
                     }
                 } else {
                     noProgressCount = 0
