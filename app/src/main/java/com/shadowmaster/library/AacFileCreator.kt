@@ -106,17 +106,21 @@ class AacFileCreator @Inject constructor(
             inputStream = BufferedInputStream(FileInputStream(pcmFile), 65536)
             var allInputSent = false
             var totalBytesRead = 0L
-            // Track presentation time for proper encoder behavior (16-bit mono = 2 bytes per sample)
             var presentationTimeUs = 0L
 
             val bufferInfo = MediaCodec.BufferInfo()
             val readBuffer = ByteArray(16384)
             Log.d(TAG, "Encoder started, processing PCM data...")
 
+            var noProgressCount = 0
+            val maxNoProgressIterations = 500
+
             while (true) {
+                var madeProgress = false
+
                 // Feed input from file stream
                 if (!allInputSent) {
-                    val inputBufferId = codec.dequeueInputBuffer(10000)
+                    val inputBufferId = codec.dequeueInputBuffer(1000)
                     if (inputBufferId >= 0) {
                         val inputBuffer = codec.getInputBuffer(inputBufferId)!!
                         val maxRead = minOf(inputBuffer.remaining(), readBuffer.size)
@@ -130,20 +134,20 @@ class AacFileCreator @Inject constructor(
                             val isLast = totalBytesRead >= pcmSize
                             val flags = if (isLast) MediaCodec.BUFFER_FLAG_END_OF_STREAM else 0
                             codec.queueInputBuffer(inputBufferId, 0, bytesRead, presentationTimeUs, flags)
-                            // Advance timestamp: bytesRead / 2 bytes per sample / 16000 Hz * 1_000_000
                             presentationTimeUs += (bytesRead / 2) * 1_000_000L / SAMPLE_RATE
 
                             if (isLast) allInputSent = true
+                            madeProgress = true
                         } else {
-                            // EOF reached
                             codec.queueInputBuffer(inputBufferId, 0, 0, presentationTimeUs, MediaCodec.BUFFER_FLAG_END_OF_STREAM)
                             allInputSent = true
+                            madeProgress = true
                         }
                     }
                 }
 
                 // Drain encoded output
-                val outputBufferId = codec.dequeueOutputBuffer(bufferInfo, 10000)
+                val outputBufferId = codec.dequeueOutputBuffer(bufferInfo, 1000)
                 when {
                     outputBufferId >= 0 -> {
                         if (bufferInfo.size > 0) {
@@ -156,6 +160,7 @@ class AacFileCreator @Inject constructor(
                             outputStream.write(chunk)
                         }
                         codec.releaseOutputBuffer(outputBufferId, false)
+                        madeProgress = true
 
                         if ((bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
                             break
@@ -163,8 +168,17 @@ class AacFileCreator @Inject constructor(
                     }
                     outputBufferId == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
                         Log.d(TAG, "Output format changed: ${codec.outputFormat}")
+                        madeProgress = true
                     }
-                    // INFO_TRY_AGAIN_LATER: continue loop
+                }
+
+                if (!madeProgress) {
+                    noProgressCount++
+                    if (noProgressCount >= maxNoProgressIterations) {
+                        throw IOException("Encoder stalled: no progress after $maxNoProgressIterations iterations")
+                    }
+                } else {
+                    noProgressCount = 0
                 }
             }
         } finally {
