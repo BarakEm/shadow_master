@@ -3,335 +3,257 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shadow Master - Audio Shadowing for Language Learning</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: linear-gradient(135deg, #0F0F1A 0%, #1A1A2E 50%, #16213E 100%);
-            min-height: 100vh;
-            color: #fff;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 40px 20px;
-        }
-
-        .hero {
-            text-align: center;
-            padding: 60px 0;
-        }
-
-        .logo-container {
-            position: relative;
-            display: inline-block;
-            margin-bottom: 30px;
-        }
-
-        .logo {
-            width: 180px;
-            height: 180px;
-            filter: drop-shadow(0 0 30px rgba(233, 69, 96, 0.5));
-            animation: float 3s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
-        .glow-ring {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 200px;
-            height: 200px;
-            border-radius: 50%;
-            background: radial-gradient(circle, rgba(233, 69, 96, 0.2) 0%, transparent 70%);
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
-            50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; }
-        }
-
-        h1 {
-            font-size: 3rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-            background: linear-gradient(90deg, #E94560, #FF6B6B);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .tagline {
-            font-size: 1.3rem;
-            color: #8892b0;
-            margin-bottom: 40px;
-        }
-
-        .cta-buttons {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            padding: 15px 30px;
-            border-radius: 8px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary {
-            background: linear-gradient(90deg, #E94560, #C73E54);
-            color: #fff;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(233, 69, 96, 0.4);
-        }
-
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .btn-secondary:hover {
-            background: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-        }
-
-        .features {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 30px;
-            margin-top: 80px;
-        }
-
-        .feature {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
-            padding: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s ease;
-        }
-
-        .feature:hover {
-            transform: translateY(-5px);
-            border-color: rgba(233, 69, 96, 0.3);
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-        }
-
-        .feature-icon {
-            font-size: 2rem;
-            margin-bottom: 15px;
-        }
-
-        .feature h3 {
-            font-size: 1.2rem;
-            margin-bottom: 10px;
-            color: #E94560;
-        }
-
-        .feature p {
-            color: #8892b0;
-            line-height: 1.6;
-        }
-
-        .how-it-works {
-            margin-top: 80px;
-            text-align: center;
-        }
-
-        .how-it-works h2 {
-            font-size: 2rem;
-            margin-bottom: 40px;
-            color: #fff;
-        }
-
-        .steps {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            flex-wrap: wrap;
-        }
-
-        .step {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            padding: 20px 25px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 50px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .step-number {
-            width: 36px;
-            height: 36px;
-            background: linear-gradient(90deg, #E94560, #C73E54);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            flex-shrink: 0;
-        }
-
-        .step-text {
-            color: #ccd6f6;
-        }
-
-        .arrow {
-            color: #E94560;
-            font-size: 1.5rem;
-        }
-
-        .requirements {
-            margin-top: 80px;
-            text-align: center;
-        }
-
-        .requirements h2 {
-            font-size: 2rem;
-            margin-bottom: 20px;
-        }
-
-        .requirements p {
-            color: #8892b0;
-            font-size: 1.1rem;
-        }
-
-        footer {
-            margin-top: 100px;
-            text-align: center;
-            padding: 30px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            color: #8892b0;
-        }
-
-        footer a {
-            color: #E94560;
-            text-decoration: none;
-        }
-
-        footer a:hover {
-            text-decoration: underline;
-        }
-
-        @media (max-width: 600px) {
-            h1 {
-                font-size: 2rem;
-            }
-            .tagline {
-                font-size: 1.1rem;
-            }
-            .step {
-                width: 100%;
-            }
-            .arrow {
-                display: none;
-            }
-        }
-    </style>
+    <title>Shadow Master - Language Learning</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <section class="hero">
+    <!-- Home Screen -->
+    <div id="homeScreen" class="screen active">
+        <div class="container">
             <div class="logo-container">
-                <div class="glow-ring"></div>
-                <img src="ninja-logo.svg" alt="Shadow Master Logo" class="logo">
+                <img src="ninja-logo.svg" alt="Shadow Master" class="logo">
             </div>
             <h1>Shadow Master</h1>
-            <p class="tagline">Master any language through audio shadowing</p>
-            <div class="cta-buttons">
-                <a href="https://github.com/BarakEm/shadow_master/releases" class="btn btn-primary">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-                    Download APK
-                </a>
-                <a href="https://github.com/BarakEm/shadow_master" class="btn btn-secondary">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-                    View Source
-                </a>
-            </div>
-        </section>
+            <p class="subtitle">Master pronunciation through shadowing</p>
 
-        <section class="features">
-            <div class="feature">
-                <div class="feature-icon">🎧</div>
-                <h3>Universal Audio Capture</h3>
-                <p>Captures audio from any app - podcasts, YouTube, audiobooks, music. Practice with content you love.</p>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">🗣️</div>
-                <h3>Smart Voice Detection</h3>
-                <p>Silero VAD automatically detects speech segments so you can focus on what matters.</p>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">🚗</div>
-                <h3>Android Auto Ready</h3>
-                <p>Designed for hands-free use while driving. Practice during your commute.</p>
-            </div>
-            <div class="feature">
-                <div class="feature-icon">⚡</div>
-                <h3>Adjustable Playback</h3>
-                <p>Slow down difficult content or repeat segments multiple times before practicing.</p>
-            </div>
-        </section>
+            <div class="mode-cards">
+                <div class="card" onclick="navigateTo('libraryScreen')">
+                    <div class="card-icon">📚</div>
+                    <h3>Shadow Library</h3>
+                    <p>Practice with imported audio files</p>
+                </div>
 
-        <section class="how-it-works">
-            <h2>How It Works</h2>
-            <div class="steps">
-                <div class="step">
-                    <span class="step-number">1</span>
-                    <span class="step-text">Play any audio</span>
+                <div class="card" onclick="navigateTo('micCaptureScreen')">
+                    <div class="card-icon">🎤</div>
+                    <h3>Record from Mic</h3>
+                    <p>Record audio from microphone</p>
                 </div>
-                <span class="arrow">→</span>
-                <div class="step">
-                    <span class="step-number">2</span>
-                    <span class="step-text">Speech detected</span>
-                </div>
-                <span class="arrow">→</span>
-                <div class="step">
-                    <span class="step-number">3</span>
-                    <span class="step-text">Repeat it back</span>
-                </div>
-                <span class="arrow">→</span>
-                <div class="step">
-                    <span class="step-number">4</span>
-                    <span class="step-text">Get feedback</span>
+
+                <div class="card disabled" title="Not available in web version">
+                    <div class="card-icon">📡</div>
+                    <h3>Capture Playing Audio</h3>
+                    <p>Live shadowing (Android only)</p>
                 </div>
             </div>
-        </section>
 
-        <section class="requirements">
-            <h2>Requirements</h2>
-            <p>Android 10+ (API 29) required for audio capture</p>
-        </section>
-
-        <footer>
-            <p>MIT License • Built with Kotlin + Jetpack Compose</p>
-            <p style="margin-top: 10px;"><a href="https://github.com/BarakEm/shadow_master">GitHub</a></p>
-        </footer>
+            <button class="btn-secondary" onclick="navigateTo('settingsScreen')">
+                ⚙️ Settings
+            </button>
+        </div>
     </div>
+
+    <!-- Library Screen -->
+    <div id="libraryScreen" class="screen">
+        <div class="header">
+            <button class="btn-back" onclick="navigateTo('homeScreen')">← Back</button>
+            <h2>Shadow Library</h2>
+            <button class="btn-icon" onclick="navigateTo('settingsScreen')">⚙️</button>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('playlists')">Playlists</button>
+            <button class="tab" onclick="switchTab('imported')">Imported Audio</button>
+        </div>
+
+        <!-- Playlists Tab -->
+        <div id="playlistsTab" class="tab-content active">
+            <div class="container">
+                <div id="playlistList" class="playlist-list">
+                    <!-- Playlists will be dynamically added here -->
+                </div>
+                <p class="empty-state" id="emptyPlaylists">No playlists yet. Import audio to get started!</p>
+            </div>
+        </div>
+
+        <!-- Imported Audio Tab -->
+        <div id="importedTab" class="tab-content">
+            <div class="container">
+                <div class="import-actions">
+                    <label class="btn-primary">
+                        📁 Import Audio File
+                        <input type="file" id="audioFileInput" accept="audio/*" onchange="importAudioFile(this)" hidden>
+                    </label>
+                </div>
+
+                <div id="importedAudioList" class="imported-list">
+                    <!-- Imported audio will be dynamically added here -->
+                </div>
+                <p class="empty-state" id="emptyImported">No imported audio. Click "Import Audio File" to begin.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mic Capture Screen -->
+    <div id="micCaptureScreen" class="screen">
+        <div class="header">
+            <button class="btn-back" onclick="navigateTo('homeScreen')">← Back</button>
+            <h2>Record from Microphone</h2>
+        </div>
+
+        <div class="container">
+            <div class="capture-card">
+                <div class="status-indicator" id="recordingStatus">Ready to record</div>
+                <div class="duration-display" id="recordingDuration">00:00</div>
+
+                <div class="instructions">
+                    <p>Tap the button below to start recording. Recording will save automatically when you stop.</p>
+                </div>
+
+                <div class="controls">
+                    <button class="btn-record" id="recordButton" onclick="toggleRecording()">
+                        <span class="record-icon">⏺️</span> Start Recording
+                    </button>
+                </div>
+
+                <div id="recordingPreview" class="recording-preview" style="display: none;">
+                    <h4>Recorded Audio</h4>
+                    <audio id="recordedAudio" controls></audio>
+                    <div class="preview-actions">
+                        <button class="btn-primary" onclick="saveRecording()">💾 Save to Library</button>
+                        <button class="btn-secondary" onclick="discardRecording()">🗑️ Discard</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Practice Screen -->
+    <div id="practiceScreen" class="screen">
+        <div class="header">
+            <button class="btn-back" onclick="stopPractice()">← Stop</button>
+            <h2 id="practiceTitle">Practice</h2>
+        </div>
+
+        <div class="container">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+                <span class="progress-text" id="progressText">0 / 0</span>
+            </div>
+
+            <div class="practice-card">
+                <div class="state-indicator" id="practiceState">Ready</div>
+
+                <div class="segment-info">
+                    <div class="transcription" id="segmentTranscription">Press Start to begin</div>
+                    <div class="translation" id="segmentTranslation"></div>
+                    <div class="duration" id="segmentDuration"></div>
+                </div>
+
+                <audio id="practiceAudio" onended="handleAudioEnded()"></audio>
+                <audio id="userRecordingPlayback" controls style="display: none;"></audio>
+
+                <div class="practice-controls">
+                    <button class="btn-primary btn-large" id="startButton" onclick="startPractice()">
+                        ▶️ Start
+                    </button>
+                    <button class="btn-secondary" id="pauseButton" onclick="togglePause()" style="display: none;">
+                        ⏸️ Pause
+                    </button>
+                    <button class="btn-secondary" id="skipButton" onclick="skipSegment()" style="display: none;">
+                        ⏭️ Skip
+                    </button>
+                </div>
+            </div>
+
+            <div class="settings-quick">
+                <label>
+                    Speed: <span id="speedValue">1.0x</span>
+                    <input type="range" id="speedSlider" min="0.5" max="2.0" step="0.1" value="1.0" onchange="updateSpeed(this.value)">
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Screen -->
+    <div id="settingsScreen" class="screen">
+        <div class="header">
+            <button class="btn-back" onclick="navigateBack()">← Back</button>
+            <h2>Settings</h2>
+        </div>
+
+        <div class="container">
+            <div class="settings-section">
+                <h3>Playback Settings</h3>
+
+                <div class="setting-item">
+                    <label>Playback Speed</label>
+                    <input type="range" id="settingsSpeed" min="0.5" max="2.0" step="0.1" value="1.0" onchange="updateSettingSpeed(this.value)">
+                    <span id="settingsSpeedValue">1.0x</span>
+                </div>
+
+                <div class="setting-item">
+                    <label>Playback Repeats</label>
+                    <input type="number" id="playbackRepeats" min="1" max="5" value="2" onchange="updateSetting('playbackRepeats', this.value)">
+                </div>
+
+                <div class="setting-item">
+                    <label>User Recording Repeats</label>
+                    <input type="number" id="userRepeats" min="1" max="3" value="1" onchange="updateSetting('userRepeats', this.value)">
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Practice Modes</h3>
+
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="busMode" onchange="updateSetting('busMode', this.checked)">
+                        Bus Mode (Listen only, no recording)
+                    </label>
+                </div>
+
+                <div class="setting-item">
+                    <label>Practice Mode</label>
+                    <select id="practiceMode" onchange="updateSetting('practiceMode', this.value)">
+                        <option value="standard">Standard</option>
+                        <option value="buildup">Buildup</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Audio Feedback</h3>
+
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="audioFeedback" checked onchange="updateSetting('audioFeedback', this.checked)">
+                        Enable Audio Feedback
+                    </label>
+                </div>
+
+                <div class="setting-item">
+                    <label>Beep Volume</label>
+                    <input type="range" id="beepVolume" min="0" max="100" value="50" onchange="updateSetting('beepVolume', this.value)">
+                    <span id="beepVolumeValue">50%</span>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>Language</h3>
+
+                <div class="setting-item">
+                    <label>Target Language</label>
+                    <select id="targetLanguage" onchange="updateSetting('targetLanguage', this.value)">
+                        <option value="en">English</option>
+                        <option value="es">Spanish</option>
+                        <option value="fr">French</option>
+                        <option value="de">German</option>
+                        <option value="ja">Japanese</option>
+                        <option value="zh">Chinese</option>
+                        <option value="he">Hebrew</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h3>About</h3>
+                <p class="about-text">Shadow Master Web v1.0</p>
+                <p class="about-text">A language learning app for shadowing practice</p>
+                <p class="about-text"><a href="https://github.com/BarakEm/shadow_master" target="_blank">View on GitHub</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
 </body>
 </html>
