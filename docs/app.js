@@ -19,8 +19,10 @@ const state = {
         practiceMode: 'standard',
         audioFeedback: true,
         beepVolume: 50,
-        targetLanguage: 'en'
+        targetLanguage: 'en',
+        backendUrl: 'http://localhost:8765'
     },
+    backendAvailable: false,
     mediaRecorder: null,
     recordedChunks: [],
     recordingStartTime: null,
@@ -420,7 +422,16 @@ function deleteImportedAudio(audioId) {
 }
 
 function exportPlaylist(playlistId) {
-    alert('Export functionality would download the playlist as an audio file. This requires additional audio processing capabilities.');
+    if (!state.backendAvailable) {
+        alert('Export requires the Python backend. Run: python3 shadow_cli/server.py');
+        return;
+    }
+
+    const playlist = state.playlists.find(p => p.id === playlistId);
+    if (!playlist) return;
+
+    // Upload segments to backend for export
+    alert('Export via backend: upload the source audio and process it. Use the YouTube or CLI workflow for full export.');
 }
 
 // Recording
@@ -817,6 +828,147 @@ function updatePracticeUI() {
     startButton.style.display = 'block';
 }
 
+// Backend Detection & YouTube Integration
+async function checkBackend() {
+    const url = state.settings.backendUrl || 'http://localhost:8765';
+    try {
+        const response = await fetch(url + '/api/health', { signal: AbortSignal.timeout(2000) });
+        const data = await response.json();
+        if (data.status === 'ok') {
+            state.backendAvailable = true;
+            onBackendDetected();
+            return true;
+        }
+    } catch (e) {
+        state.backendAvailable = false;
+    }
+    return false;
+}
+
+function onBackendDetected() {
+    // Show YouTube card on home screen
+    const ytCard = document.getElementById('youtubeCard');
+    if (ytCard) ytCard.style.display = '';
+
+    // Show backend status
+    const statusEl = document.getElementById('backendStatus');
+    if (statusEl) {
+        statusEl.style.display = 'block';
+        statusEl.innerHTML = '<span style="color:#4ecdc4;">Backend connected</span>';
+    }
+
+    // Show backend settings section
+    const backendSettings = document.getElementById('backendSettings');
+    if (backendSettings) backendSettings.style.display = '';
+
+    // Update connection status in settings
+    const connStatus = document.getElementById('backendConnectionStatus');
+    if (connStatus) connStatus.textContent = 'Status: Connected';
+}
+
+async function processYouTube() {
+    const url = document.getElementById('youtubeUrl').value.trim();
+    if (!url) {
+        alert('Please enter a YouTube URL');
+        return;
+    }
+
+    if (!state.backendAvailable) {
+        alert('Backend not available. Start it with: python3 shadow_cli/server.py');
+        return;
+    }
+
+    const backendUrl = state.settings.backendUrl || 'http://localhost:8765';
+    const progressEl = document.getElementById('ytProgress');
+    const resultEl = document.getElementById('ytResult');
+    progressEl.style.display = 'block';
+    resultEl.style.display = 'none';
+
+    document.getElementById('ytProgressFill').style.width = '20%';
+    document.getElementById('ytProgressText').textContent = 'Downloading...';
+
+    try {
+        // Step 1: Download
+        const dlResponse = await fetch(backendUrl + '/api/youtube/download', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                url: url,
+                start: document.getElementById('ytStart').value || null,
+                end: document.getElementById('ytEnd').value || null
+            })
+        });
+
+        if (!dlResponse.ok) {
+            const err = await dlResponse.json();
+            throw new Error(err.detail || 'Download failed');
+        }
+
+        const dlResult = await dlResponse.json();
+        document.getElementById('ytProgressFill').style.width = '50%';
+        document.getElementById('ytProgressText').textContent = 'Processing segments...';
+
+        // Show title and subtitles
+        document.getElementById('ytTitle').textContent = dlResult.title;
+        if (dlResult.subtitles && Object.keys(dlResult.subtitles).length > 0) {
+            const langs = Object.keys(dlResult.subtitles);
+            document.getElementById('ytSubtitles').innerHTML =
+                'Subtitles: ' + langs.map(l => `<span style="color:#4ecdc4;">${l}</span>`).join(', ');
+        }
+
+        // Step 2: Process
+        const processResponse = await fetch(backendUrl + '/api/process', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                audio_id: dlResult.id,
+                preset: document.getElementById('ytPreset').value,
+                speed: parseFloat(document.getElementById('ytSpeed').value),
+                playback_repeats: parseInt(document.getElementById('ytPlaybackRepeats').value),
+                user_repeats: parseInt(document.getElementById('ytUserRepeats').value),
+                format: document.getElementById('ytFormat').value,
+                subtitle_lang: Object.keys(dlResult.subtitles || {})[0] || null
+            })
+        });
+
+        if (!processResponse.ok) {
+            const err = await processResponse.json();
+            throw new Error(err.detail || 'Processing failed');
+        }
+
+        const processResult = await processResponse.json();
+        document.getElementById('ytProgressFill').style.width = '100%';
+        document.getElementById('ytProgressText').textContent = 'Done!';
+
+        // Show segments
+        const segmentsHtml = processResult.segments.map((seg, i) => {
+            const text = seg.text ? `<span style="color:#8892b0;"> - ${seg.text}</span>` : '';
+            return `<div style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.05);">
+                <span style="color:#E94560;">[${i+1}]</span>
+                ${(seg.start/1000).toFixed(1)}s - ${(seg.end/1000).toFixed(1)}s${text}
+            </div>`;
+        }).join('');
+        document.getElementById('ytSegments').innerHTML = segmentsHtml;
+
+        // Show download link
+        resultEl.style.display = 'block';
+        resultEl.innerHTML += `
+            <a href="${backendUrl}/api/download/${processResult.output_file}"
+               class="btn-primary" style="display:inline-block;text-decoration:none;margin-top:15px;"
+               download>
+                Download Practice Audio
+            </a>
+        `;
+
+        setTimeout(() => { progressEl.style.display = 'none'; }, 1500);
+
+    } catch (error) {
+        alert('Error: ' + error.message);
+        progressEl.style.display = 'none';
+    }
+}
+
 // Initialize
 loadState();
 renderLibrary();
+checkBackend();

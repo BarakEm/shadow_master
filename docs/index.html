@@ -30,12 +30,20 @@
                     <p>Record audio from microphone</p>
                 </div>
 
-                <div class="card disabled" title="Not available in web version">
+                <div id="youtubeCard" class="card" style="display: none;" onclick="navigateTo('youtubeScreen')">
+                    <div class="card-icon">🎬</div>
+                    <h3>YouTube Import</h3>
+                    <p>Download and practice with YouTube videos</p>
+                </div>
+
+                <div id="captureCard" class="card disabled" title="Not available in web version">
                     <div class="card-icon">📡</div>
                     <h3>Capture Playing Audio</h3>
                     <p>Live shadowing (Android only)</p>
                 </div>
             </div>
+
+            <div id="backendStatus" class="backend-status" style="display: none;"></div>
 
             <button class="btn-secondary" onclick="navigateTo('settingsScreen')">
                 ⚙️ Settings
@@ -165,6 +173,92 @@
         </div>
     </div>
 
+    <!-- YouTube Screen -->
+    <div id="youtubeScreen" class="screen">
+        <div class="header">
+            <button class="btn-back" onclick="navigateTo('homeScreen')">← Back</button>
+            <h2>YouTube Import</h2>
+        </div>
+
+        <div class="container">
+            <div class="capture-card">
+                <div class="setting-item">
+                    <label>YouTube URL</label>
+                    <input type="url" id="youtubeUrl" placeholder="https://youtube.com/watch?v=..." style="width:100%;padding:12px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;font-size:1rem;">
+                </div>
+
+                <div style="display:flex;gap:15px;">
+                    <div class="setting-item" style="flex:1;">
+                        <label>Start Time</label>
+                        <input type="text" id="ytStart" placeholder="0:00" style="width:100%;padding:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;">
+                    </div>
+                    <div class="setting-item" style="flex:1;">
+                        <label>End Time</label>
+                        <input type="text" id="ytEnd" placeholder="2:00" style="width:100%;padding:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;">
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <label>Segmentation Preset</label>
+                    <select id="ytPreset">
+                        <option value="sentences" selected>Sentences (0.5s - 8s)</option>
+                        <option value="short">Short (0.5s - 3s)</option>
+                        <option value="long">Long (1s - 12s)</option>
+                        <option value="words">Words (0.3s - 2s)</option>
+                    </select>
+                </div>
+
+                <div style="display:flex;gap:15px;">
+                    <div class="setting-item" style="flex:1;">
+                        <label>Speed</label>
+                        <select id="ytSpeed">
+                            <option value="0.6">0.6x</option>
+                            <option value="0.7">0.7x</option>
+                            <option value="0.8" selected>0.8x</option>
+                            <option value="0.9">0.9x</option>
+                            <option value="1.0">1.0x</option>
+                        </select>
+                    </div>
+                    <div class="setting-item" style="flex:1;">
+                        <label>Format</label>
+                        <select id="ytFormat">
+                            <option value="mp3" selected>MP3</option>
+                            <option value="wav">WAV</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display:flex;gap:15px;">
+                    <div class="setting-item" style="flex:1;">
+                        <label>Playback Repeats</label>
+                        <input type="number" id="ytPlaybackRepeats" min="1" max="5" value="2" style="width:100%;padding:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;">
+                    </div>
+                    <div class="setting-item" style="flex:1;">
+                        <label>User Repeats</label>
+                        <input type="number" id="ytUserRepeats" min="0" max="3" value="1" style="width:100%;padding:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;">
+                    </div>
+                </div>
+
+                <div id="ytProgress" style="display:none;">
+                    <div class="progress-bar" style="margin:20px 0;">
+                        <div class="progress-fill" id="ytProgressFill"></div>
+                        <span class="progress-text" id="ytProgressText">Downloading...</span>
+                    </div>
+                </div>
+
+                <div id="ytResult" style="display:none;margin-top:20px;">
+                    <h4 id="ytTitle" style="margin-bottom:10px;"></h4>
+                    <div id="ytSubtitles" style="margin-bottom:15px;"></div>
+                    <div id="ytSegments" style="max-height:300px;overflow-y:auto;margin-bottom:15px;"></div>
+                </div>
+
+                <button class="btn-primary" onclick="processYouTube()" style="margin-top:20px;">
+                    Download & Process
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Settings Screen -->
     <div id="settingsScreen" class="screen">
         <div class="header">
@@ -243,6 +337,20 @@
                         <option value="zh">Chinese</option>
                         <option value="he">Hebrew</option>
                     </select>
+                </div>
+            </div>
+
+            <div id="backendSettings" class="settings-section" style="display:none;">
+                <h3>Backend</h3>
+
+                <div class="setting-item">
+                    <label>Backend URL</label>
+                    <input type="url" id="backendUrl" value="http://localhost:8765" onchange="updateSetting('backendUrl', this.value)" style="width:100%;padding:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;">
+                    <p class="setting-description">URL of the Shadow Master Python backend server.</p>
+                </div>
+
+                <div class="setting-item">
+                    <label id="backendConnectionStatus">Status: checking...</label>
                 </div>
             </div>
 

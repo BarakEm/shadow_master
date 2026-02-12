@@ -1,0 +1,6 @@
+fastapi
+uvicorn
+webrtcvad-wheels
+pydub==0.25.1
+numpy
+python-multipart
