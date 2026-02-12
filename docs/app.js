@@ -204,30 +204,193 @@ function readAudioFile(file) {
 }
 
 // Playlist Management
+let currentAudioForSegmentation = null;
+
 function createPlaylistFromAudio(audioId) {
     const audio = state.importedAudio.find(a => a.id === audioId);
     if (!audio) return;
 
-    const playlistName = prompt('Enter playlist name:', audio.name.replace(/\.[^/.]+$/, ''));
-    if (!playlistName) return;
+    currentAudioForSegmentation = audio;
+    showSegmentationModal();
+}
 
-    const playlist = {
-        id: generateId(),
-        name: playlistName,
-        language: state.settings.targetLanguage,
-        segments: [{
-            id: generateId(),
-            audioUrl: audio.data,
-            duration: audio.duration,
-            transcription: '',
-            translation: ''
-        }],
-        createdAt: Date.now()
+function showSegmentationModal() {
+    const modal = document.getElementById('segmentationModal');
+    modal.style.display = 'flex';
+
+    // Load saved settings or defaults
+    const segmentMode = state.settings.segmentMode || 'sentence';
+    document.getElementById('segmentMode').value = segmentMode;
+    document.getElementById('vadAlgorithm').value = state.settings.vadAlgorithm || 'energy';
+    document.getElementById('silenceThreshold').value = state.settings.silenceThreshold || 0.01;
+    document.getElementById('silenceThresholdValue').textContent = state.settings.silenceThreshold || 0.01;
+    document.getElementById('minSilenceDuration').value = state.settings.minSilenceDuration || 0.3;
+    document.getElementById('minSilenceDurationValue').textContent = (state.settings.minSilenceDuration || 0.3) + 's';
+    document.getElementById('speechPadding').value = state.settings.speechPadding || 0.1;
+    document.getElementById('speechPaddingValue').textContent = (state.settings.speechPadding || 0.1) + 's';
+
+    updateSegmentModeUI();
+
+    // Add event listeners for sliders
+    document.getElementById('silenceThreshold').oninput = function() {
+        document.getElementById('silenceThresholdValue').textContent = this.value;
     };
 
-    state.playlists.push(playlist);
+    document.getElementById('minSilenceDuration').oninput = function() {
+        document.getElementById('minSilenceDurationValue').textContent = this.value + 's';
+    };
+
+    document.getElementById('speechPadding').oninput = function() {
+        document.getElementById('speechPaddingValue').textContent = this.value + 's';
+    };
+
+    document.getElementById('segmentMode').onchange = updateSegmentModeUI;
+}
+
+function updateSegmentModeUI() {
+    const mode = document.getElementById('segmentMode').value;
+    const customSettings = document.getElementById('customRangeSettings');
+
+    if (mode === 'custom') {
+        customSettings.style.display = 'block';
+    } else {
+        customSettings.style.display = 'none';
+    }
+}
+
+function closeSegmentationModal() {
+    document.getElementById('segmentationModal').style.display = 'none';
+    currentAudioForSegmentation = null;
+}
+
+async function startSegmentation() {
+    if (!currentAudioForSegmentation) return;
+
+    // Get configuration
+    const vadAlgorithm = document.getElementById('vadAlgorithm').value;
+    const segmentMode = document.getElementById('segmentMode').value;
+    const silenceThreshold = parseFloat(document.getElementById('silenceThreshold').value);
+    const minSilenceDuration = parseFloat(document.getElementById('minSilenceDuration').value);
+    const speechPadding = parseFloat(document.getElementById('speechPadding').value);
+
+    let minSegmentDuration, maxSegmentDuration;
+
+    if (segmentMode === 'word') {
+        minSegmentDuration = 0.5;
+        maxSegmentDuration = 2.0;
+    } else if (segmentMode === 'sentence') {
+        minSegmentDuration = 1.0;
+        maxSegmentDuration = 8.0;
+    } else {
+        minSegmentDuration = parseFloat(document.getElementById('minDuration').value) || 0.5;
+        maxSegmentDuration = parseFloat(document.getElementById('maxDuration').value) || 8.0;
+    }
+
+    // Save settings for next time
+    state.settings.vadAlgorithm = vadAlgorithm;
+    state.settings.segmentMode = segmentMode;
+    state.settings.silenceThreshold = silenceThreshold;
+    state.settings.minSilenceDuration = minSilenceDuration;
+    state.settings.speechPadding = speechPadding;
     saveState();
-    renderPlaylists();
+
+    // Show progress
+    document.getElementById('segmentationProgress').style.display = 'block';
+    document.getElementById('segmentButtonText').textContent = 'Processing...';
+
+    try {
+        // Fetch audio data
+        const response = await fetch(currentAudioForSegmentation.data);
+        const arrayBuffer = await response.arrayBuffer();
+
+        // Update progress
+        document.getElementById('segmentProgressText').textContent = 'Analyzing audio...';
+        document.getElementById('segmentProgressFill').style.width = '30%';
+
+        // Run VAD segmentation
+        const segments = await vadProcessor.segmentAudio(arrayBuffer, {
+            algorithm: vadAlgorithm,
+            minSegmentDuration,
+            maxSegmentDuration,
+            silenceThreshold,
+            speechPadding,
+            minSilenceDuration
+        });
+
+        document.getElementById('segmentProgressText').textContent = 'Creating segments...';
+        document.getElementById('segmentProgressFill').style.width = '60%';
+
+        // Extract each segment
+        const playlistSegments = [];
+        for (let i = 0; i < segments.length; i++) {
+            const seg = segments[i];
+            const segmentUrl = await vadProcessor.extractSegment(
+                currentAudioForSegmentation.data,
+                seg.start,
+                seg.end
+            );
+
+            playlistSegments.push({
+                id: generateId(),
+                audioUrl: segmentUrl,
+                duration: seg.duration,
+                transcription: '',
+                translation: '',
+                startTime: seg.start,
+                endTime: seg.end
+            });
+
+            const progress = 60 + (40 * (i + 1) / segments.length);
+            document.getElementById('segmentProgressFill').style.width = progress + '%';
+            document.getElementById('segmentProgressText').textContent =
+                `Creating segment ${i + 1} of ${segments.length}...`;
+        }
+
+        document.getElementById('segmentProgressFill').style.width = '100%';
+
+        // Prompt for playlist name
+        const playlistName = prompt(
+            `Found ${playlistSegments.length} segments. Enter playlist name:`,
+            currentAudioForSegmentation.name.replace(/\.[^/.]+$/, '')
+        );
+
+        if (!playlistName) {
+            closeSegmentationModal();
+            return;
+        }
+
+        // Create playlist
+        const playlist = {
+            id: generateId(),
+            name: playlistName,
+            language: state.settings.targetLanguage,
+            segments: playlistSegments,
+            createdAt: Date.now(),
+            sourceAudioId: currentAudioForSegmentation.id,
+            vadSettings: {
+                algorithm: vadAlgorithm,
+                segmentMode,
+                minSegmentDuration,
+                maxSegmentDuration
+            }
+        };
+
+        state.playlists.push(playlist);
+        saveState();
+
+        closeSegmentationModal();
+        renderPlaylists();
+        switchTab('playlists');
+
+        alert(`Playlist created with ${playlistSegments.length} segments!`);
+    } catch (error) {
+        console.error('Segmentation error:', error);
+        alert('Error during segmentation: ' + error.message);
+    } finally {
+        document.getElementById('segmentationProgress').style.display = 'none';
+        document.getElementById('segmentButtonText').textContent = 'Create Playlist';
+        document.getElementById('segmentProgressFill').style.width = '0%';
+    }
 }
 
 function openPlaylist(playlistId) {
@@ -329,36 +492,72 @@ function updateRecordingDuration() {
 
 async function saveRecording() {
     const audio = document.getElementById('recordedAudio');
-    const playlistName = prompt('Enter playlist name:', 'Microphone Recording');
-    if (!playlistName) return;
 
-    const blob = new Blob(state.recordedChunks, { type: 'audio/webm' });
-    const reader = new FileReader();
+    // Ask if user wants to segment the recording
+    const shouldSegment = confirm(
+        'Would you like to automatically detect speech segments?\n\n' +
+        'Yes = Create multiple segments (recommended)\n' +
+        'No = Keep as single recording'
+    );
 
-    reader.onload = function(e) {
-        const playlist = {
-            id: generateId(),
-            name: playlistName,
-            language: state.settings.targetLanguage,
-            segments: [{
+    if (!shouldSegment) {
+        // Save as single segment
+        const playlistName = prompt('Enter playlist name:', 'Microphone Recording');
+        if (!playlistName) return;
+
+        const blob = new Blob(state.recordedChunks, { type: 'audio/webm' });
+        const reader = new FileReader();
+
+        reader.onload = function(e) {
+            const playlist = {
                 id: generateId(),
-                audioUrl: e.target.result,
-                duration: audio.duration || 0,
-                transcription: '',
-                translation: ''
-            }],
-            createdAt: Date.now()
+                name: playlistName,
+                language: state.settings.targetLanguage,
+                segments: [{
+                    id: generateId(),
+                    audioUrl: e.target.result,
+                    duration: audio.duration || 0,
+                    transcription: '',
+                    translation: ''
+                }],
+                createdAt: Date.now()
+            };
+
+            state.playlists.push(playlist);
+            saveState();
+
+            discardRecording();
+            navigateTo('libraryScreen');
+            switchTab('playlists');
         };
 
-        state.playlists.push(playlist);
-        saveState();
+        reader.readAsDataURL(blob);
+    } else {
+        // Save to imported audio and trigger segmentation
+        const blob = new Blob(state.recordedChunks, { type: 'audio/webm' });
+        const reader = new FileReader();
 
-        discardRecording();
-        navigateTo('libraryScreen');
-        switchTab('playlists');
-    };
+        reader.onload = async function(e) {
+            const importedAudio = {
+                id: generateId(),
+                name: 'Microphone Recording ' + new Date().toLocaleString(),
+                duration: audio.duration || 0,
+                data: e.target.result,
+                createdAt: Date.now()
+            };
 
-    reader.readAsDataURL(blob);
+            state.importedAudio.push(importedAudio);
+            saveState();
+
+            discardRecording();
+
+            // Trigger segmentation
+            currentAudioForSegmentation = importedAudio;
+            showSegmentationModal();
+        };
+
+        reader.readAsDataURL(blob);
+    }
 }
 
 function discardRecording() {
