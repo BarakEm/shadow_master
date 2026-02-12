@@ -133,13 +133,14 @@ h1 {
 .btn-back,
 .btn-icon,
 .btn-record {
-    padding: 12px 24px;
+    padding: 14px 28px;
     border-radius: 8px;
     border: none;
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
+    min-height: 44px;
 }
 
 .btn-primary {
@@ -204,7 +205,7 @@ h1 {
 }
 
 .tab {
-    padding: 12px 24px;
+    padding: 14px 28px;
     background: transparent;
     color: #8892b0;
     border: none;
@@ -212,6 +213,7 @@ h1 {
     cursor: pointer;
     font-size: 1rem;
     transition: all 0.3s ease;
+    min-height: 44px;
 }
 
 .tab.active {
@@ -654,5 +656,80 @@ input[type="range"]::-moz-range-thumb {
 
     .modal-footer button {
         width: 100%;
+    }
+
+    /* Enhanced mobile touch targets */
+    .btn-primary,
+    .btn-secondary,
+    .btn-back,
+    .btn-icon,
+    .btn-record {
+        padding: 16px 32px;
+        font-size: 1.1rem;
+        min-height: 48px;
+    }
+
+    .tab {
+        padding: 16px 32px;
+        font-size: 1.1rem;
+        min-height: 48px;
+    }
+
+    .btn-large {
+        padding: 24px 48px;
+        font-size: 1.3rem;
+        min-height: 56px;
+    }
+
+    .btn-record {
+        padding: 24px 48px;
+        font-size: 1.3rem;
+        min-height: 56px;
+    }
+
+    .playlist-card .actions button,
+    .imported-card .actions button {
+        padding: 12px;
+        font-size: 1rem;
+        min-height: 44px;
+    }
+
+    .btn-close {
+        width: 44px;
+        height: 44px;
+        font-size: 1.8rem;
+    }
+
+    .card {
+        padding: 40px;
+        min-height: 200px;
+    }
+
+    .card-icon {
+        font-size: 4rem;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+        width: 28px;
+        height: 28px;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+        width: 28px;
+        height: 28px;
+    }
+
+    .setting-item input[type="range"],
+    .setting-item input[type="number"],
+    .setting-item select {
+        padding: 12px;
+        font-size: 1.1rem;
+        min-height: 44px;
+    }
+
+    .setting-item input[type="checkbox"] {
+        width: 24px;
+        height: 24px;
+        margin-right: 15px;
     }
 }
