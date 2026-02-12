@@ -421,17 +421,47 @@ function deleteImportedAudio(audioId) {
     renderImportedAudio();
 }
 
-function exportPlaylist(playlistId) {
-    if (!state.backendAvailable) {
-        alert('Export requires the Python backend. Run: python3 shadow_cli/server.py');
-        return;
-    }
-
+async function exportPlaylist(playlistId) {
     const playlist = state.playlists.find(p => p.id === playlistId);
     if (!playlist) return;
 
-    // Upload segments to backend for export
-    alert('Export via backend: upload the source audio and process it. Use the YouTube or CLI workflow for full export.');
+    if (!playlist.segments || playlist.segments.length === 0) {
+        alert('No segments to export');
+        return;
+    }
+
+    try {
+        // Create a simple export: download each segment as a zip or concatenated audio
+        // For simplicity, we'll create a JSON export with all playlist data
+        const exportData = {
+            name: playlist.name,
+            language: playlist.language,
+            createdAt: playlist.createdAt,
+            segments: playlist.segments.map(seg => ({
+                transcription: seg.transcription,
+                translation: seg.translation,
+                duration: seg.duration,
+                startTime: seg.startTime,
+                endTime: seg.endTime,
+                audioUrl: seg.audioUrl
+            }))
+        };
+
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${playlist.name}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        alert(`Playlist "${playlist.name}" exported successfully!`);
+    } catch (error) {
+        console.error('Export error:', error);
+        alert('Error exporting playlist: ' + error.message);
+    }
 }
 
 // Recording
