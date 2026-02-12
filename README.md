@@ -11,54 +11,100 @@
 
 <p align="center">
   <strong>Language learning through audio shadowing</strong><br>
-  <a href="https://barakem.github.io/shadow_master/">Project Website</a>
+  <a href="https://barakem.github.io/shadow_master/">🌐 Try Web App</a> |
+  <a href="https://github.com/BarakEm/shadow_master/releases">📱 Download Android App</a>
 </p>
 
 ---
 
-Android app for language learning through audio shadowing. Import audio files or capture live audio, then practice repeating speech segments hands-free.
+**Shadow Master** helps you master pronunciation through audio shadowing - available as both a **web app** and **Android app**. Import audio files or capture live audio, then practice repeating speech segments hands-free with intelligent voice activity detection.
 
-## Two Practice Modes
+## Platforms
+
+### 🌐 Web App
+Try Shadow Master instantly in your browser - no installation required!
+
+**[Launch Web App →](https://barakem.github.io/shadow_master/)**
+
+- Works on any modern browser (Chrome, Firefox, Safari, Edge)
+- Import audio files or record from microphone
+- Multiple VAD algorithms for automatic segmentation
+- Configurable segment length and detection sensitivity
+- Save playlists in browser storage
+- Perfect for desktop and mobile browsers
+
+### 📱 Android App
+Full-featured native Android application with additional capabilities:
+
+**[Download APK →](https://github.com/BarakEm/shadow_master/releases)**
+
+- Android 10+ (API 29 or higher)
+- Live audio capture from other apps (podcasts, YouTube, etc.)
+- Silero VAD for highest accuracy segmentation
+- Android Auto integration for hands-free practice
+- Local database for offline playlist management
+- Optional Azure Speech Services for pronunciation assessment
+
+## Practice Modes
 
 ### Shadow Library (Recommended)
-Import audio files from your device for offline, hands-free practice:
-- **No permissions required** - works with any audio file on your phone
-- **Better segmentation** - pre-processes audio for accurate speech boundaries
+Import audio files for offline, hands-free practice:
+- **Intelligent segmentation** - multiple VAD algorithms detect speech boundaries automatically
 - **Playlist management** - organize content into playlists
-- **Multiple segmentation modes** - create different playlists from same audio (word-level or sentence-level)
-- **Re-segmentation** - adjust segmentation without re-importing
+- **Multiple segmentation modes** - word-level (0.5-2s) or sentence-level (1-8s)
+- **Configurable detection** - adjust silence threshold and segment length
 - **Offline practice** - no internet needed after import
-- **Track progress** - see practice counts and favorites
+- **Track progress** - see practice counts and favorites (Android)
 
-### Live Shadow
+### Live Shadow (Android Only)
 Capture audio from any app in real-time:
 - Works with podcasts, YouTube, audiobooks, etc.
 - Requires screen recording permission each session
 - Best for spontaneous practice
 
-## Features
+## Key Features
 
-- **Voice Activity Detection**: Silero VAD detects speech segments automatically
-- **Playback Control**: Adjustable speed (0.5x-1.5x) and repeat count
-- **Bus Mode**: Listen-only mode - hear segments without speaking practice
+### Intelligent Segmentation
+- **Web**: Energy-based VAD, WebRTC VAD, or Silero VAD (via ONNX)
+- **Android**: Silero VAD for highest accuracy
+- Configurable segment length (word-level or sentence-level)
+- Adjustable silence threshold and detection sensitivity
+- Automatic speech padding for natural playback
+
+### Playback & Practice
+- **Adjustable Speed**: 0.5x - 2.0x playback speed
+- **Repeat Control**: Configure playback and user recording repeats
+- **Bus Mode**: Listen-only mode without speaking practice
 - **Audio Feedback**: Gentle beeps indicate state changes for hands-free use
 - **User Recording**: Records your pronunciation with automatic silence detection
+
+### Advanced Features (Android)
 - **Pronunciation Assessment**: Optional Azure Speech Services integration
-- **Android Auto Ready**: Designed for hands-free use while driving
+- **Android Auto**: Full support for hands-free driving practice
+- **Live Capture**: Record audio from any playing app in real-time
 
-## Requirements
+## Getting Started
 
+### Web App - Instant Access
+1. Visit **[https://barakem.github.io/shadow_master/](https://barakem.github.io/shadow_master/)**
+2. Import an audio file or record from your microphone
+3. Configure VAD segmentation settings (or use defaults)
+4. Start practicing!
+
+No installation, no permissions required. Works on any modern browser.
+
+### Android App - Installation
+
+#### Option 1: Download APK (Recommended)
+Download the latest APK from [GitHub Releases](https://github.com/BarakEm/shadow_master/releases)
+
+**Requirements:**
 - Android 10 (API 29) or higher
 - Microphone permission (for recording your voice)
 - Storage access (for importing audio files)
 - Screen capture permission (only for Live Shadow mode)
 
-## Installation
-
-### Option 1: Download APK
-Download the latest APK from [GitHub Releases](https://github.com/BarakEm/shadow_master/releases)
-
-### Option 2: Build from source
+#### Option 2: Build from Source
 
 ```bash
 # Clone the repo
@@ -76,24 +122,50 @@ cd shadow_master
 ./gradlew assembleRelease
 ```
 
-### Option 3: Install via ADB
+#### Option 3: Install via ADB
 
 ```bash
 # Build and install directly to connected device
 ./gradlew installDebug
 ```
 
-## Usage
+## Usage Guide
 
-### Shadow Library Mode
+### Web App Usage
+
+#### Import and Segment Audio
+1. Click "Shadow Library"
+2. Go to "Imported Audio" tab
+3. Click "Import Audio File" and select your audio
+4. Click "Create Playlist" on the imported audio
+5. Configure segmentation:
+   - **VAD Algorithm**: Energy-based (fast), WebRTC (moderate), or Silero (best)
+   - **Segment Length**: Word Mode (0.5-2s), Sentence Mode (1-8s), or Custom
+   - **Silence Threshold**: Adjust sensitivity (lower = more sensitive)
+   - **Minimum Silence**: How long silence must last to split segments
+   - **Speech Padding**: Extra time before/after each segment
+6. Click "Create Playlist" to process
+7. Name your playlist and start practicing!
+
+#### Practice Session
+1. Select a playlist from the "Playlists" tab
+2. Press "Start" to begin
+3. Each segment plays according to your settings
+4. Record your pronunciation (or enable Bus Mode to skip)
+5. Track progress with the progress bar
+6. Adjust playback speed in real-time
+
+### Android App Usage
+
+#### Shadow Library Mode
 1. Open Shadow Master
 2. Tap "Shadow Library" on the home screen
 3. Tap + to import an audio file
 4. View your imported audio in the "Imported Audio" tab
 5. Tap "Create Playlist" on an imported audio item
 6. Choose a segmentation mode:
-   - **Word Mode**: Shorter segments (500ms-2000ms) for word-level practice
-   - **Sentence Mode**: Longer segments (1000ms-8000ms) for full sentences
+   - **Word Mode**: Shorter segments (0.5-2s) for word-level practice
+   - **Sentence Mode**: Longer segments (1-8s) for full sentences
 7. Name your playlist and tap "Create"
 8. Switch to "Playlists" tab and tap your new playlist
 9. Tap Play to start practice
@@ -165,6 +237,15 @@ com.shadowmaster/
 
 ## Tech Stack
 
+### Web App
+- **Vanilla JavaScript** - No frameworks, lightweight and fast
+- **Web Audio API** - Audio processing and playback
+- **MediaRecorder API** - Microphone recording
+- **localStorage** - Settings and playlist persistence
+- **Custom VAD Engine** - Energy-based, WebRTC, and Silero support
+- **ONNX Runtime Web** - For Silero VAD model (optional)
+
+### Android App
 - **Kotlin** with Coroutines and Flow
 - **Jetpack Compose** for UI
 - **Room** for local database (Shadow Library)

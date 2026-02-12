@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shadow Master - Language Learning</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="vad.js"></script>
 </head>
 <body>
     <!-- Home Screen -->
@@ -250,6 +251,85 @@
                 <p class="about-text">Shadow Master Web v1.0</p>
                 <p class="about-text">A language learning app for shadowing practice</p>
                 <p class="about-text"><a href="https://github.com/BarakEm/shadow_master" target="_blank">View on GitHub</a></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Segmentation Config Modal -->
+    <div id="segmentationModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Configure Segmentation</h3>
+                <button class="btn-close" onclick="closeSegmentationModal()">✕</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="setting-item">
+                    <label>VAD Algorithm</label>
+                    <select id="vadAlgorithm">
+                        <option value="energy">Energy-based (Fast, Good)</option>
+                        <option value="webrtc">WebRTC VAD (Moderate)</option>
+                        <option value="silero">Silero VAD (Best, Slower)</option>
+                    </select>
+                    <p class="setting-description">Choose the voice activity detection algorithm. Energy-based is recommended for most users.</p>
+                </div>
+
+                <div class="setting-item">
+                    <label>Segment Length</label>
+                    <select id="segmentMode">
+                        <option value="word">Word Mode (0.5s - 2s)</option>
+                        <option value="sentence" selected>Sentence Mode (1s - 8s)</option>
+                        <option value="custom">Custom Range</option>
+                    </select>
+                </div>
+
+                <div id="customRangeSettings" style="display: none;">
+                    <div class="setting-item">
+                        <label>Min Duration (seconds)</label>
+                        <input type="number" id="minDuration" min="0.3" max="5" step="0.1" value="0.5">
+                    </div>
+
+                    <div class="setting-item">
+                        <label>Max Duration (seconds)</label>
+                        <input type="number" id="maxDuration" min="1" max="30" step="0.5" value="8">
+                    </div>
+                </div>
+
+                <div class="setting-item">
+                    <label>Silence Threshold</label>
+                    <input type="range" id="silenceThreshold" min="0.005" max="0.05" step="0.005" value="0.01">
+                    <span id="silenceThresholdValue">0.01</span>
+                    <p class="setting-description">Lower = more sensitive (detects quieter speech). Higher = less sensitive (only louder speech).</p>
+                </div>
+
+                <div class="setting-item">
+                    <label>Minimum Silence Duration (seconds)</label>
+                    <input type="range" id="minSilenceDuration" min="0.1" max="1.0" step="0.1" value="0.3">
+                    <span id="minSilenceDurationValue">0.3s</span>
+                    <p class="setting-description">How long silence must last to separate segments.</p>
+                </div>
+
+                <div class="setting-item">
+                    <label>Speech Padding (seconds)</label>
+                    <input type="range" id="speechPadding" min="0" max="0.5" step="0.05" value="0.1">
+                    <span id="speechPaddingValue">0.1s</span>
+                    <p class="setting-description">Extra time added before/after each segment.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeSegmentationModal()">Cancel</button>
+                <button class="btn-primary" onclick="startSegmentation()">
+                    <span id="segmentButtonText">Create Playlist</span>
+                </button>
+            </div>
+
+            <div id="segmentationProgress" class="progress-container" style="display: none;">
+                <div class="progress-message">Analyzing audio and detecting speech segments...</div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="segmentProgressFill"></div>
+                </div>
+                <div class="progress-text" id="segmentProgressText">0%</div>
             </div>
         </div>
     </div>
