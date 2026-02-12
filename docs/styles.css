@@ -732,4 +732,28 @@ input[type="range"]::-moz-range-thumb {
         height: 24px;
         margin-right: 15px;
     }
+
+    .header {
+        padding: 24px;
+    }
+
+    .header h2 {
+        font-size: 1.8rem;
+    }
+
+    .settings-section h3 {
+        font-size: 1.5rem;
+    }
+
+    .setting-item label {
+        font-size: 1.1rem;
+    }
+
+    .transcription {
+        font-size: 1.5rem;
+    }
+
+    .translation {
+        font-size: 1.2rem;
+    }
 }

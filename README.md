@@ -12,7 +12,7 @@
 <p align="center">
   <strong>Language learning through audio shadowing</strong><br>
   <a href="https://barakem.github.io/shadow_master/">🌐 Try Web App</a> |
-  <a href="https://github.com/BarakEm/shadow_master/releases">📱 Download Android App</a>
+  <a href="#android-app---installation">📱 Android App</a>
 </p>
 
 ---
@@ -36,14 +36,14 @@ Try Shadow Master instantly in your browser - no installation required!
 ### 📱 Android App
 Full-featured native Android application with additional capabilities:
 
-**[Download APK →](https://github.com/BarakEm/shadow_master/releases)**
-
 - Android 10+ (API 29 or higher)
 - Live audio capture from other apps (podcasts, YouTube, etc.)
 - Silero VAD for highest accuracy segmentation
 - Android Auto integration for hands-free practice
 - Local database for offline playlist management
 - Optional Azure Speech Services for pronunciation assessment
+
+See [installation instructions](#android-app---installation) below to build from source.
 
 ## Practice Modes
 
@@ -95,16 +95,13 @@ No installation, no permissions required. Works on any modern browser.
 
 ### Android App - Installation
 
-#### Option 1: Download APK (Recommended)
-Download the latest APK from [GitHub Releases](https://github.com/BarakEm/shadow_master/releases)
-
 **Requirements:**
 - Android 10 (API 29) or higher
 - Microphone permission (for recording your voice)
 - Storage access (for importing audio files)
 - Screen capture permission (only for Live Shadow mode)
 
-#### Option 2: Build from Source
+#### Option 1: Build from Source
 
 ```bash
 # Clone the repo
@@ -122,7 +119,7 @@ cd shadow_master
 ./gradlew assembleRelease
 ```
 
-#### Option 3: Install via ADB
+#### Option 2: Install via ADB
 
 ```bash
 # Build and install directly to connected device
