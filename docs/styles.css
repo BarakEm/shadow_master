@@ -57,7 +57,7 @@ body {
 .logo {
     width: 120px;
     height: 120px;
-    filter: drop-shadow(0 0 20px rgba(233, 69, 96, 0.5));
+    filter: drop-shadow(0 0 20px rgba(102, 126, 234, 0.5));
     animation: float 3s ease-in-out infinite;
 }
 
@@ -71,7 +71,7 @@ h1 {
     font-size: 2.5rem;
     font-weight: 700;
     margin-bottom: 10px;
-    background: linear-gradient(90deg, #E94560, #FF6B6B);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -103,8 +103,8 @@ h1 {
 
 .card:hover:not(.disabled) {
     transform: translateY(-5px);
-    border-color: rgba(233, 69, 96, 0.5);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    border-color: rgba(102, 126, 234, 0.5);
+    box-shadow: 0 10px 40px rgba(102, 126, 234, 0.2);
 }
 
 .card.disabled {
@@ -120,7 +120,7 @@ h1 {
 .card h3 {
     font-size: 1.2rem;
     margin-bottom: 10px;
-    color: #E94560;
+    color: #667eea;
 }
 
 .card p {
@@ -144,7 +144,7 @@ h1 {
 }
 
 .btn-primary {
-    background: linear-gradient(90deg, #E94560, #C73E54);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: #fff;
     display: block;
     margin: 0 auto;
@@ -152,7 +152,7 @@ h1 {
 
 .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 10px 30px rgba(233, 69, 96, 0.4);
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
 }
 
 .btn-secondary {
@@ -185,7 +185,7 @@ h1 {
 }
 
 .btn-record {
-    background: linear-gradient(90deg, #E94560, #C73E54);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: #fff;
     padding: 20px 40px;
     font-size: 1.2rem;
@@ -193,7 +193,7 @@ h1 {
 
 .btn-record:hover {
     transform: scale(1.05);
-    box-shadow: 0 10px 30px rgba(233, 69, 96, 0.4);
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.5);
 }
 
 .tabs {
@@ -217,8 +217,8 @@ h1 {
 }
 
 .tab.active {
-    color: #E94560;
-    border-bottom-color: #E94560;
+    color: #667eea;
+    border-bottom-color: #667eea;
 }
 
 .tab:hover {
@@ -259,7 +259,7 @@ h1 {
 .playlist-card:hover,
 .imported-card:hover {
     transform: translateY(-3px);
-    border-color: rgba(233, 69, 96, 0.3);
+    border-color: rgba(102, 126, 234, 0.4);
 }
 
 .playlist-card h4,
@@ -323,7 +323,7 @@ h1 {
     padding: 10px 20px;
     background: rgba(233, 69, 96, 0.2);
     border-radius: 20px;
-    color: #E94560;
+    color: #667eea;
     font-weight: 600;
     margin-bottom: 20px;
 }
@@ -377,7 +377,7 @@ h1 {
 
 .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #E94560, #FF6B6B);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     border-radius: 20px;
     transition: width 0.3s ease;
     width: 0%;
@@ -449,7 +449,7 @@ h1 {
 .settings-section h3 {
     font-size: 1.3rem;
     margin-bottom: 20px;
-    color: #E94560;
+    color: #667eea;
 }
 
 .setting-item {
@@ -487,7 +487,7 @@ h1 {
 }
 
 .about-text a {
-    color: #E94560;
+    color: #667eea;
     text-decoration: none;
 }
 
@@ -509,7 +509,7 @@ input[type="range"]::-webkit-slider-thumb {
     appearance: none;
     width: 18px;
     height: 18px;
-    background: #E94560;
+    background: #667eea;
     border-radius: 50%;
     cursor: pointer;
 }
@@ -517,7 +517,7 @@ input[type="range"]::-webkit-slider-thumb {
 input[type="range"]::-moz-range-thumb {
     width: 18px;
     height: 18px;
-    background: #E94560;
+    background: #667eea;
     border-radius: 50%;
     cursor: pointer;
     border: none;
@@ -560,7 +560,7 @@ input[type="range"]::-moz-range-thumb {
 
 .modal-header h3 {
     font-size: 1.5rem;
-    color: #E94560;
+    color: #667eea;
 }
 
 .btn-close {
@@ -673,40 +673,44 @@ input[type="range"]::-moz-range-thumb {
     .btn-back,
     .btn-icon,
     .btn-record {
-        padding: 16px 32px;
-        font-size: 1.1rem;
-        min-height: 48px;
+        padding: 18px 36px;
+        font-size: 1.2rem;
+        min-height: 56px;
+        border-radius: 12px;
     }
 
     .tab {
-        padding: 16px 32px;
-        font-size: 1.1rem;
-        min-height: 48px;
+        padding: 18px 36px;
+        font-size: 1.2rem;
+        min-height: 56px;
     }
 
     .btn-large {
-        padding: 24px 48px;
-        font-size: 1.3rem;
-        min-height: 56px;
+        padding: 28px 56px;
+        font-size: 1.4rem;
+        min-height: 64px;
+        border-radius: 14px;
     }
 
     .btn-record {
-        padding: 24px 48px;
-        font-size: 1.3rem;
-        min-height: 56px;
+        padding: 28px 56px;
+        font-size: 1.4rem;
+        min-height: 64px;
+        border-radius: 14px;
     }
 
     .playlist-card .actions button,
     .imported-card .actions button {
-        padding: 12px;
-        font-size: 1rem;
-        min-height: 44px;
+        padding: 14px 20px;
+        font-size: 1.1rem;
+        min-height: 52px;
+        border-radius: 10px;
     }
 
     .btn-close {
-        width: 44px;
-        height: 44px;
-        font-size: 1.8rem;
+        width: 52px;
+        height: 52px;
+        font-size: 2rem;
     }
 
     .card {
