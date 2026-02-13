@@ -907,12 +907,10 @@ function onBackendDetected() {
     const statusEl = document.getElementById('backendStatus');
     if (statusEl) {
         statusEl.style.display = 'block';
-        statusEl.innerHTML = '<span style="color:#4ecdc4;">Backend connected</span>';
+        statusEl.innerHTML = '<span class="status-connected">Backend connected</span>';
     }
 
-    // Show backend settings section
-    const backendSettings = document.getElementById('backendSettings');
-    if (backendSettings) backendSettings.style.display = '';
+    // Backend settings section is always visible in Settings
 
     // Update connection status in settings
     const connStatus = document.getElementById('backendConnectionStatus');
@@ -966,7 +964,7 @@ async function processYouTube() {
         if (dlResult.subtitles && Object.keys(dlResult.subtitles).length > 0) {
             const langs = Object.keys(dlResult.subtitles);
             document.getElementById('ytSubtitles').innerHTML =
-                'Subtitles: ' + langs.map(l => `<span style="color:#4ecdc4;">${l}</span>`).join(', ');
+                'Subtitles: ' + langs.map(l => `<span class="status-connected">${l}</span>`).join(', ');
         }
 
         // Step 2: Process
@@ -996,9 +994,9 @@ async function processYouTube() {
 
         // Show segments
         const segmentsHtml = processResult.segments.map((seg, i) => {
-            const text = seg.text ? `<span style="color:#8892b0;"> - ${seg.text}</span>` : '';
+            const text = seg.text ? `<span class="yt-seg-text"> - ${seg.text}</span>` : '';
             return `<div class="yt-segment-row">
-                <span style="color:#E94560;">[${i+1}]</span>
+                <span class="yt-seg-index">[${i+1}]</span>
                 ${(seg.start/1000).toFixed(1)}s - ${(seg.end/1000).toFixed(1)}s${text}
             </div>`;
         }).join('');
@@ -1030,12 +1028,12 @@ async function processYouTube() {
         // Show result with both options
         resultEl.style.display = 'block';
         resultEl.innerHTML += `
-            <div class="button-group" style="margin-top:15px;">
+            <div class="button-group yt-result-actions">
                 <button class="btn-primary" onclick="openPlaylist('${playlist.id}')">
                     Practice Now
                 </button>
                 <a href="${backendUrl}/api/download/${processResult.output_file}"
-                   class="btn-primary" style="display:inline-block;text-decoration:none;"
+                   class="btn-primary btn-download-link"
                    download>
                     Download MP3
                 </a>

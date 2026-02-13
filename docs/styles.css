@@ -701,6 +701,32 @@ input[type="range"]::-moz-range-thumb {
     margin: 6px 0;
 }
 
+/* YouTube segment styling */
+.yt-seg-index {
+    color: #E94560;
+}
+
+.yt-seg-text {
+    color: #8892b0;
+}
+
+/* Status colors */
+.status-connected {
+    color: #4ecdc4;
+}
+
+/* YouTube result actions */
+.yt-result-actions {
+    margin-top: 15px;
+}
+
+/* Download link styled as button */
+.btn-download-link {
+    display: inline-block;
+    text-decoration: none;
+    text-align: center;
+}
+
 /* Touch interaction hints */
 button, .card, a, input, select, .tab {
     -webkit-tap-highlight-color: rgba(102, 126, 234, 0.2);
@@ -813,7 +839,7 @@ button, .card, a, input, select, .tab {
 /* Mobile phones - enhanced readability and touch targets */
 @media (max-width: 480px) {
     body {
-        font-size: 17px;
+        font-size: 18px;
         /* iOS safe area support for notched phones */
         padding-top: env(safe-area-inset-top);
         padding-bottom: env(safe-area-inset-bottom);
@@ -831,7 +857,7 @@ button, .card, a, input, select, .tab {
     }
 
     .subtitle {
-        font-size: 1.15rem;
+        font-size: 1.2rem;
         margin-bottom: 30px;
     }
 
@@ -843,15 +869,15 @@ button, .card, a, input, select, .tab {
         font-size: 1.6rem;
     }
 
-    /* Enhanced mobile touch targets - 48-56px minimum */
+    /* All buttons: big, tappable, readable */
     .btn-primary,
     .btn-secondary,
     .btn-back,
     .btn-icon,
     .btn-record {
-        padding: 16px 28px;
-        font-size: 1.15rem;
-        min-height: 52px;
+        padding: 18px 28px;
+        font-size: 1.25rem;
+        min-height: 56px;
         border-radius: 12px;
         width: 100%;
     }
@@ -859,55 +885,43 @@ button, .card, a, input, select, .tab {
     .btn-back,
     .btn-icon {
         width: auto;
-        min-width: 52px;
+        min-width: 56px;
+        font-size: 1.2rem;
     }
 
     .tab {
         padding: 16px 24px;
-        font-size: 1.1rem;
+        font-size: 1.15rem;
         min-height: 52px;
     }
 
-    .btn-large {
-        padding: 20px 40px;
-        font-size: 1.3rem;
-        min-height: 60px;
-        border-radius: 14px;
-    }
-
+    .btn-large,
     .btn-record {
-        padding: 20px 40px;
-        font-size: 1.3rem;
-        min-height: 60px;
+        padding: 22px 40px;
+        font-size: 1.35rem;
+        min-height: 64px;
         border-radius: 14px;
-    }
-
-    .playlist-card .actions button,
-    .imported-card .actions button {
-        padding: 14px 16px;
-        font-size: 1.05rem;
-        min-height: 50px;
-        border-radius: 10px;
     }
 
     .btn-close {
-        width: 48px;
-        height: 48px;
-        font-size: 1.8rem;
+        width: 52px;
+        height: 52px;
+        font-size: 2rem;
     }
 
+    /* Cards */
     .card {
         padding: 28px 20px;
         min-height: 180px;
     }
 
     .card h3 {
-        font-size: 1.35rem;
+        font-size: 1.4rem;
         margin-bottom: 8px;
     }
 
     .card p {
-        font-size: 1.05rem;
+        font-size: 1.15rem;
         line-height: 1.5;
     }
 
@@ -916,100 +930,13 @@ button, .card, a, input, select, .tab {
         margin-bottom: 12px;
     }
 
-    /* Larger touch targets for sliders */
-    input[type="range"]::-webkit-slider-thumb {
-        width: 32px;
-        height: 32px;
-    }
-
-    input[type="range"]::-moz-range-thumb {
-        width: 32px;
-        height: 32px;
-    }
-
-    input[type="range"] {
-        height: 8px;
-    }
-
-    /* Form elements - better readability */
-    .setting-item input[type="range"],
-    .setting-item input[type="number"],
-    .setting-item select {
-        padding: 14px;
-        font-size: 1.1rem;
-        min-height: 48px;
-        border-radius: 8px;
-    }
-
-    .setting-item input[type="checkbox"] {
-        width: 26px;
-        height: 26px;
-        margin-right: 12px;
-    }
-
-    .setting-item {
-        padding: 16px;
-        margin-bottom: 16px;
-    }
-
-    .setting-item label {
-        font-size: 1.1rem;
-        margin-bottom: 12px;
-    }
-
-    .settings-section {
-        margin-bottom: 32px;
-    }
-
-    .settings-section h3 {
-        font-size: 1.45rem;
-        margin-bottom: 16px;
-    }
-
-    /* Text readability */
-    .transcription {
-        font-size: 1.5rem;
-        line-height: 1.5;
-    }
-
-    .translation {
-        font-size: 1.2rem;
-        line-height: 1.5;
-    }
-
-    .duration {
-        font-size: 1rem;
-    }
-
-    .instructions p {
-        font-size: 1.05rem;
-        line-height: 1.6;
-    }
-
-    .empty-state {
-        font-size: 1.15rem;
-        margin-top: 40px;
-        padding: 0 20px;
-    }
-
-    .about-text {
-        font-size: 1.05rem;
-        line-height: 1.6;
-    }
-
-    .setting-description {
-        font-size: 0.95rem;
-        line-height: 1.5;
-        margin-top: 10px;
-    }
-
-    /* Capture/practice card padding */
+    /* Capture/practice cards */
     .capture-card,
     .practice-card {
         padding: 20px 14px;
     }
 
-    /* Playlist/imported cards bigger on phones */
+    /* Playlist/imported cards */
     .playlist-card,
     .imported-card {
         padding: 20px 16px;
@@ -1017,13 +944,13 @@ button, .card, a, input, select, .tab {
 
     .playlist-card h4,
     .imported-card h4 {
-        font-size: 1.25rem;
+        font-size: 1.3rem;
         margin-bottom: 8px;
     }
 
     .playlist-card p,
     .imported-card p {
-        font-size: 1.1rem;
+        font-size: 1.15rem;
         margin: 6px 0;
     }
 
@@ -1036,26 +963,113 @@ button, .card, a, input, select, .tab {
 
     .playlist-card .actions button,
     .imported-card .actions button {
-        padding: 16px;
-        font-size: 1.1rem;
-        min-height: 52px;
+        padding: 18px;
+        font-size: 1.2rem;
+        min-height: 56px;
         border-radius: 10px;
+    }
+
+    /* Larger touch targets for sliders */
+    input[type="range"]::-webkit-slider-thumb {
+        width: 36px;
+        height: 36px;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+        width: 36px;
+        height: 36px;
+    }
+
+    input[type="range"] {
+        height: 10px;
+    }
+
+    /* Form elements */
+    .setting-item input[type="range"],
+    .setting-item input[type="number"],
+    .setting-item select {
+        padding: 14px;
+        font-size: 1.15rem;
+        min-height: 52px;
+        border-radius: 8px;
+    }
+
+    .setting-item input[type="checkbox"] {
+        width: 28px;
+        height: 28px;
+        margin-right: 12px;
+    }
+
+    .setting-item {
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+
+    .setting-item label {
+        font-size: 1.15rem;
+        margin-bottom: 12px;
+    }
+
+    .settings-section {
+        margin-bottom: 32px;
+    }
+
+    .settings-section h3 {
+        font-size: 1.5rem;
+        margin-bottom: 16px;
+    }
+
+    /* Text readability */
+    .transcription {
+        font-size: 1.6rem;
+        line-height: 1.5;
+    }
+
+    .translation {
+        font-size: 1.25rem;
+        line-height: 1.5;
+    }
+
+    .duration {
+        font-size: 1.1rem;
+    }
+
+    .instructions p {
+        font-size: 1.15rem;
+        line-height: 1.6;
+    }
+
+    .empty-state {
+        font-size: 1.2rem;
+        margin-top: 40px;
+        padding: 0 20px;
+    }
+
+    .about-text {
+        font-size: 1.15rem;
+        line-height: 1.6;
+    }
+
+    .setting-description {
+        font-size: 1.05rem;
+        line-height: 1.5;
+        margin-top: 10px;
     }
 
     /* Progress and status elements */
     .progress-bar {
-        height: 44px;
-        border-radius: 22px;
+        height: 48px;
+        border-radius: 24px;
     }
 
     .progress-text {
-        font-size: 1.05rem;
+        font-size: 1.1rem;
     }
 
     .status-indicator,
     .state-indicator {
-        padding: 12px 24px;
-        font-size: 1.1rem;
+        padding: 14px 24px;
+        font-size: 1.15rem;
         border-radius: 24px;
     }
 
@@ -1064,7 +1078,7 @@ button, .card, a, input, select, .tab {
         margin: 24px 0;
     }
 
-    /* Modal improvements */
+    /* Modal */
     .modal-content {
         width: 96%;
         border-radius: 12px;
@@ -1089,8 +1103,20 @@ button, .card, a, input, select, .tab {
     }
 
     .settings-quick label {
-        font-size: 1.1rem;
+        font-size: 1.15rem;
         flex-wrap: wrap;
+    }
+
+    /* YouTube segment rows */
+    .yt-segment-row {
+        padding: 14px;
+        font-size: 1.1rem;
+    }
+
+    /* Discovered backends */
+    .discovered-backend-card {
+        padding: 16px;
+        font-size: 1.1rem;
     }
 
     /* Speech controls */
@@ -1106,7 +1132,7 @@ button, .card, a, input, select, .tab {
         margin: 0 !important;
     }
 
-    /* Button groups stack vertically on mobile */
+    /* Button groups stack vertically */
     .button-group {
         flex-direction: column;
         width: 100%;
@@ -1118,7 +1144,7 @@ button, .card, a, input, select, .tab {
         margin: 0;
     }
 
-    /* Form rows stack vertically on mobile */
+    /* Form rows stack vertically */
     .form-row {
         flex-direction: column;
         gap: 0;
@@ -1131,8 +1157,8 @@ button, .card, a, input, select, .tab {
     /* Input fields - prevent iOS zoom, proper sizing */
     .input-field {
         font-size: 16px;
-        padding: 14px;
-        min-height: 52px;
+        padding: 16px;
+        min-height: 56px;
         border-radius: 10px;
     }
 

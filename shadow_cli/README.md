@@ -8,19 +8,25 @@ Python backend that adds YouTube download, subtitle extraction, VAD segmentation
 
 ```bash
 # 1. Install system dependencies
-sudo apt install ffmpeg python3-pip
+sudo apt install ffmpeg python3-pip python3-venv
 
-# 2. Install yt-dlp
-pip3 install yt-dlp
-# or: sudo apt install yt-dlp
+# 2. Create a virtual environment (required on modern distros)
+python3 -m venv ~/.venvs/shadow
+source ~/.venvs/shadow/bin/activate
 
-# 3. Install Python dependencies
+# 3. Install yt-dlp and Python dependencies
 cd shadow_cli
-pip3 install -r requirements.txt
+pip install yt-dlp
+pip install -r requirements.txt
 
 # 4. Start the backend server
 python3 server.py
 ```
+
+> **Why a virtual environment?** Modern Linux distros (Ubuntu 23.04+, Debian 12+) block
+> bare `pip install` to protect system packages (PEP 668). If you see
+> `error: externally-managed-environment`, you need a venv.
+> Activate it each time with `source ~/.venvs/shadow/bin/activate`.
 
 The server starts on `http://localhost:8765`.
 
