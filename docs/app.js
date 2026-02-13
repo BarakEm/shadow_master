@@ -20,7 +20,11 @@ const state = {
         audioFeedback: true,
         beepVolume: 50,
         targetLanguage: 'en',
-        backendUrl: 'http://localhost:8765'
+        backendUrl: 'http://localhost:8765',
+        enableSTT: true,
+        enableTTS: true,
+        ttsVoice: '',
+        enableDiscovery: false
     },
     backendAvailable: false,
     mediaRecorder: null,
@@ -810,6 +814,15 @@ function loadSettings() {
     document.getElementById('beepVolume').value = state.settings.beepVolume;
     document.getElementById('beepVolumeValue').textContent = state.settings.beepVolume + '%';
     document.getElementById('targetLanguage').value = state.settings.targetLanguage;
+    document.getElementById('enableSTT').checked = state.settings.enableSTT || false;
+    document.getElementById('enableTTS').checked = state.settings.enableTTS || false;
+    document.getElementById('ttsVoice').value = state.settings.ttsVoice || '';
+    document.getElementById('enableDiscovery').checked = state.settings.enableDiscovery || false;
+
+    // Set TTS voice if specified
+    if (state.settings.ttsVoice) {
+        tts.setVoice(state.settings.ttsVoice);
+    }
 }
 
 function updateSettingSpeed(value) {
@@ -823,7 +836,11 @@ function updateSetting(key, value) {
         document.getElementById('beepVolumeValue').textContent = value + '%';
     }
 
-    state.settings[key] = key === 'busMode' || key === 'audioFeedback' ? value :
+    if (key === 'ttsVoice') {
+        tts.setVoice(value);
+    }
+
+    state.settings[key] = key === 'busMode' || key === 'audioFeedback' || key === 'enableSTT' || key === 'enableTTS' || key === 'enableDiscovery' ? value :
                           (key === 'playbackRepeats' || key === 'userRepeats' || key === 'beepVolume') ?
                           parseInt(value) : value;
     saveState();
@@ -1032,12 +1049,231 @@ async function processYouTube() {
     }
 }
 
+// STT/TTS Integration Functions
+function toggleSTT() {
+    if (!stt.isSupported()) {
+        alert('Speech recognition not supported in this browser');
+        return;
+    }
+
+    const button = document.getElementById('sttButton');
+    const segment = state.currentPlaylist?.segments[state.currentSegmentIndex];
+
+    if (stt.isListening) {
+        stt.stop();
+        button.textContent = '🎤 Listen & Transcribe';
+    } else {
+        button.textContent = '🛑 Stop Listening';
+
+        stt.onResult = (result) => {
+            if (segment) {
+                segment.transcription = result.transcript;
+                document.getElementById('segmentTranscription').textContent = result.transcript;
+                saveState();
+            }
+            button.textContent = '🎤 Listen & Transcribe';
+        };
+
+        stt.onError = (error) => {
+            console.error('STT error:', error);
+            button.textContent = '🎤 Listen & Transcribe';
+            alert('Speech recognition error: ' + error);
+        };
+
+        const langCode = getLanguageCode(state.settings.targetLanguage);
+        stt.start(langCode);
+    }
+}
+
+function speakTranscription() {
+    if (!tts.isSupported()) {
+        alert('Text-to-speech not supported in this browser');
+        return;
+    }
+
+    const segment = state.currentPlaylist?.segments[state.currentSegmentIndex];
+    if (!segment || !segment.transcription) {
+        alert('No transcription available');
+        return;
+    }
+
+    const langCode = getLanguageCode(state.settings.targetLanguage);
+    tts.speak(segment.transcription, {
+        lang: langCode,
+        rate: state.settings.playbackSpeed
+    });
+}
+
+function speakTranslation() {
+    if (!tts.isSupported()) {
+        alert('Text-to-speech not supported in this browser');
+        return;
+    }
+
+    const segment = state.currentPlaylist?.segments[state.currentSegmentIndex];
+    if (!segment || !segment.translation) {
+        alert('No translation available');
+        return;
+    }
+
+    // Use user's native language for translation TTS
+    tts.speak(segment.translation, {
+        rate: state.settings.playbackSpeed
+    });
+}
+
+function getLanguageCode(shortCode) {
+    const langMap = {
+        'en': 'en-US',
+        'es': 'es-ES',
+        'fr': 'fr-FR',
+        'de': 'de-DE',
+        'ja': 'ja-JP',
+        'zh': 'zh-CN',
+        'he': 'he-IL'
+    };
+    return langMap[shortCode] || 'en-US';
+}
+
+// Network Discovery Functions
+async function manualDiscovery() {
+    const button = event.target;
+    button.disabled = true;
+    button.textContent = '🔍 Scanning...';
+
+    const result = await backendDiscovery.discover();
+
+    if (result) {
+        state.settings.backendUrl = result;
+        document.getElementById('backendUrl').value = result;
+        saveState();
+        alert(`Found backend at ${result}`);
+        checkBackend();
+    } else {
+        alert('No backends found on local network');
+    }
+
+    button.disabled = false;
+    button.textContent = '🔍 Scan for Backends';
+
+    // Show discovered backends list
+    const discoveredList = document.getElementById('discoveredBackendsList');
+    const backends = backendDiscovery.getDiscoveredBackends();
+
+    if (backends.length > 0) {
+        document.getElementById('discoveredBackends').style.display = 'block';
+        discoveredList.innerHTML = backends.map(b => `
+            <div style="padding: 10px; margin: 5px 0; background: rgba(255,255,255,0.05); border-radius: 6px;">
+                <div><strong>${b.url}</strong></div>
+                ${b.info ? `
+                    <div style="font-size: 0.9em; color: #8892b0;">
+                        Host: ${b.info.hostname} | IP: ${b.info.ip}
+                    </div>
+                ` : ''}
+                <button class="btn-secondary" style="margin-top: 5px;"
+                    onclick="useBackend('${b.url}')">Use This Backend</button>
+            </div>
+        `).join('');
+    }
+}
+
+function useBackend(url) {
+    state.settings.backendUrl = url;
+    document.getElementById('backendUrl').value = url;
+    backendDiscovery.setActiveBackend(url);
+    saveState();
+    checkBackend();
+    alert(`Now using backend at ${url}`);
+}
+
+async function testBackendConnection() {
+    const url = state.settings.backendUrl || 'http://localhost:8765';
+    const statusEl = document.getElementById('backendConnectionStatus');
+
+    statusEl.textContent = 'Status: testing...';
+
+    const success = await backendDiscovery.probeBackend(url);
+
+    if (success) {
+        statusEl.textContent = 'Status: Connected ✓';
+        statusEl.style.color = '#4ecdc4';
+        state.backendAvailable = true;
+        onBackendDetected();
+    } else {
+        statusEl.textContent = 'Status: Not connected ✗';
+        statusEl.style.color = '#E94560';
+        state.backendAvailable = false;
+    }
+}
+
+// Initialize STT/TTS support indicators
+function initializeSpeechSupport() {
+    // Check STT support
+    const sttSupportEl = document.getElementById('sttSupport');
+    if (stt.isSupported()) {
+        sttSupportEl.textContent = 'Browser supports speech recognition ✓';
+        sttSupportEl.style.color = '#4ecdc4';
+    } else {
+        sttSupportEl.textContent = 'Speech recognition not supported in this browser ✗';
+        sttSupportEl.style.color = '#E94560';
+        document.getElementById('enableSTT').disabled = true;
+    }
+
+    // Check TTS support
+    const ttsSupportEl = document.getElementById('ttsSupport');
+    if (tts.isSupported()) {
+        ttsSupportEl.textContent = 'Browser supports text-to-speech ✓';
+        ttsSupportEl.style.color = '#4ecdc4';
+
+        // Populate TTS voice selector
+        setTimeout(() => {
+            const voices = tts.getVoices();
+            const voiceSelect = document.getElementById('ttsVoice');
+            voiceSelect.innerHTML = '<option value="">Default Voice</option>' +
+                voices.map(v => `<option value="${v.voiceURI}">${v.name} (${v.lang})</option>`).join('');
+
+            if (voices.length > 0) {
+                document.getElementById('ttsVoiceSelector').style.display = 'block';
+            }
+        }, 500);
+    } else {
+        ttsSupportEl.textContent = 'Text-to-speech not supported in this browser ✗';
+        ttsSupportEl.style.color = '#E94560';
+        document.getElementById('enableTTS').disabled = true;
+    }
+}
+
+// Update loadCurrentSegment to show STT/TTS controls
+const originalLoadCurrentSegment = loadCurrentSegment;
+loadCurrentSegment = function() {
+    originalLoadCurrentSegment.call(this);
+
+    // Show STT/TTS controls if enabled
+    const speechControls = document.getElementById('speechControls');
+    if (state.settings.enableSTT || state.settings.enableTTS) {
+        speechControls.style.display = 'block';
+    }
+};
+
 // Initialize
 loadState();
 renderLibrary();
+initializeSpeechSupport();
 
-// Only check backend on desktop (not mobile) to avoid network permission prompts
-const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-if (!isMobile) {
-    checkBackend();
+// Auto-discovery on load if enabled
+if (state.settings.enableDiscovery) {
+    backendDiscovery.discover().then(url => {
+        if (url) {
+            state.settings.backendUrl = url;
+            state.backendAvailable = true;
+            onBackendDetected();
+            saveState();
+        }
+    });
+} else {
+    // Only check backend on desktop (not mobile) to avoid network permission prompts
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    if (!isMobile) {
+        checkBackend();
+    }
 }

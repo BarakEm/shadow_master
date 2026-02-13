@@ -6,7 +6,10 @@ import sys
 import uuid
 import tempfile
 import wave
+import socket
 from pathlib import Path
+from contextlib import asynccontextmanager
+from typing import Optional
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -20,7 +23,95 @@ from practice_builder import build_practice_audio
 from exporter import change_speed, export_mp3, export_wav
 from downloader import download_audio, download_subtitles
 
-app = FastAPI(title='Shadow Master Backend')
+# mDNS/Zeroconf for network discovery (optional)
+try:
+    from zeroconf import ServiceInfo, Zeroconf
+    ZEROCONF_AVAILABLE = True
+except ImportError:
+    ZEROCONF_AVAILABLE = False
+    Zeroconf = None
+    ServiceInfo = None
+
+# Global state for zeroconf
+zeroconf_instance: Optional[Zeroconf] = None
+service_info: Optional[ServiceInfo] = None
+
+
+def get_local_ip():
+    """Get the local IP address of this machine."""
+    try:
+        # Create a socket to determine local IP
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+        return local_ip
+    except Exception:
+        return "127.0.0.1"
+
+
+def register_mdns_service(port: int, enable_discovery: bool = False):
+    """Register mDNS service for network discovery."""
+    global zeroconf_instance, service_info
+
+    if not enable_discovery or not ZEROCONF_AVAILABLE:
+        return
+
+    try:
+        local_ip = get_local_ip()
+        hostname = socket.gethostname()
+
+        service_info = ServiceInfo(
+            "_shadowmaster._tcp.local.",
+            f"Shadow Master Backend ({hostname})._shadowmaster._tcp.local.",
+            addresses=[socket.inet_aton(local_ip)],
+            port=port,
+            properties={
+                "version": "1.0",
+                "api": "v1",
+                "features": "youtube,stt,tts,processing"
+            },
+            server=f"{hostname}.local.",
+        )
+
+        zeroconf_instance = Zeroconf()
+        zeroconf_instance.register_service(service_info)
+        print(f"✓ mDNS service registered: {service_info.name}")
+        print(f"  Discoverable at: http://{local_ip}:{port}")
+    except Exception as e:
+        print(f"⚠ mDNS registration failed: {e}")
+
+
+def unregister_mdns_service():
+    """Unregister mDNS service on shutdown."""
+    global zeroconf_instance, service_info
+
+    if zeroconf_instance and service_info:
+        try:
+            zeroconf_instance.unregister_service(service_info)
+            zeroconf_instance.close()
+            print("✓ mDNS service unregistered")
+        except Exception as e:
+            print(f"⚠ mDNS unregister failed: {e}")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup and shutdown events for FastAPI."""
+    # Startup: Register mDNS if enabled
+    enable_discovery = os.environ.get('SHADOWMASTER_DISCOVERY', 'false').lower() == 'true'
+    port = int(os.environ.get('SHADOWMASTER_PORT', '8765'))
+
+    if enable_discovery:
+        register_mdns_service(port, enable_discovery)
+
+    yield
+
+    # Shutdown: Unregister mDNS
+    unregister_mdns_service()
+
+
+app = FastAPI(title='Shadow Master Backend', lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -239,6 +330,96 @@ async def upload_audio(file: UploadFile = File(...)):
     return {'audio_id': audio_id, 'duration': duration}
 
 
+class STTRequest(BaseModel):
+    audio_id: str | None = None
+    provider: str = 'browser'  # 'browser', 'google', 'whisper', etc.
+    language: str = 'en-US'
+
+
+class TTSRequest(BaseModel):
+    text: str
+    language: str = 'en-US'
+    provider: str = 'browser'  # 'browser', 'google', etc.
+
+
+@app.post('/api/stt')
+async def speech_to_text(req: STTRequest):
+    """
+    Speech-to-text endpoint (placeholder for future integration).
+    Currently returns a note that browser-based STT should be used.
+    """
+    if req.provider == 'browser':
+        return {
+            'provider': 'browser',
+            'note': 'Use Web Speech API in the browser for STT',
+            'text': '',
+            'confidence': 0.0
+        }
+
+    # Placeholder for future providers (Google Cloud Speech, Whisper, etc.)
+    raise HTTPException(
+        status_code=501,
+        detail=f'Provider "{req.provider}" not implemented. Use browser-based STT for now.'
+    )
+
+
+@app.post('/api/tts')
+async def text_to_speech(req: TTSRequest):
+    """
+    Text-to-speech endpoint (placeholder for future integration).
+    Currently returns a note that browser-based TTS should be used.
+    """
+    if req.provider == 'browser':
+        return {
+            'provider': 'browser',
+            'note': 'Use Web Speech API in the browser for TTS',
+            'audio_url': ''
+        }
+
+    # Placeholder for future providers (Google Cloud TTS, Azure TTS, etc.)
+    raise HTTPException(
+        status_code=501,
+        detail=f'Provider "{req.provider}" not implemented. Use browser-based TTS for now.'
+    )
+
+
+@app.get('/api/discovery/info')
+def discovery_info():
+    """Return network discovery information."""
+    local_ip = get_local_ip()
+    port = int(os.environ.get('SHADOWMASTER_PORT', '8765'))
+    discovery_enabled = os.environ.get('SHADOWMASTER_DISCOVERY', 'false').lower() == 'true'
+
+    return {
+        'ip': local_ip,
+        'port': port,
+        'discovery_enabled': discovery_enabled,
+        'zeroconf_available': ZEROCONF_AVAILABLE,
+        'hostname': socket.gethostname(),
+        'url': f'http://{local_ip}:{port}'
+    }
+
+
 if __name__ == '__main__':
+    import argparse
     import uvicorn
-    uvicorn.run(app, host='0.0.0.0', port=8765)
+
+    parser = argparse.ArgumentParser(description='Shadow Master Backend Server')
+    parser.add_argument('--port', type=int, default=8765, help='Server port (default: 8765)')
+    parser.add_argument('--host', default='0.0.0.0', help='Server host (default: 0.0.0.0)')
+    parser.add_argument('--discovery', action='store_true',
+                        help='Enable mDNS/Zeroconf network discovery (opt-in)')
+    args = parser.parse_args()
+
+    # Set environment variables for lifespan context
+    os.environ['SHADOWMASTER_PORT'] = str(args.port)
+    if args.discovery:
+        os.environ['SHADOWMASTER_DISCOVERY'] = 'true'
+        print("✓ Network discovery enabled (mDNS)")
+        if not ZEROCONF_AVAILABLE:
+            print("⚠ Warning: zeroconf not installed. Install with: pip install zeroconf")
+            print("  Discovery will not work without it.")
+    else:
+        print("ℹ Network discovery disabled (use --discovery to enable)")
+
+    uvicorn.run(app, host=args.host, port=args.port)
