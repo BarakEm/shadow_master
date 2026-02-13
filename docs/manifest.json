@@ -1,0 +1,18 @@
+{
+  "name": "Shadow Master",
+  "short_name": "Shadow Master",
+  "description": "Master pronunciation through shadowing",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0F0F1A",
+  "theme_color": "#0F0F1A",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "parrot-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

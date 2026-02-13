@@ -655,6 +655,33 @@ input[type="range"]::-moz-range-thumb {
     flex-wrap: wrap;
 }
 
+/* Reusable input field style (replaces inline styles) */
+.input-field {
+    width: 100%;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    color: #fff;
+    font-size: 1rem;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: rgba(102, 126, 234, 0.6);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+/* Form row items (flex children) */
+.form-row-item {
+    flex: 1;
+}
+
+/* Touch interaction hints */
+button, .card, a, input, select, .tab {
+    -webkit-tap-highlight-color: rgba(102, 126, 234, 0.2);
+}
+
 /* Tablet and small desktop improvements */
 @media (max-width: 768px) {
     .mode-cards {
@@ -712,12 +739,38 @@ input[type="range"]::-moz-range-thumb {
     .card p {
         font-size: 1.05rem;
     }
+
+    /* Tabs: scroll horizontally instead of wrapping */
+    .tabs {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        justify-content: flex-start;
+        padding: 16px;
+        gap: 8px;
+    }
+
+    .tab {
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    /* Input fields responsive sizing */
+    .input-field {
+        font-size: 16px; /* prevents iOS zoom on focus */
+        padding: 14px;
+        min-height: 48px;
+    }
 }
 
 /* Mobile phones - enhanced readability and touch targets */
 @media (max-width: 480px) {
     body {
         font-size: 17px;
+        /* iOS safe area support for notched phones */
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
     }
 
     .container {
@@ -976,5 +1029,41 @@ input[type="range"]::-moz-range-thumb {
 
     .form-row .setting-item {
         margin-bottom: 16px;
+    }
+
+    /* Input fields - prevent iOS zoom, proper sizing */
+    .input-field {
+        font-size: 16px;
+        padding: 14px;
+        min-height: 52px;
+        border-radius: 10px;
+    }
+
+    /* Audio player full width */
+    audio {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    /* Prevent horizontal overflow */
+    .screen {
+        overflow-x: hidden;
+    }
+
+    /* Logo smaller on phones */
+    .logo {
+        width: 90px;
+        height: 90px;
+    }
+}
+
+/* iOS standalone mode (Add to Home Screen) bottom padding */
+@media (display-mode: standalone) {
+    body {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .header {
+        padding-top: env(safe-area-inset-top);
     }
 }
