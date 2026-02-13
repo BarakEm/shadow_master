@@ -119,7 +119,7 @@
                 <div id="recordingPreview" class="recording-preview" style="display: none;">
                     <h4>Recorded Audio</h4>
                     <audio id="recordedAudio" controls></audio>
-                    <div class="preview-actions">
+                    <div class="button-group">
                         <button class="btn-primary" onclick="saveRecording()">💾 Save to Library</button>
                         <button class="btn-secondary" onclick="discardRecording()">🗑️ Discard</button>
                     </div>
@@ -150,11 +150,11 @@
                     <div class="duration" id="segmentDuration"></div>
 
                     <!-- STT/TTS Controls -->
-                    <div class="speech-controls" style="margin-top: 15px; display: none;" id="speechControls">
-                        <button class="btn-secondary" id="sttButton" onclick="toggleSTT()" style="margin-right: 10px;">
+                    <div class="speech-controls" style="display: none;" id="speechControls">
+                        <button class="btn-secondary" id="sttButton" onclick="toggleSTT()">
                             🎤 Listen & Transcribe
                         </button>
-                        <button class="btn-secondary" id="ttsButton" onclick="speakTranscription()" style="margin-right: 10px;">
+                        <button class="btn-secondary" id="ttsButton" onclick="speakTranscription()">
                             🔊 Speak Transcription
                         </button>
                         <button class="btn-secondary" id="ttsTranslateButton" onclick="speakTranslation()">
@@ -202,7 +202,7 @@
                     <input type="url" id="youtubeUrl" placeholder="https://youtube.com/watch?v=..." style="width:100%;padding:12px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;font-size:1rem;">
                 </div>
 
-                <div style="display:flex;gap:15px;">
+                <div class="form-row">
                     <div class="setting-item" style="flex:1;">
                         <label>Start Time</label>
                         <input type="text" id="ytStart" placeholder="0:00" style="width:100%;padding:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;">
@@ -223,7 +223,7 @@
                     </select>
                 </div>
 
-                <div style="display:flex;gap:15px;">
+                <div class="form-row">
                     <div class="setting-item" style="flex:1;">
                         <label>Speed</label>
                         <select id="ytSpeed">
@@ -243,7 +243,7 @@
                     </div>
                 </div>
 
-                <div style="display:flex;gap:15px;">
+                <div class="form-row">
                     <div class="setting-item" style="flex:1;">
                         <label>Playback Repeats</label>
                         <input type="number" id="ytPlaybackRepeats" min="1" max="5" value="2" style="width:100%;padding:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;">
