@@ -6,6 +6,8 @@
     <title>Shadow Master - Language Learning</title>
     <link rel="stylesheet" href="styles.css">
     <script src="vad.js"></script>
+    <script src="discovery.js"></script>
+    <script src="speech.js"></script>
 </head>
 <body>
     <!-- Home Screen -->
@@ -146,6 +148,19 @@
                     <div class="transcription" id="segmentTranscription">Press Start to begin</div>
                     <div class="translation" id="segmentTranslation"></div>
                     <div class="duration" id="segmentDuration"></div>
+
+                    <!-- STT/TTS Controls -->
+                    <div class="speech-controls" style="margin-top: 15px; display: none;" id="speechControls">
+                        <button class="btn-secondary" id="sttButton" onclick="toggleSTT()" style="margin-right: 10px;">
+                            🎤 Listen & Transcribe
+                        </button>
+                        <button class="btn-secondary" id="ttsButton" onclick="speakTranscription()" style="margin-right: 10px;">
+                            🔊 Speak Transcription
+                        </button>
+                        <button class="btn-secondary" id="ttsTranslateButton" onclick="speakTranslation()">
+                            🌍 Speak Translation
+                        </button>
+                    </div>
                 </div>
 
                 <audio id="practiceAudio" onended="handleAudioEnded()"></audio>
@@ -340,17 +355,62 @@
                 </div>
             </div>
 
+            <div class="settings-section">
+                <h3>Speech Recognition & Synthesis</h3>
+
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="enableSTT" onchange="updateSetting('enableSTT', this.checked)">
+                        Enable Speech-to-Text (STT)
+                    </label>
+                    <p class="setting-description" id="sttSupport">Checking browser support...</p>
+                </div>
+
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="enableTTS" checked onchange="updateSetting('enableTTS', this.checked)">
+                        Enable Text-to-Speech (TTS)
+                    </label>
+                    <p class="setting-description" id="ttsSupport">Checking browser support...</p>
+                </div>
+
+                <div class="setting-item" id="ttsVoiceSelector" style="display: none;">
+                    <label>TTS Voice</label>
+                    <select id="ttsVoice" onchange="updateSetting('ttsVoice', this.value)">
+                        <option value="">Default Voice</option>
+                    </select>
+                </div>
+            </div>
+
             <div id="backendSettings" class="settings-section" style="display:none;">
                 <h3>Backend</h3>
 
                 <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="enableDiscovery" onchange="updateSetting('enableDiscovery', this.checked)">
+                        Enable Network Discovery
+                    </label>
+                    <p class="setting-description">Automatically discover Shadow Master backends on your local network (opt-in).</p>
+                </div>
+
+                <div class="setting-item">
                     <label>Backend URL</label>
                     <input type="url" id="backendUrl" value="http://localhost:8765" onchange="updateSetting('backendUrl', this.value)" style="width:100%;padding:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;">
-                    <p class="setting-description">URL of the Shadow Master Python backend server.</p>
+                    <p class="setting-description">URL of the Shadow Master Python backend server. Leave as localhost or use auto-discovery.</p>
+                </div>
+
+                <div class="setting-item">
+                    <button class="btn-secondary" onclick="manualDiscovery()">🔍 Scan for Backends</button>
+                    <button class="btn-secondary" onclick="testBackendConnection()" style="margin-left: 10px;">🔌 Test Connection</button>
                 </div>
 
                 <div class="setting-item">
                     <label id="backendConnectionStatus">Status: checking...</label>
+                </div>
+
+                <div id="discoveredBackends" style="margin-top: 15px; display: none;">
+                    <h4>Discovered Backends:</h4>
+                    <div id="discoveredBackendsList"></div>
                 </div>
             </div>
 

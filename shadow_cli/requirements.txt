@@ -4,3 +4,4 @@ webrtcvad-wheels
 pydub==0.25.1
 numpy
 python-multipart
+zeroconf>=0.132.2
