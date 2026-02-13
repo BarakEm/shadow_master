@@ -2,7 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Shadow Master">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#0F0F1A">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="parrot-logo.png">
     <title>Shadow Master - Language Learning</title>
     <link rel="stylesheet" href="styles.css">
     <script src="vad.js"></script>
@@ -199,17 +206,17 @@
             <div class="capture-card">
                 <div class="setting-item">
                     <label>YouTube URL</label>
-                    <input type="url" id="youtubeUrl" placeholder="https://youtube.com/watch?v=..." style="width:100%;padding:12px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;font-size:1rem;">
+                    <input type="url" id="youtubeUrl" placeholder="https://youtube.com/watch?v=..." class="input-field">
                 </div>
 
                 <div class="form-row">
-                    <div class="setting-item" style="flex:1;">
+                    <div class="setting-item form-row-item">
                         <label>Start Time</label>
-                        <input type="text" id="ytStart" placeholder="0:00" style="width:100%;padding:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;">
+                        <input type="text" id="ytStart" placeholder="0:00" class="input-field">
                     </div>
-                    <div class="setting-item" style="flex:1;">
+                    <div class="setting-item form-row-item">
                         <label>End Time</label>
-                        <input type="text" id="ytEnd" placeholder="2:00" style="width:100%;padding:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;">
+                        <input type="text" id="ytEnd" placeholder="2:00" class="input-field">
                     </div>
                 </div>
 
@@ -224,7 +231,7 @@
                 </div>
 
                 <div class="form-row">
-                    <div class="setting-item" style="flex:1;">
+                    <div class="setting-item form-row-item">
                         <label>Speed</label>
                         <select id="ytSpeed">
                             <option value="0.6">0.6x</option>
@@ -234,7 +241,7 @@
                             <option value="1.0">1.0x</option>
                         </select>
                     </div>
-                    <div class="setting-item" style="flex:1;">
+                    <div class="setting-item form-row-item">
                         <label>Format</label>
                         <select id="ytFormat">
                             <option value="mp3" selected>MP3</option>
@@ -244,13 +251,13 @@
                 </div>
 
                 <div class="form-row">
-                    <div class="setting-item" style="flex:1;">
+                    <div class="setting-item form-row-item">
                         <label>Playback Repeats</label>
-                        <input type="number" id="ytPlaybackRepeats" min="1" max="5" value="2" style="width:100%;padding:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;">
+                        <input type="number" id="ytPlaybackRepeats" min="1" max="5" value="2" class="input-field">
                     </div>
-                    <div class="setting-item" style="flex:1;">
+                    <div class="setting-item form-row-item">
                         <label>User Repeats</label>
-                        <input type="number" id="ytUserRepeats" min="0" max="3" value="1" style="width:100%;padding:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;">
+                        <input type="number" id="ytUserRepeats" min="0" max="3" value="1" class="input-field">
                     </div>
                 </div>
 
@@ -395,13 +402,15 @@
 
                 <div class="setting-item">
                     <label>Backend URL</label>
-                    <input type="url" id="backendUrl" value="http://localhost:8765" onchange="updateSetting('backendUrl', this.value)" style="width:100%;padding:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;color:#fff;">
+                    <input type="url" id="backendUrl" value="http://localhost:8765" onchange="updateSetting('backendUrl', this.value)" class="input-field">
                     <p class="setting-description">URL of the Shadow Master Python backend server. Leave as localhost or use auto-discovery.</p>
                 </div>
 
                 <div class="setting-item">
-                    <button class="btn-secondary" onclick="manualDiscovery()">🔍 Scan for Backends</button>
-                    <button class="btn-secondary" onclick="testBackendConnection()" style="margin-left: 10px;">🔌 Test Connection</button>
+                    <div class="button-group">
+                        <button class="btn-secondary" onclick="manualDiscovery()">🔍 Scan for Backends</button>
+                        <button class="btn-secondary" onclick="testBackendConnection()">🔌 Test Connection</button>
+                    </div>
                 </div>
 
                 <div class="setting-item">
