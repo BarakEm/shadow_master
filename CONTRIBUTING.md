@@ -47,7 +47,19 @@ This allows rapid iteration on issue fixes while maintaining history.
 
 ## Code Review Guidelines
 
-### What Reviewers Look For
+### Automated Code Review
+
+All pull requests automatically receive a code review from Claude as part of the build workflow. Claude reviews:
+- Code quality and adherence to Kotlin best practices
+- Proper resource management (MediaCodec, MediaExtractor, etc.)
+- Coroutine usage and dispatcher selection
+- Naming accuracy
+- Avoiding unnecessary comments
+- Testing coverage for new features
+
+The automated review follows the guidelines in `CLAUDE.md` and `.github/claude-instructions.md`.
+
+### What Human Reviewers Look For
 
 - [ ] Code follows Kotlin style guidelines
 - [ ] Compose UI patterns are used correctly
@@ -90,6 +102,15 @@ Before submitting a PR:
 1. **Run lint:** `./gradlew lint`
 2. **Run tests:** `./gradlew test`
 3. **Test on device** if touching audio/UI code
+
+### Continuous Integration
+
+All PRs automatically run:
+- **Build workflow** - Builds debug and release APKs
+- **Claude code review** - Automated code quality review
+- **Additional checks** - As configured in `.github/workflows/`
+
+PRs must pass all checks before merging.
 
 ## Getting Help
 
