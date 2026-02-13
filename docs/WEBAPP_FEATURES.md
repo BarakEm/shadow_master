@@ -118,10 +118,7 @@ Shadow Master supports speech recognition for transcribing segments during pract
 
 ### How to Use
 
-#### Enable STT
-1. Go to **Settings** → **Speech Recognition & Synthesis**
-2. Enable **"Enable Speech-to-Text (STT)"**
-3. Check that browser support indicator shows ✓
+STT is **enabled by default** in supported browsers. You can disable it in Settings if needed.
 
 #### During Practice
 1. Start practicing a playlist
@@ -160,10 +157,7 @@ Shadow Master can speak transcriptions and translations aloud using the browser'
 
 ### How to Use
 
-#### Enable TTS
-1. Go to **Settings** → **Speech Recognition & Synthesis**
-2. Enable **"Enable Text-to-Speech (TTS)"**
-3. Select a preferred voice (optional)
+TTS is **enabled by default** in all browsers. You can disable it in Settings if needed, or select a preferred voice.
 
 #### During Practice
 1. Add transcriptions to segments (manual or via STT)

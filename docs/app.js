@@ -21,8 +21,8 @@ const state = {
         beepVolume: 50,
         targetLanguage: 'en',
         backendUrl: 'http://localhost:8765',
-        enableSTT: false,
-        enableTTS: false,
+        enableSTT: true,
+        enableTTS: true,
         ttsVoice: '',
         enableDiscovery: false
     },
