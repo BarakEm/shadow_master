@@ -431,33 +431,39 @@ async function exportPlaylist(playlistId) {
     }
 
     try {
-        // Create a simple export: download each segment as a zip or concatenated audio
-        // For simplicity, we'll create a JSON export with all playlist data
-        const exportData = {
-            name: playlist.name,
-            language: playlist.language,
-            createdAt: playlist.createdAt,
-            segments: playlist.segments.map(seg => ({
-                transcription: seg.transcription,
-                translation: seg.translation,
-                duration: seg.duration,
-                startTime: seg.startTime,
-                endTime: seg.endTime,
-                audioUrl: seg.audioUrl
-            }))
-        };
+        // Download each segment as a separate audio file
+        for (let i = 0; i < playlist.segments.length; i++) {
+            const seg = playlist.segments[i];
+            const paddedIndex = String(i + 1).padStart(3, '0');
 
-        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${playlist.name}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+            // Create filename from transcription or index
+            let filename = `${playlist.name}_${paddedIndex}`;
+            if (seg.transcription && seg.transcription.trim()) {
+                const cleanTranscription = seg.transcription
+                    .trim()
+                    .substring(0, 50)
+                    .replace(/[^a-zA-Z0-9\s-]/g, '')
+                    .replace(/\s+/g, '_');
+                if (cleanTranscription) {
+                    filename = `${playlist.name}_${paddedIndex}_${cleanTranscription}`;
+                }
+            }
 
-        alert(`Playlist "${playlist.name}" exported successfully!`);
+            // Download the segment
+            const a = document.createElement('a');
+            a.href = seg.audioUrl;
+            a.download = `${filename}.wav`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            // Small delay between downloads to avoid browser blocking
+            if (i < playlist.segments.length - 1) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+        }
+
+        alert(`Exported ${playlist.segments.length} segments from "${playlist.name}"!`);
     } catch (error) {
         console.error('Export error:', error);
         alert('Error exporting playlist: ' + error.message);
@@ -1001,4 +1007,9 @@ async function processYouTube() {
 // Initialize
 loadState();
 renderLibrary();
-checkBackend();
+
+// Only check backend on desktop (not mobile) to avoid network permission prompts
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+if (!isMobile) {
+    checkBackend();
+}
