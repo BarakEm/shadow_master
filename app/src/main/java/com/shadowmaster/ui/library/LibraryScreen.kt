@@ -742,7 +742,7 @@ fun LibraryScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "Segmentation Mode",
-                        style = MaterialTheme.typography.titleSmall,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Medium
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -768,7 +768,7 @@ fun LibraryScreen(
                                     text = "Mode: ${preset.segmentMode.name}, " +
                                            "Min: ${preset.minSegmentDurationMs}ms, " +
                                            "Max: ${preset.maxSegmentDurationMs}ms",
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
