@@ -997,7 +997,7 @@ async function processYouTube() {
         // Show segments
         const segmentsHtml = processResult.segments.map((seg, i) => {
             const text = seg.text ? `<span style="color:#8892b0;"> - ${seg.text}</span>` : '';
-            return `<div style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.05);">
+            return `<div class="yt-segment-row">
                 <span style="color:#E94560;">[${i+1}]</span>
                 ${(seg.start/1000).toFixed(1)}s - ${(seg.end/1000).toFixed(1)}s${text}
             </div>`;
@@ -1164,15 +1164,14 @@ async function manualDiscovery() {
     if (backends.length > 0) {
         document.getElementById('discoveredBackends').style.display = 'block';
         discoveredList.innerHTML = backends.map(b => `
-            <div style="padding: 10px; margin: 5px 0; background: rgba(255,255,255,0.05); border-radius: 6px;">
+            <div class="discovered-backend-card">
                 <div><strong>${b.url}</strong></div>
                 ${b.info ? `
-                    <div style="font-size: 0.9em; color: #8892b0;">
+                    <div class="discovered-backend-info">
                         Host: ${b.info.hostname} | IP: ${b.info.ip}
                     </div>
                 ` : ''}
-                <button class="btn-secondary" style="margin-top: 5px;"
-                    onclick="useBackend('${b.url}')">Use This Backend</button>
+                <button class="btn-secondary" onclick="useBackend('${b.url}')">Use This Backend</button>
             </div>
         `).join('');
     }
