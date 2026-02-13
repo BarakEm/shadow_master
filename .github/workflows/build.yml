@@ -47,3 +47,35 @@ jobs:
         name: shadow-master-release-unsigned
         path: app/build/outputs/apk/release/app-release-unsigned.apk
         retention-days: 30
+
+  code-review:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+      id-token: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Run Claude Code Review
+      uses: anthropics/claude-code-action@v1
+      with:
+        claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        prompt: |
+          Review this pull request for code quality, following the guidelines in CLAUDE.md and .github/claude-instructions.md.
+          
+          Focus on:
+          - Code quality and adherence to Kotlin best practices
+          - Proper resource management (MediaCodec, MediaExtractor, etc.)
+          - Coroutine usage and dispatcher selection
+          - Naming accuracy
+          - Avoiding unnecessary comments
+          - Testing coverage for new features
+          
+          Provide constructive feedback and suggest improvements where needed.
