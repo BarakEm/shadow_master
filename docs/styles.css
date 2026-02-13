@@ -370,6 +370,20 @@ h1 {
     margin-top: 20px;
 }
 
+/* Button group for responsive button layouts */
+.button-group {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* Form row for side-by-side inputs */
+.form-row {
+    display: flex;
+    gap: 15px;
+}
+
 .progress-bar {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 20px;
@@ -630,6 +644,15 @@ input[type="range"]::-moz-range-thumb {
     margin-bottom: 20px;
     font-size: 0.85rem;
     color: #8892b0;
+}
+
+/* Speech controls - horizontal layout on desktop */
+.speech-controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 15px;
+    flex-wrap: wrap;
 }
 
 /* Tablet and small desktop improvements */
@@ -931,5 +954,27 @@ input[type="range"]::-moz-range-thumb {
     .speech-controls button {
         width: 100%;
         margin: 0 !important;
+    }
+
+    /* Button groups stack vertically on mobile */
+    .button-group {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .button-group button,
+    .button-group a {
+        width: 100%;
+        margin: 0;
+    }
+
+    /* Form rows stack vertically on mobile */
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .form-row .setting-item {
+        margin-bottom: 16px;
     }
 }

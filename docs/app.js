@@ -1030,15 +1030,16 @@ async function processYouTube() {
         // Show result with both options
         resultEl.style.display = 'block';
         resultEl.innerHTML += `
-            <button class="btn-primary" style="margin-top:15px;margin-right:10px;"
-                onclick="openPlaylist('${playlist.id}')">
-                Practice Now
-            </button>
-            <a href="${backendUrl}/api/download/${processResult.output_file}"
-               class="btn-primary" style="display:inline-block;text-decoration:none;margin-top:15px;"
-               download>
-                Download MP3
-            </a>
+            <div class="button-group" style="margin-top:15px;">
+                <button class="btn-primary" onclick="openPlaylist('${playlist.id}')">
+                    Practice Now
+                </button>
+                <a href="${backendUrl}/api/download/${processResult.output_file}"
+                   class="btn-primary" style="display:inline-block;text-decoration:none;"
+                   download>
+                    Download MP3
+                </a>
+            </div>
         `;
 
         setTimeout(() => { progressEl.style.display = 'none'; }, 1500);
