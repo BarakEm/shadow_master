@@ -973,6 +973,7 @@ async function processYouTube() {
         }
 
         const processResult = await processResponse.json();
+        const audioId = processResult.audio_id || dlResult.id;
         document.getElementById('ytProgressFill').style.width = '100%';
         document.getElementById('ytProgressText').textContent = 'Done!';
 
@@ -986,13 +987,40 @@ async function processYouTube() {
         }).join('');
         document.getElementById('ytSegments').innerHTML = segmentsHtml;
 
-        // Show download link
+        // Build playlist from segments
+        const playlistSegments = processResult.segments.map((seg, i) => ({
+            id: generateId(),
+            audioUrl: `${backendUrl}/api/segment/${audioId}/${i}`,
+            duration: (seg.end - seg.start) / 1000,
+            transcription: seg.text || '',
+            translation: '',
+            startTime: seg.start / 1000,
+            endTime: seg.end / 1000
+        }));
+
+        const playlist = {
+            id: generateId(),
+            name: dlResult.title,
+            language: state.settings.targetLanguage,
+            segments: playlistSegments,
+            createdAt: Date.now(),
+            source: 'youtube'
+        };
+
+        state.playlists.push(playlist);
+        saveState();
+
+        // Show result with both options
         resultEl.style.display = 'block';
         resultEl.innerHTML += `
+            <button class="btn-primary" style="margin-top:15px;margin-right:10px;"
+                onclick="openPlaylist('${playlist.id}')">
+                Practice Now
+            </button>
             <a href="${backendUrl}/api/download/${processResult.output_file}"
                class="btn-primary" style="display:inline-block;text-decoration:none;margin-top:15px;"
                download>
-                Download Practice Audio
+                Download MP3
             </a>
         `;
 

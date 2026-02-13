@@ -5,6 +5,7 @@ import os
 import sys
 import uuid
 import tempfile
+import wave
 from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -14,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from segmenter import load_audio_as_pcm, segment_audio, align_subtitles
+from segmenter import load_audio_as_pcm, segment_audio, align_subtitles, extract_segment_pcm
 from practice_builder import build_practice_audio
 from exporter import change_speed, export_mp3, export_wav
 from downloader import download_audio, download_subtitles
@@ -135,7 +136,13 @@ def process_audio(req: ProcessRequest):
 
     filename = os.path.basename(output_path)
 
+    # Store segments and PCM for per-segment serving
+    if req.audio_id and req.audio_id in audio_registry:
+        audio_registry[req.audio_id]['segments'] = segments
+        audio_registry[req.audio_id]['pcm_data'] = pcm_data
+
     return {
+        'audio_id': req.audio_id,
         'output_file': filename,
         'segments': [
             {'start': s.start_ms, 'end': s.end_ms, 'text': s.text}
@@ -169,6 +176,34 @@ def get_subtitles(audio_id: str):
             for lang, entries in subtitles.items()
         }
     }
+
+
+@app.get('/api/segment/{audio_id}/{index}')
+def get_segment(audio_id: str, index: int):
+    if audio_id not in audio_registry:
+        raise HTTPException(status_code=404, detail='Audio not found')
+
+    entry = audio_registry[audio_id]
+    segments = entry.get('segments')
+    pcm_data = entry.get('pcm_data')
+    if not segments or not pcm_data:
+        raise HTTPException(status_code=400, detail='Audio not processed yet')
+    if index < 0 or index >= len(segments):
+        raise HTTPException(status_code=404, detail='Segment index out of range')
+
+    # Check cache
+    cache_path = WORK_DIR / f'{audio_id}_seg{index}.wav'
+    if not cache_path.exists():
+        seg = segments[index]
+        seg_pcm = extract_segment_pcm(pcm_data, seg.start_ms, seg.end_ms)
+        with wave.open(str(cache_path), 'wb') as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(16000)
+            wf.writeframes(seg_pcm)
+
+    return FileResponse(str(cache_path), media_type='audio/wav',
+                        filename=f'segment_{index}.wav')
 
 
 @app.post('/api/upload')
