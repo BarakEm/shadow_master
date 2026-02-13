@@ -268,7 +268,7 @@ h1 {
 
 .playlist-card h4,
 .imported-card h4 {
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     margin-bottom: 10px;
     color: #fff;
 }
@@ -276,7 +276,7 @@ h1 {
 .playlist-card p,
 .imported-card p {
     color: #8892b0;
-    font-size: 0.9rem;
+    font-size: 1rem;
     margin: 5px 0;
 }
 
@@ -290,13 +290,14 @@ h1 {
 .playlist-card .actions button,
 .imported-card .actions button {
     flex: 1;
-    padding: 8px;
+    padding: 12px;
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 6px;
+    border-radius: 8px;
     color: #fff;
     cursor: pointer;
-    font-size: 0.85rem;
+    font-size: 1rem;
+    min-height: 44px;
 }
 
 .playlist-card .actions button:hover,
@@ -431,8 +432,8 @@ h1 {
 }
 
 .duration {
-    font-size: 0.9rem;
-    color: #666;
+    font-size: 1rem;
+    color: #8892b0;
 }
 
 .practice-controls {
@@ -619,10 +620,10 @@ input[type="range"]::-moz-range-thumb {
 }
 
 .setting-description {
-    font-size: 0.85rem;
-    color: #666;
+    font-size: 0.95rem;
+    color: #8892b0;
     margin-top: 8px;
-    line-height: 1.4;
+    line-height: 1.5;
 }
 
 .progress-container {
@@ -634,15 +635,15 @@ input[type="range"]::-moz-range-thumb {
     text-align: center;
     color: #8892b0;
     margin-bottom: 15px;
-    font-size: 0.95rem;
+    font-size: 1rem;
 }
 
 /* Backend status */
 .backend-status {
     text-align: center;
-    padding: 8px 16px;
+    padding: 10px 16px;
     margin-bottom: 20px;
-    font-size: 0.85rem;
+    font-size: 1rem;
     color: #8892b0;
 }
 
@@ -675,6 +676,29 @@ input[type="range"]::-moz-range-thumb {
 /* Form row items (flex children) */
 .form-row-item {
     flex: 1;
+}
+
+/* YouTube segment rows */
+.yt-segment-row {
+    padding: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+/* Discovered backend cards */
+.discovered-backend-card {
+    padding: 14px;
+    margin: 8px 0;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.discovered-backend-info {
+    font-size: 0.95rem;
+    color: #8892b0;
+    margin: 6px 0;
 }
 
 /* Touch interaction hints */
@@ -758,6 +782,30 @@ button, .card, a, input, select, .tab {
     .input-field {
         font-size: 16px; /* prevents iOS zoom on focus */
         padding: 14px;
+        min-height: 48px;
+    }
+
+    /* Reduce card padding on tablet */
+    .capture-card,
+    .practice-card {
+        padding: 24px 16px;
+    }
+
+    /* Playlist/imported cards */
+    .playlist-card,
+    .imported-card {
+        padding: 20px 16px;
+    }
+
+    .playlist-card .actions,
+    .imported-card .actions {
+        flex-direction: column;
+    }
+
+    .playlist-card .actions button,
+    .imported-card .actions button {
+        padding: 14px;
+        font-size: 1.05rem;
         min-height: 48px;
     }
 }
@@ -955,6 +1003,45 @@ button, .card, a, input, select, .tab {
         margin-top: 10px;
     }
 
+    /* Capture/practice card padding */
+    .capture-card,
+    .practice-card {
+        padding: 20px 14px;
+    }
+
+    /* Playlist/imported cards bigger on phones */
+    .playlist-card,
+    .imported-card {
+        padding: 20px 16px;
+    }
+
+    .playlist-card h4,
+    .imported-card h4 {
+        font-size: 1.25rem;
+        margin-bottom: 8px;
+    }
+
+    .playlist-card p,
+    .imported-card p {
+        font-size: 1.1rem;
+        margin: 6px 0;
+    }
+
+    .playlist-card .actions,
+    .imported-card .actions {
+        flex-direction: column;
+        gap: 8px;
+        margin-top: 12px;
+    }
+
+    .playlist-card .actions button,
+    .imported-card .actions button {
+        padding: 16px;
+        font-size: 1.1rem;
+        min-height: 52px;
+        border-radius: 10px;
+    }
+
     /* Progress and status elements */
     .progress-bar {
         height: 44px;
@@ -968,7 +1055,7 @@ button, .card, a, input, select, .tab {
     .status-indicator,
     .state-indicator {
         padding: 12px 24px;
-        font-size: 1.05rem;
+        font-size: 1.1rem;
         border-radius: 24px;
     }
 
@@ -994,6 +1081,16 @@ button, .card, a, input, select, .tab {
     .modal-footer {
         padding: 16px;
         gap: 12px;
+    }
+
+    /* Settings quick bar */
+    .settings-quick {
+        padding: 16px;
+    }
+
+    .settings-quick label {
+        font-size: 1.1rem;
+        flex-wrap: wrap;
     }
 
     /* Speech controls */
