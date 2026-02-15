@@ -1116,11 +1116,24 @@ private fun ImportedAudioCard(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        if (audio.segmentationCount > 0) {
+                            Text(
+                                text = "•",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "${audio.segmentationCount} playlist${if (audio.segmentationCount == 1) "" else "s"}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
-                
+
                 Button(onClick = onCreatePlaylist) {
-                    Text("Create Playlist")
+                    Text(if (audio.segmentationCount > 0) "Create Another" else "Create Playlist")
                 }
             }
         }
