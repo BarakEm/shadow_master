@@ -26,12 +26,56 @@ Try Shadow Master instantly in your browser - no installation required!
 
 **[Launch Web App →](https://barakem.github.io/shadow_master/)**
 
+The web app consists of two components:
+
+#### Frontend (Vanilla JavaScript)
 - Works on any modern browser (Chrome, Firefox, Safari, Edge)
 - Import audio files or record from microphone
 - Multiple VAD algorithms for automatic segmentation
 - Configurable segment length and detection sensitivity
 - Save playlists in browser storage
 - Perfect for desktop and mobile browsers
+
+#### Backend (Python - Optional)
+The `shadow_cli/` Python backend adds powerful server-side features:
+
+**Features:**
+- **YouTube/Podcast Download** - Download audio and subtitles from YouTube and other platforms
+- **Network Discovery** - mDNS/Zeroconf for automatic backend detection
+- **Advanced Audio Processing** - WebRTC VAD segmentation, speed adjustment, format conversion
+- **Practice Audio Export** - Generate MP3/WAV practice files with beeps and silence gaps
+- **Local Server** - Serves the web app and provides REST API endpoints
+
+**Quick Setup (WSL/Linux):**
+```bash
+# Install dependencies
+sudo apt install ffmpeg python3-pip python3-venv
+
+# Create virtual environment
+python3 -m venv ~/.venvs/shadow
+source ~/.venvs/shadow/bin/activate
+
+# Install Python packages
+cd shadow_cli
+pip install yt-dlp
+pip install -r requirements.txt
+
+# Start server
+python3 server.py
+# Server runs at http://localhost:8765
+```
+
+**CLI Usage (no browser):**
+```bash
+# Download from YouTube and create practice audio
+python3 shadow_master.py youtube "https://youtube.com/watch?v=XXX" \
+  --start 0:30 --end 2:00 --speed 0.8 --preset sentences
+
+# Process local audio files
+python3 shadow_master.py local ~/audio/*.mp3 --speed 0.8
+```
+
+See `shadow_cli/README.md` for complete backend documentation.
 
 ### 📱 Android App
 Full-featured native Android application with additional capabilities:
@@ -203,6 +247,7 @@ AZURE_SPEECH_REGION=your_azure_region
 
 ## Architecture
 
+### Android App Structure
 ```
 com.shadowmaster/
 ├── audio/
@@ -232,15 +277,38 @@ com.shadowmaster/
     └── navigation/    # Navigation graph
 ```
 
+### Web App Backend Structure (shadow_cli/)
+```
+shadow_cli/
+├── shadow_master.py     # CLI entry point (youtube/local/server modes)
+├── server.py            # FastAPI server with REST endpoints
+├── downloader.py        # YouTube/podcast audio + subtitle download
+├── segmenter.py         # WebRTC VAD-based audio segmentation
+├── practice_builder.py  # Assemble practice audio with beeps/gaps
+├── exporter.py          # Speed adjustment, MP3/WAV export
+├── beep_generator.py    # Generate audio feedback beeps
+├── requirements.txt     # Python dependencies
+└── README.md            # Backend documentation
+```
+
 ## Tech Stack
 
-### Web App
+### Web App Frontend
 - **Vanilla JavaScript** - No frameworks, lightweight and fast
 - **Web Audio API** - Audio processing and playback
 - **MediaRecorder API** - Microphone recording
 - **localStorage** - Settings and playlist persistence
 - **Custom VAD Engine** - Energy-based, WebRTC, and Silero support
 - **ONNX Runtime Web** - For Silero VAD model (optional)
+
+### Web App Backend (Python - shadow_cli/)
+- **FastAPI** - REST API server with CORS support
+- **yt-dlp** - YouTube and podcast audio/subtitle downloading
+- **ffmpeg** - Audio decoding, encoding, and speed adjustment
+- **webrtcvad** - Voice activity detection for segmentation
+- **pydub** - Audio manipulation and format conversion
+- **zeroconf** - mDNS network discovery (optional)
+- **NumPy** - Audio processing and PCM manipulation
 
 ### Android App
 - **Kotlin** with Coroutines and Flow
