@@ -228,6 +228,7 @@ com.shadowmaster/
     ├── library/       # Library browser
     ├── practice/      # Offline practice player
     ├── driving/       # Live shadow screen
+    ├── mic/           # Microphone capture screen
     ├── settings/      # Settings screen
     └── navigation/    # Navigation graph
 ```
