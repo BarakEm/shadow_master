@@ -313,14 +313,17 @@ async function startSegmentation() {
         document.getElementById('segmentProgressText').textContent = 'Analyzing audio...';
         document.getElementById('segmentProgressFill').style.width = '30%';
 
-        // Run VAD segmentation
+        // Run VAD segmentation with optimized settings
         const segments = await vadProcessor.segmentAudio(arrayBuffer, {
             algorithm: vadAlgorithm,
             minSegmentDuration,
             maxSegmentDuration,
             silenceThreshold,
             speechPadding,
-            minSilenceDuration
+            minSilenceDuration,
+            useWorker: true,
+            downsampleRate: 8000, // Downsample to 8kHz for faster VAD
+            frameSize: 0.05 // 50ms frames for faster processing
         });
 
         document.getElementById('segmentProgressText').textContent = 'Creating segments...';
@@ -435,9 +438,15 @@ async function exportPlaylist(playlistId) {
     }
 
     try {
-        // Download each segment as a separate audio file
-        for (let i = 0; i < playlist.segments.length; i++) {
-            const seg = playlist.segments[i];
+        // Show progress
+        const exportBtn = document.querySelector(`button[onclick="exportPlaylist('${playlistId}')"]`);
+        if (exportBtn) {
+            exportBtn.textContent = '⏳ Exporting...';
+            exportBtn.disabled = true;
+        }
+
+        // Build list of downloads in parallel
+        const downloads = playlist.segments.map((seg, i) => {
             const paddedIndex = String(i + 1).padStart(3, '0');
 
             // Create filename from transcription or index
@@ -453,18 +462,32 @@ async function exportPlaylist(playlistId) {
                 }
             }
 
-            // Download the segment
-            const a = document.createElement('a');
-            a.href = seg.audioUrl;
-            a.download = `${filename}.wav`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            return { url: seg.audioUrl, filename: `${filename}.wav` };
+        });
 
-            // Small delay between downloads to avoid browser blocking
-            if (i < playlist.segments.length - 1) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-            }
+        // Download all in parallel (batches of 10 to avoid browser limits)
+        const batchSize = 10;
+        for (let i = 0; i < downloads.length; i += batchSize) {
+            const batch = downloads.slice(i, i + batchSize);
+            await Promise.all(batch.map(d => {
+                return new Promise((resolve) => {
+                    const a = document.createElement('a');
+                    a.href = d.url;
+                    a.download = d.filename;
+                    a.target = '_blank';
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => {
+                        document.body.removeChild(a);
+                        resolve();
+                    }, 200); // Small delay for browser to handle
+                });
+            }));
+        }
+
+        if (exportBtn) {
+            exportBtn.textContent = '📥 Export';
+            exportBtn.disabled = false;
         }
 
         alert(`Exported ${playlist.segments.length} segments from "${playlist.name}"!`);
