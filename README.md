@@ -41,7 +41,7 @@ Full-featured native Android application with additional capabilities:
 - Silero VAD for highest accuracy segmentation
 - Android Auto integration for hands-free practice
 - Local database for offline playlist management
-- Optional Azure Speech Services for pronunciation assessment
+- Multiple transcription providers for automatic speech-to-text
 
 See [installation instructions](#android-app---installation) below to build from source.
 
@@ -79,7 +79,7 @@ Capture audio from any app in real-time:
 - **User Recording**: Records your pronunciation with automatic silence detection
 
 ### Advanced Features (Android)
-- **Pronunciation Assessment**: Optional Azure Speech Services integration
+- **Automatic Transcription**: Multiple provider options (see [Transcription Providers](#transcription-providers))
 - **Android Auto**: Full support for hands-free driving practice
 - **Live Capture**: Record audio from any playing app in real-time
 
@@ -190,16 +190,37 @@ cd shadow_master
 - **Practice Mode**: Standard or Buildup (backward buildup technique)
 - **Audio Feedback**: Beeps for state awareness (customizable volume and tone)
 
+## Transcription Providers
+
+Shadow Master supports multiple transcription providers for automatic speech-to-text:
+
+### Free Providers
+- **ivrit.ai** - Hebrew speech recognition (free, cloud-based)
+- **Local Model (Vosk)** - Offline transcription using Vosk models (free, runs on device)
+- **Google Speech (Free)** - Android's built-in speech recognition (free, requires internet)
+
+### Paid/Custom Providers
+- **OpenAI Whisper** - High-quality transcription via OpenAI API (requires API key)
+- **Custom Endpoint** - Connect to your own transcription service (requires endpoint URL and optional API key)
+
+Configure your preferred provider in the app settings. Free providers work out of the box, while paid providers require API credentials.
+
 ## Configuration
 
-### Azure Speech (Optional)
+### OpenAI Whisper (Optional)
 
-For pronunciation assessment, create `local.properties` in the project root:
+For OpenAI Whisper transcription, add to `local.properties`:
 
 ```properties
-AZURE_SPEECH_KEY=your_azure_speech_key
-AZURE_SPEECH_REGION=your_azure_region
+OPENAI_API_KEY=your_openai_api_key
 ```
+
+### Custom Endpoint (Optional)
+
+For custom transcription endpoints, configure in the app settings:
+- Endpoint URL
+- API key (if required)
+- Request/response format (must match OpenAI Whisper API format)
 
 ## Architecture
 
@@ -275,10 +296,12 @@ com.shadowmaster/
 - [x] Export playlist as practice audio (WAV with beeps and silence gaps)
 - [x] Enhanced audio beep customization (volume, tone type, duration)
 
-### 📋 Version 1.2 (Planned)
-- [ ] Automatic transcription (Speech-to-Text API)
-- [ ] Automatic translation (Translation API)
-- [ ] Real pronunciation assessment (Azure Speech Services)
+### ✅ Version 1.2 (Complete)
+- [x] Automatic transcription with multiple providers (ivrit.ai, Vosk, Google Speech, OpenAI Whisper, Custom)
+- [x] Automatic translation (DeepL, Google Translate, Custom)
+
+### 📋 Version 1.3 (Planned)
+- [ ] Real pronunciation assessment
 - [ ] Import from URL (YouTube, podcast links)
 
 ### 🔮 Future Ideas
