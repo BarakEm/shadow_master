@@ -763,7 +763,7 @@ class VADProcessor {
     }
 
     /**
-     * Extract single audio segment
+     * Extract single audio segment - returns Blob URL (fast)
      */
     async extractSingleSegment(audioBuffer, startTime, endTime) {
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -788,11 +788,12 @@ class VADProcessor {
             segmentData.set(originalData.subarray(startSample, endSample));
         }
 
-        // Convert to data URL
-        const dataUrl = await this.audioBufferToDataUrl(segmentBuffer);
+        // Convert to Blob URL (MUCH faster than data URL)
+        const blobUrl = await this.audioBufferToBlobUrl(segmentBuffer);
         
         return {
-            audioUrl: dataUrl,
+            audioUrl: blobUrl,
+            blob: await this.audioBufferToBlob(segmentBuffer),
             duration: endTime - startTime,
             startTime,
             endTime
@@ -825,7 +826,16 @@ class VADProcessor {
     }
 
     /**
-     * Convert AudioBuffer to data URL
+     * Convert AudioBuffer to Blob URL (more efficient than data URL)
+     * This is MUCH faster and uses less memory than base64 encoding
+     */
+    async audioBufferToBlobUrl(audioBuffer) {
+        const wavBlob = this.audioBufferToWav(audioBuffer);
+        return URL.createObjectURL(wavBlob);
+    }
+
+    /**
+     * Convert AudioBuffer to data URL (legacy)
      */
     async audioBufferToDataUrl(audioBuffer) {
         const wavBlob = this.audioBufferToWav(audioBuffer);
@@ -835,6 +845,22 @@ class VADProcessor {
             reader.onerror = reject;
             reader.readAsDataURL(wavBlob);
         });
+    }
+
+    /**
+     * Get audio as Blob for external use
+     */
+    async audioBufferToBlob(audioBuffer) {
+        return this.audioBufferToWav(audioBuffer);
+    }
+
+    /**
+     * Revoke Blob URL to free memory
+     */
+    revokeBlobUrl(blobUrl) {
+        if (blobUrl && blobUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(blobUrl);
+        }
     }
 
     /**

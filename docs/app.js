@@ -365,14 +365,37 @@ async function startSegmentation() {
         );
 
         // Convert to playlist segment format
-        const playlistSegments = extractedSegments.map((seg, i) => ({
-            id: generateId(),
-            audioUrl: seg.audioUrl,
-            duration: seg.duration,
-            transcription: '',
-            translation: '',
-            startTime: segments[i].start,
-            endTime: segments[i].end
+        // OPTIMIZATION: Keep Blob URLs in memory for fast export, convert to data URL for localStorage persistence
+        document.getElementById('segmentProgressText').textContent = 'Preparing for storage...';
+        
+        const playlistSegments = await Promise.all(extractedSegments.map(async (seg, i) => {
+            // Convert Blob URL to data URL for localStorage persistence
+            let audioUrl = seg.audioUrl;
+            if (audioUrl.startsWith('blob:')) {
+                try {
+                    const response = await fetch(audioUrl);
+                    const blob = await response.blob();
+                    audioUrl = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.readAsDataURL(blob);
+                    });
+                    // Revoke the Blob URL to free memory
+                    URL.revokeObjectURL(seg.audioUrl);
+                } catch (e) {
+                    console.warn('Could not convert Blob URL to data URL:', e);
+                }
+            }
+            
+            return {
+                id: generateId(),
+                audioUrl: audioUrl,
+                duration: seg.duration,
+                transcription: '',
+                translation: '',
+                startTime: segments[i].start,
+                endTime: segments[i].end
+            };
         }));
 
         document.getElementById('segmentProgressFill').style.width = '100%';
@@ -461,6 +484,14 @@ async function exportPlaylist(playlistId) {
         return;
     }
 
+    const totalSegments = playlist.segments.length;
+    
+    // Ask user for export method
+    const useZip = totalSegments > 10 && typeof JSZip !== 'undefined';
+    const exportMethod = totalSegments > 10 
+        ? confirm(`Export ${totalSegments} segments. Use ZIP file (faster)?\n\nOK = ZIP\nCancel = Individual files`)
+        : false;
+
     try {
         // Show progress
         const exportBtn = document.querySelector(`button[onclick="exportPlaylist('${playlistId}')"]`);
@@ -469,44 +500,12 @@ async function exportPlaylist(playlistId) {
             exportBtn.disabled = true;
         }
 
-        // Build list of downloads in parallel
-        const downloads = playlist.segments.map((seg, i) => {
-            const paddedIndex = String(i + 1).padStart(3, '0');
-
-            // Create filename from transcription or index
-            let filename = `${playlist.name}_${paddedIndex}`;
-            if (seg.transcription && seg.transcription.trim()) {
-                const cleanTranscription = seg.transcription
-                    .trim()
-                    .substring(0, 50)
-                    .replace(/[^a-zA-Z0-9\s-]/g, '')
-                    .replace(/\s+/g, '_');
-                if (cleanTranscription) {
-                    filename = `${playlist.name}_${paddedIndex}_${cleanTranscription}`;
-                }
-            }
-
-            return { url: seg.audioUrl, filename: `${filename}.wav` };
-        });
-
-        // Download all in parallel (batches of 10 to avoid browser limits)
-        const batchSize = 10;
-        for (let i = 0; i < downloads.length; i += batchSize) {
-            const batch = downloads.slice(i, i + batchSize);
-            await Promise.all(batch.map(d => {
-                return new Promise((resolve) => {
-                    const a = document.createElement('a');
-                    a.href = d.url;
-                    a.download = d.filename;
-                    a.target = '_blank';
-                    document.body.appendChild(a);
-                    a.click();
-                    setTimeout(() => {
-                        document.body.removeChild(a);
-                        resolve();
-                    }, 200); // Small delay for browser to handle
-                });
-            }));
+        if (useZip && exportMethod) {
+            // ZIP export - fast and creates single file
+            await exportAsZip(playlist, exportBtn);
+        } else {
+            // Individual files - optimized
+            await exportIndividualFiles(playlist, exportBtn);
         }
 
         if (exportBtn) {
@@ -518,6 +517,203 @@ async function exportPlaylist(playlistId) {
     } catch (error) {
         console.error('Export error:', error);
         alert('Error exporting playlist: ' + error.message);
+    }
+}
+
+/**
+ * Export playlist as ZIP file (efficient for large playlists)
+ */
+async function exportAsZip(playlist, exportBtn) {
+    if (typeof JSZip === 'undefined') {
+        // Fallback to individual if no JSZip
+        await exportIndividualFiles(playlist, exportBtn);
+        return;
+    }
+
+    const zip = new JSZip();
+    const folder = zip.folder(playlist.name.replace(/[^a-zA-Z0-9]/g, '_'));
+    
+    // Try to get original audio for re-extraction
+    let audioBuffer = null;
+    const sourceAudio = state.importedAudio.find(a => a.id === playlist.sourceAudioId);
+    
+    if (sourceAudio) {
+        try {
+            const response = await fetch(sourceAudio.data);
+            const arrayBuffer = await response.arrayBuffer();
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        } catch (e) {
+            console.warn('Could not load source audio for re-export:', e);
+        }
+    }
+
+    const total = playlist.segments.length;
+    
+    // Extract and add to ZIP in batches
+    const batchSize = 20;
+    for (let i = 0; i < total; i += batchSize) {
+        const batchEnd = Math.min(i + batchSize, total);
+        const batchPromises = [];
+        
+        for (let j = i; j < batchEnd; j++) {
+            const seg = playlist.segments[j];
+            const paddedIndex = String(j + 1).padStart(3, '0');
+            
+            let filename = `${playlist.name}_${paddedIndex}`;
+            if (seg.transcription && seg.transcription.trim()) {
+                const clean = seg.transcription.trim().substring(0, 30).replace(/[^a-zA-Z0-9]/g, '_');
+                if (clean) filename = `${playlist.name}_${paddedIndex}_${clean}`;
+            }
+            filename += '.wav';
+            
+            batchPromises.push((async () => {
+                let blob;
+                
+                if (audioBuffer) {
+                    // Re-extract from source (faster, fresh Blob)
+                    const extracted = await vadProcessor.extractSingleSegment(
+                        audioBuffer, seg.startTime, seg.endTime
+                    );
+                    blob = extracted.blob;
+                } else if (seg.audioUrl.startsWith('data:')) {
+                    // Convert data URL to Blob
+                    const response = await fetch(seg.audioUrl);
+                    blob = await response.blob();
+                } else {
+                    // Fetch from existing URL
+                    const response = await fetch(seg.audioUrl);
+                    blob = await response.blob();
+                }
+                
+                folder.file(filename, blob);
+            })());
+        }
+        
+        await Promise.all(batchPromises);
+        
+        if (exportBtn) {
+            const progress = Math.round((batchEnd / total) * 100);
+            exportBtn.textContent = `⏳ ${progress}%`;
+        }
+    }
+
+    // Generate and download ZIP
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const zipUrl = URL.createObjectURL(zipBlob);
+    
+    const a = document.createElement('a');
+    a.href = zipUrl;
+    a.download = `${playlist.name.replace(/[^a-zA-Z0-9]/g, '_')}_segments.zip`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    
+    // Cleanup
+    setTimeout(() => URL.revokeObjectURL(zipUrl), 1000);
+}
+
+/**
+ * Export playlist as individual files (optimized)
+ */
+async function exportIndividualFiles(playlist, exportBtn) {
+    // Try to get original audio for re-extraction
+    let audioBuffer = null;
+    const sourceAudio = state.importedAudio.find(a => a.id === playlist.sourceAudioId);
+    
+    if (sourceAudio) {
+        try {
+            const response = await fetch(sourceAudio.data);
+            const arrayBuffer = await response.arrayBuffer();
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        } catch (e) {
+            console.warn('Could not load source audio for re-export:', e);
+        }
+    }
+
+    const total = playlist.segments.length;
+    const downloads = [];
+    
+    // Build download list with fresh Blob URLs when possible
+    for (let i = 0; i < total; i++) {
+        const seg = playlist.segments[i];
+        const paddedIndex = String(i + 1).padStart(3, '0');
+        
+        let filename = `${playlist.name}_${paddedIndex}`;
+        if (seg.transcription && seg.transcription.trim()) {
+            const cleanTranscription = seg.transcription.trim()
+                .substring(0, 50)
+                .replace(/[^a-zA-Z0-9\s-]/g, '')
+                .replace(/\s+/g, '_');
+            if (cleanTranscription) {
+                filename = `${playlist.name}_${paddedIndex}_${cleanTranscription}`;
+            }
+        }
+        filename += '.wav';
+        
+        downloads.push({ 
+            index: i,
+            segment: seg, 
+            filename,
+            audioBuffer,
+            sourceAudio
+        });
+        
+        // Update progress
+        if (exportBtn && i % 10 === 0) {
+            exportBtn.textContent = `⏳ ${Math.round((i / total) * 50)}%`;
+        }
+    }
+
+    // Process downloads in efficient batches
+    const batchSize = 15;
+    for (let i = 0; i < downloads.length; i += batchSize) {
+        const batch = downloads.slice(i, i + batchSize);
+        
+        await Promise.all(batch.map(async (d) => {
+            let blobUrl;
+            
+            if (d.audioBuffer) {
+                // Re-extract from source - fastest, creates fresh Blob URL
+                const extracted = await vadProcessor.extractSingleSegment(
+                    d.audioBuffer, d.segment.startTime, d.segment.endTime
+                );
+                blobUrl = extracted.audioUrl;
+            } else if (d.segment.audioUrl.startsWith('data:')) {
+                // Convert data URL to Blob URL - faster than using data URL directly
+                const response = await fetch(d.segment.audioUrl);
+                const blob = await response.blob();
+                blobUrl = URL.createObjectURL(blob);
+            } else {
+                // Use existing URL (may already be Blob URL)
+                blobUrl = d.segment.audioUrl;
+            }
+            
+            // Trigger download
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = d.filename;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            
+            // Don't remove immediately - let download complete
+            // Blob URLs will be revoked after a delay
+            if (blobUrl.startsWith('blob:')) {
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+            }
+        }));
+        
+        document.body.removeChild(document.body.lastChild);
+        
+        if (exportBtn) {
+            const progress = 50 + Math.round(((i + batchSize) / total) * 50);
+            exportBtn.textContent = `⏳ ${Math.min(progress, 100)}%`;
+        }
+        
+        // Small yield to keep UI responsive
+        await new Promise(r => setTimeout(r, 50));
     }
 }
 
