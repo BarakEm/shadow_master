@@ -313,6 +313,26 @@ async function startSegmentation() {
         document.getElementById('segmentProgressText').textContent = 'Analyzing audio...';
         document.getElementById('segmentProgressFill').style.width = '30%';
 
+        // Progress callback for detailed progress updates
+        const updateProgress = (info) => {
+            let progress = 0;
+            let text = '';
+            
+            if (info.phase === 'decoding') {
+                progress = info.progress * 0.20; // 0-20%
+                text = 'Decoding audio...';
+            } else if (info.phase === 'downsampling') {
+                progress = 20 + info.progress * 0.15; // 20-35%
+                text = 'Optimizing audio...';
+            } else if (info.phase === 'processing') {
+                progress = 35 + info.progress * 0.40; // 35-75%
+                text = 'Detecting speech segments...';
+            }
+            
+            document.getElementById('segmentProgressFill').style.width = progress + '%';
+            document.getElementById('segmentProgressText').textContent = text;
+        };
+
         // Run VAD segmentation with optimized settings
         const segments = await vadProcessor.segmentAudio(arrayBuffer, {
             algorithm: vadAlgorithm,
@@ -324,38 +344,42 @@ async function startSegmentation() {
             useWorker: true,
             downsampleRate: 8000, // Downsample to 8kHz for faster VAD
             frameSize: 0.05 // 50ms frames for faster processing
-        });
+        }, updateProgress);
 
-        document.getElementById('segmentProgressText').textContent = 'Creating segments...';
-        document.getElementById('segmentProgressFill').style.width = '60%';
+        document.getElementById('segmentProgressText').textContent = 'Extracting segments...';
+        document.getElementById('segmentProgressFill').style.width = '80%';
 
-        // Extract each segment
-        const playlistSegments = [];
-        for (let i = 0; i < segments.length; i++) {
-            const seg = segments[i];
-            const segmentUrl = await vadProcessor.extractSegment(
-                currentAudioForSegmentation.data,
-                seg.start,
-                seg.end
-            );
+        // OPTIMIZED: Batch extract segments in parallel
+        // This fetches the audio once and extracts all segments efficiently
+        const extractedSegments = await vadProcessor.extractSegments(
+            currentAudioForSegmentation.data,
+            segments,
+            (extractInfo) => {
+                // Progress from 80% to 95%
+                const progress = 80 + (extractInfo.progress * 0.15);
+                document.getElementById('segmentProgressFill').style.width = progress + '%';
+                const current = Math.ceil(extractInfo.progress * segments.length);
+                document.getElementById('segmentProgressText').textContent = 
+                    `Creating segment ${current} of ${segments.length}...`;
+            }
+        );
 
-            playlistSegments.push({
-                id: generateId(),
-                audioUrl: segmentUrl,
-                duration: seg.duration,
-                transcription: '',
-                translation: '',
-                startTime: seg.start,
-                endTime: seg.end
-            });
-
-            const progress = 60 + (40 * (i + 1) / segments.length);
-            document.getElementById('segmentProgressFill').style.width = progress + '%';
-            document.getElementById('segmentProgressText').textContent =
-                `Creating segment ${i + 1} of ${segments.length}...`;
-        }
+        // Convert to playlist segment format
+        const playlistSegments = extractedSegments.map((seg, i) => ({
+            id: generateId(),
+            audioUrl: seg.audioUrl,
+            duration: seg.duration,
+            transcription: '',
+            translation: '',
+            startTime: segments[i].start,
+            endTime: segments[i].end
+        }));
 
         document.getElementById('segmentProgressFill').style.width = '100%';
+        document.getElementById('segmentProgressText').textContent = 'Finalizing...';
+        
+        // Small delay to show completion
+        await new Promise(resolve => setTimeout(resolve, 200));
 
         // Prompt for playlist name
         const playlistName = prompt(
