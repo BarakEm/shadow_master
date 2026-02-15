@@ -286,7 +286,7 @@ class PracticeViewModel @Inject constructor(
             val startByteOffset = ((totalMs - portionMs) * bytesPerMs).toInt()
                 .coerceIn(0, audioData.size)
             // Align to 2-byte boundary (16-bit samples)
-            val alignedOffset = startByteOffset and 0x7FFFFFFE
+            val alignedOffset = startByteOffset and 0xFFFFFFFE.toInt()
 
             _state.value = PracticeState.Playing(index, step)
 
