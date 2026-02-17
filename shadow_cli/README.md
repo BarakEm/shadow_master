@@ -30,6 +30,16 @@ python3 server.py
 
 The server starts on `http://localhost:8765`.
 
+### Firewall (Linux with UFW)
+
+If you're running the backend on a separate Linux machine (e.g., a NUC) and accessing the web app from another device on your LAN, you need to open the port:
+
+```bash
+sudo ufw allow 8765/tcp
+```
+
+This allows other devices on your local network to reach the backend. On a home network this is fine; avoid this on public/shared networks since the API has no authentication.
+
 ### Windows Browser + WSL Backend
 
 WSL2 automatically forwards `localhost` ports to Windows, so:
@@ -43,6 +53,14 @@ WSL2 automatically forwards `localhost` ports to Windows, so:
 hostname -I
 ```
 Then in the web app Settings, change Backend URL to `http://<wsl-ip>:8765`.
+
+### Accessing from Another Device on LAN
+
+If the backend runs on a separate machine (e.g., a Linux NUC at `10.0.0.22`):
+
+1. Open the firewall port if needed (see Firewall section above)
+2. In the web app Settings, set Backend URL to `http://10.0.0.22:8765`
+3. Click "Test Connection" to verify
 
 ### CLI Usage (no browser needed)
 

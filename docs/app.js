@@ -26,6 +26,8 @@ const state = {
         ttsVoice: '',
         enableDiscovery: false
     },
+    subtitleLanguage: null,
+    karaokeAnimationId: null,
     backendAvailable: false,
     mediaRecorder: null,
     recordedChunks: [],
@@ -224,6 +226,9 @@ function showSegmentationModal() {
     const modal = document.getElementById('segmentationModal');
     modal.style.display = 'flex';
 
+    // Pre-select language from settings
+    document.getElementById('segmentationLanguage').value = state.settings.targetLanguage;
+
     // Load saved settings or defaults
     const segmentMode = state.settings.segmentMode || 'sentence';
     document.getElementById('segmentMode').value = segmentMode;
@@ -273,6 +278,7 @@ async function startSegmentation() {
     if (!currentAudioForSegmentation) return;
 
     // Get configuration
+    const segmentationLanguage = document.getElementById('segmentationLanguage').value;
     const vadAlgorithm = document.getElementById('vadAlgorithm').value;
     const segmentMode = document.getElementById('segmentMode').value;
     const silenceThreshold = parseFloat(document.getElementById('silenceThreshold').value);
@@ -419,7 +425,7 @@ async function startSegmentation() {
         const playlist = {
             id: generateId(),
             name: playlistName,
-            language: state.settings.targetLanguage,
+            language: segmentationLanguage,
             segments: playlistSegments,
             createdAt: Date.now(),
             sourceAudioId: currentAudioForSegmentation.id,
@@ -874,6 +880,10 @@ function initializePractice() {
     state.isPracticing = false;
     state.isPaused = false;
 
+    // Set default subtitle language
+    const langs = state.currentPlaylist.availableLanguages || [];
+    state.subtitleLanguage = langs.length > 0 ? langs[0] : null;
+
     updatePracticeUI();
     loadCurrentSegment();
 
@@ -888,10 +898,23 @@ function loadCurrentSegment() {
     const segment = state.currentPlaylist.segments[state.currentSegmentIndex];
     if (!segment) return;
 
-    document.getElementById('segmentTranscription').textContent =
-        segment.transcription || 'No transcription available';
-    document.getElementById('segmentTranslation').textContent =
-        segment.translation || '';
+    const lang = state.subtitleLanguage;
+    const texts = segment.texts || {};
+    const hasTexts = Object.keys(texts).length > 0;
+
+    // Primary subtitle: use selected language from texts, fallback to transcription
+    const primaryText = (lang && texts[lang]) || segment.transcription || 'No transcription available';
+    document.getElementById('karaokeText').textContent = primaryText;
+
+    // Secondary subtitle: pick a different language
+    const secondaryEl = document.getElementById('subtitleSecondary');
+    if (hasTexts) {
+        const otherLang = Object.keys(texts).find(l => l !== lang);
+        secondaryEl.textContent = otherLang ? texts[otherLang] : '';
+    } else {
+        secondaryEl.textContent = segment.translation || '';
+    }
+
     document.getElementById('segmentDuration').textContent =
         'Duration: ' + formatDuration(segment.duration);
 
@@ -899,6 +922,13 @@ function loadCurrentSegment() {
     audio.src = segment.audioUrl;
     audio.playbackRate = state.settings.playbackSpeed;
 
+    // Show speech controls if enabled
+    const speechControls = document.getElementById('speechControls');
+    if (state.settings.enableSTT || state.settings.enableTTS) {
+        speechControls.style.display = 'block';
+    }
+
+    updateLanguageSwitcher();
     updateProgress();
 }
 
@@ -924,9 +954,11 @@ function playCurrentSegment() {
 
     const audio = document.getElementById('practiceAudio');
     audio.play();
+    startKaraokeAnimation();
 }
 
 function handleAudioEnded() {
+    stopKaraokeAnimation();
     if (!state.isPracticing || state.isPaused) return;
 
     state.currentRepeat++;
@@ -944,6 +976,7 @@ function handleAudioEnded() {
 
 async function startUserRecording() {
     document.getElementById('practiceState').textContent = 'Your turn - Recording...';
+    document.getElementById('karaokeText').classList.add('user-turn');
 
     if (state.settings.audioFeedback) {
         playBeep();
@@ -974,6 +1007,7 @@ async function startUserRecording() {
 }
 
 function moveToNextSegment() {
+    document.getElementById('karaokeText').classList.remove('user-turn');
     state.currentSegmentIndex++;
     state.currentRepeat = 0;
 
@@ -997,6 +1031,7 @@ function togglePause() {
 
     if (state.isPaused) {
         audio.pause();
+        stopKaraokeAnimation();
         pauseButton.textContent = '▶️ Resume';
         document.getElementById('practiceState').textContent = 'Paused';
     } else {
@@ -1007,8 +1042,9 @@ function togglePause() {
 
 function finishPractice() {
     state.isPracticing = false;
+    stopKaraokeAnimation();
     document.getElementById('practiceState').textContent = 'Completed!';
-    document.getElementById('segmentTranscription').textContent = 'Great job! You completed the playlist.';
+    document.getElementById('karaokeText').textContent = 'Great job! You completed the playlist.';
 
     document.getElementById('startButton').style.display = 'block';
     document.getElementById('startButton').textContent = '🔄 Practice Again';
@@ -1018,6 +1054,7 @@ function finishPractice() {
 
 function stopPractice() {
     state.isPracticing = false;
+    stopKaraokeAnimation();
     const audio = document.getElementById('practiceAudio');
     audio.pause();
     audio.currentTime = 0;
@@ -1122,6 +1159,59 @@ function updatePracticeUI() {
     const startButton = document.getElementById('startButton');
     startButton.textContent = '▶️ Start';
     startButton.style.display = 'block';
+}
+
+// Karaoke Animation
+function startKaraokeAnimation() {
+    stopKaraokeAnimation();
+    const karaokeText = document.getElementById('karaokeText');
+    const progressFill = document.getElementById('karaokeProgressFill');
+    const audio = document.getElementById('practiceAudio');
+
+    karaokeText.classList.add('playing');
+    karaokeText.classList.remove('user-turn');
+
+    function animate() {
+        if (audio.duration && audio.duration > 0) {
+            const progress = (audio.currentTime / audio.duration) * 100;
+            progressFill.style.width = progress + '%';
+        }
+        state.karaokeAnimationId = requestAnimationFrame(animate);
+    }
+    state.karaokeAnimationId = requestAnimationFrame(animate);
+}
+
+function stopKaraokeAnimation() {
+    if (state.karaokeAnimationId) {
+        cancelAnimationFrame(state.karaokeAnimationId);
+        state.karaokeAnimationId = null;
+    }
+    const karaokeText = document.getElementById('karaokeText');
+    const progressFill = document.getElementById('karaokeProgressFill');
+    if (karaokeText) karaokeText.classList.remove('playing');
+    if (progressFill) progressFill.style.width = '0%';
+}
+
+// Language Switcher
+function updateLanguageSwitcher() {
+    const switcher = document.getElementById('languageSwitcher');
+    const langs = state.currentPlaylist?.availableLanguages || [];
+
+    if (langs.length < 2) {
+        switcher.style.display = 'none';
+        return;
+    }
+
+    switcher.style.display = 'flex';
+    switcher.innerHTML = langs.map(lang => {
+        const isActive = lang === state.subtitleLanguage ? ' active' : '';
+        return `<button class="lang-btn${isActive}" onclick="switchSubtitleLanguage('${lang}')">${lang}</button>`;
+    }).join('');
+}
+
+function switchSubtitleLanguage(lang) {
+    state.subtitleLanguage = lang;
+    loadCurrentSegment();
 }
 
 // Backend Detection & YouTube Integration
@@ -1246,11 +1336,13 @@ async function processYouTube() {
         document.getElementById('ytSegments').innerHTML = segmentsHtml;
 
         // Build playlist from segments
+        const availableLanguages = processResult.available_languages || [];
         const playlistSegments = processResult.segments.map((seg, i) => ({
             id: generateId(),
             audioUrl: `${backendUrl}/api/segment/${audioId}/${i}`,
             duration: (seg.end - seg.start) / 1000,
             transcription: seg.text || '',
+            texts: seg.texts || {},
             translation: '',
             startTime: seg.start / 1000,
             endTime: seg.end / 1000
@@ -1260,6 +1352,7 @@ async function processYouTube() {
             id: generateId(),
             name: dlResult.title,
             language: state.settings.targetLanguage,
+            availableLanguages: availableLanguages,
             segments: playlistSegments,
             createdAt: Date.now(),
             source: 'youtube'
@@ -1310,7 +1403,7 @@ function toggleSTT() {
         stt.onResult = (result) => {
             if (segment) {
                 segment.transcription = result.transcript;
-                document.getElementById('segmentTranscription').textContent = result.transcript;
+                document.getElementById('karaokeText').textContent = result.transcript;
                 saveState();
             }
             button.textContent = '🎤 Listen & Transcribe';
@@ -1334,13 +1427,18 @@ function speakTranscription() {
     }
 
     const segment = state.currentPlaylist?.segments[state.currentSegmentIndex];
-    if (!segment || !segment.transcription) {
+    if (!segment) return;
+
+    const texts = segment.texts || {};
+    const lang = state.subtitleLanguage;
+    const text = (lang && texts[lang]) || segment.transcription;
+    if (!text) {
         alert('No transcription available');
         return;
     }
 
-    const langCode = getLanguageCode(state.settings.targetLanguage);
-    tts.speak(segment.transcription, {
+    const langCode = lang ? getLanguageCode(lang) : getLanguageCode(state.settings.targetLanguage);
+    tts.speak(text, {
         lang: langCode,
         rate: state.settings.playbackSpeed
     });
@@ -1353,13 +1451,22 @@ function speakTranslation() {
     }
 
     const segment = state.currentPlaylist?.segments[state.currentSegmentIndex];
-    if (!segment || !segment.translation) {
+    if (!segment) return;
+
+    const texts = segment.texts || {};
+    const lang = state.subtitleLanguage;
+    // Find a language different from the selected one
+    const otherLang = Object.keys(texts).find(l => l !== lang);
+    const text = otherLang ? texts[otherLang] : segment.translation;
+
+    if (!text) {
         alert('No translation available');
         return;
     }
 
-    // Use user's native language for translation TTS
-    tts.speak(segment.translation, {
+    const langCode = otherLang ? getLanguageCode(otherLang) : undefined;
+    tts.speak(text, {
+        lang: langCode,
         rate: state.settings.playbackSpeed
     });
 }
@@ -1372,9 +1479,14 @@ function getLanguageCode(shortCode) {
         'de': 'de-DE',
         'ja': 'ja-JP',
         'zh': 'zh-CN',
-        'he': 'he-IL'
+        'he': 'he-IL',
+        'ar': 'ar-SA',
+        'ru': 'ru-RU',
+        'pt': 'pt-BR',
+        'it': 'it-IT',
+        'ko': 'ko-KR'
     };
-    return langMap[shortCode] || 'en-US';
+    return langMap[shortCode] || shortCode || 'en-US';
 }
 
 // Network Discovery Functions
@@ -1483,18 +1595,6 @@ function initializeSpeechSupport() {
         document.getElementById('enableTTS').disabled = true;
     }
 }
-
-// Update loadCurrentSegment to show STT/TTS controls
-const originalLoadCurrentSegment = loadCurrentSegment;
-loadCurrentSegment = function() {
-    originalLoadCurrentSegment.call(this);
-
-    // Show STT/TTS controls if enabled
-    const speechControls = document.getElementById('speechControls');
-    if (state.settings.enableSTT || state.settings.enableTTS) {
-        speechControls.style.display = 'block';
-    }
-};
 
 // Initialize
 loadState();

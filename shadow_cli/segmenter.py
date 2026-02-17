@@ -4,7 +4,7 @@ import struct
 import subprocess
 import tempfile
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import webrtcvad
 
@@ -25,6 +25,7 @@ class Segment:
     start_ms: int
     end_ms: int
     text: str = ''
+    texts: dict[str, str] = field(default_factory=dict)
 
     @property
     def duration_ms(self) -> int:
@@ -154,4 +155,28 @@ def align_subtitles(segments: list[Segment], subtitles: list[dict]) -> list[Segm
                 best_text = sub['text']
         if best_overlap > 0:
             seg.text = best_text
+    return segments
+
+
+def align_all_subtitles(segments: list[Segment], subtitles: dict[str, list[dict]]) -> list[Segment]:
+    """Align all available subtitle languages to audio segments."""
+    for lang, subs in subtitles.items():
+        for seg in segments:
+            best_overlap = 0
+            best_text = ''
+            for sub in subs:
+                overlap_start = max(seg.start_ms, sub['start_ms'])
+                overlap_end = min(seg.end_ms, sub['end_ms'])
+                overlap = max(0, overlap_end - overlap_start)
+                if overlap > best_overlap:
+                    best_overlap = overlap
+                    best_text = sub['text']
+            if best_overlap > 0:
+                seg.texts[lang] = best_text
+    # Set text from first available language for backward compat
+    if subtitles:
+        first_lang = next(iter(subtitles))
+        for seg in segments:
+            if first_lang in seg.texts:
+                seg.text = seg.texts[first_lang]
     return segments

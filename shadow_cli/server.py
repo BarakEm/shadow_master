@@ -18,7 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from segmenter import load_audio_as_pcm, segment_audio, align_subtitles, extract_segment_pcm
+from segmenter import load_audio_as_pcm, segment_audio, align_subtitles, align_all_subtitles, extract_segment_pcm
 from practice_builder import build_practice_audio
 from exporter import change_speed, export_mp3, export_wav
 from downloader import download_audio, download_subtitles
@@ -198,9 +198,9 @@ def process_audio(req: ProcessRequest):
     pcm_data = load_audio_as_pcm(audio_path)
     segments = segment_audio(pcm_data, preset=req.preset)
 
-    # Align subtitles
-    if req.subtitle_lang and req.subtitle_lang in subtitles:
-        segments = align_subtitles(segments, subtitles[req.subtitle_lang])
+    # Align subtitles (all languages)
+    if subtitles:
+        segments = align_all_subtitles(segments, subtitles)
 
     # Speed change
     if req.speed != 1.0:
@@ -232,11 +232,14 @@ def process_audio(req: ProcessRequest):
         audio_registry[req.audio_id]['segments'] = segments
         audio_registry[req.audio_id]['pcm_data'] = pcm_data
 
+    available_languages = list(subtitles.keys()) if subtitles else []
+
     return {
         'audio_id': req.audio_id,
         'output_file': filename,
+        'available_languages': available_languages,
         'segments': [
-            {'start': s.start_ms, 'end': s.end_ms, 'text': s.text}
+            {'start': s.start_ms, 'end': s.end_ms, 'text': s.text, 'texts': s.texts}
             for s in segments
         ]
     }

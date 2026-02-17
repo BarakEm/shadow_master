@@ -152,8 +152,14 @@
                 <div class="state-indicator" id="practiceState">Ready</div>
 
                 <div class="segment-info">
-                    <div class="transcription" id="segmentTranscription">Press Start to begin</div>
-                    <div class="translation" id="segmentTranslation"></div>
+                    <div class="karaoke-display">
+                        <div class="karaoke-text" id="karaokeText">Press Start to begin</div>
+                        <div class="karaoke-progress-bar">
+                            <div class="karaoke-progress-fill" id="karaokeProgressFill"></div>
+                        </div>
+                    </div>
+                    <div class="subtitle-secondary" id="subtitleSecondary"></div>
+                    <div class="language-switcher" id="languageSwitcher" style="display: none;"></div>
                     <div class="duration" id="segmentDuration"></div>
 
                     <!-- STT/TTS Controls -->
@@ -352,12 +358,15 @@
                     <label>Target Language</label>
                     <select id="targetLanguage" onchange="updateSetting('targetLanguage', this.value)">
                         <option value="en">English</option>
-                        <option value="es">Spanish</option>
-                        <option value="fr">French</option>
                         <option value="de">German</option>
-                        <option value="ja">Japanese</option>
-                        <option value="zh">Chinese</option>
+                        <option value="es">Spanish</option>
+                        <option value="ru">Russian</option>
                         <option value="he">Hebrew</option>
+                        <option value="ar">Arabic</option>
+                        <option value="fr">French</option>
+                        <option value="it">Italian</option>
+                        <option value="pt">Portuguese</option>
+                        <option value="zh">Mandarin</option>
                     </select>
                 </div>
             </div>
@@ -441,6 +450,22 @@
             </div>
 
             <div class="modal-body">
+                <div class="setting-item">
+                    <label>Language</label>
+                    <select id="segmentationLanguage">
+                        <option value="en">English</option>
+                        <option value="de">German</option>
+                        <option value="es">Spanish</option>
+                        <option value="ru">Russian</option>
+                        <option value="he">Hebrew</option>
+                        <option value="ar">Arabic</option>
+                        <option value="fr">French</option>
+                        <option value="it">Italian</option>
+                        <option value="pt">Portuguese</option>
+                        <option value="zh">Mandarin</option>
+                    </select>
+                </div>
+
                 <div class="setting-item">
                     <label>VAD Algorithm</label>
                     <select id="vadAlgorithm">
