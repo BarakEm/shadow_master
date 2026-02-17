@@ -195,6 +195,11 @@ dependencies {
     // OkHttp for network requests (URL downloads)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
+    // LAME MP3 encoder for MP3 export support
+    implementation("com.github.naman14:TAndroidLame:1.1") {
+        exclude(group = "com.android.support")
+    }
+
     // Vosk for local transcription (alternative to Whisper.cpp, better Android support)
     // Vosk is a lightweight speech recognition library that works offline
     // Models are smaller (~50MB) and faster than Whisper on mobile devices

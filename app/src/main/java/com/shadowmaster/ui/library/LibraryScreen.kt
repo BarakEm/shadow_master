@@ -390,11 +390,15 @@ fun LibraryScreen(
     // Export dialog
     showExportDialog?.let { playlist ->
         var includeYourTurnSilence by remember { mutableStateOf(true) }
-        var selectedFormat by remember { mutableStateOf(com.shadowmaster.library.ExportFormat.AAC) }
-        
+        var selectedFormat by remember { mutableStateOf(com.shadowmaster.library.ExportFormat.MP3) }
+
         // Generate filename information to display to user
         val sanitizedName = playlist.name.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-        val fileExtension = if (selectedFormat == com.shadowmaster.library.ExportFormat.AAC) "aac" else "wav"
+        val fileExtension = when (selectedFormat) {
+            com.shadowmaster.library.ExportFormat.AAC -> "aac"
+            com.shadowmaster.library.ExportFormat.MP3 -> "mp3"
+            com.shadowmaster.library.ExportFormat.WAV -> "wav"
+        }
         val saveLocation = "Music/ShadowMaster/"
         
         AlertDialog(
@@ -420,15 +424,21 @@ fun LibraryScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         FilterChip(
+                            selected = selectedFormat == com.shadowmaster.library.ExportFormat.MP3,
+                            onClick = { selectedFormat = com.shadowmaster.library.ExportFormat.MP3 },
+                            label = { Text("MP3") },
+                            modifier = Modifier.weight(1f)
+                        )
+                        FilterChip(
                             selected = selectedFormat == com.shadowmaster.library.ExportFormat.AAC,
                             onClick = { selectedFormat = com.shadowmaster.library.ExportFormat.AAC },
-                            label = { Text("AAC (Smaller)") },
+                            label = { Text("AAC") },
                             modifier = Modifier.weight(1f)
                         )
                         FilterChip(
                             selected = selectedFormat == com.shadowmaster.library.ExportFormat.WAV,
                             onClick = { selectedFormat = com.shadowmaster.library.ExportFormat.WAV },
-                            label = { Text("WAV (Quality)") },
+                            label = { Text("WAV") },
                             modifier = Modifier.weight(1f)
                         )
                     }

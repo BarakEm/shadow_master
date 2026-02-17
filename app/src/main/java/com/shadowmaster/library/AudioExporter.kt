@@ -28,6 +28,7 @@ class AudioExporter @Inject constructor(
     private val playlistExporter: PlaylistExporter,
     private val wavFileCreator: WavFileCreator,
     private val aacFileCreator: AacFileCreator,
+    private val mp3FileCreator: Mp3FileCreator,
     private val progressTracker: ExportProgressTracker,
     private val lyricsExporter: LyricsExporter
 ) {
@@ -93,6 +94,7 @@ class AudioExporter @Inject constructor(
                 val result = when (format) {
                     ExportFormat.WAV -> wavFileCreator.saveAsWav(tempPcmFile, playlistName)
                     ExportFormat.AAC -> aacFileCreator.saveAsAac(tempPcmFile, playlistName)
+                    ExportFormat.MP3 -> mp3FileCreator.saveAsMp3(tempPcmFile, playlistName)
                 }
 
                 // Clean up temp file

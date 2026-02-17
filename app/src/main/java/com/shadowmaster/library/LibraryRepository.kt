@@ -170,9 +170,42 @@ class LibraryRepository @Inject constructor(
         config: SegmentationConfig,
         enableTranscription: Boolean = false,
         providerOverride: String? = null
-    ): Result<String> = audioImporter.segmentImportedAudio(
-        importedAudioId, playlistName, config, enableTranscription, providerOverride = providerOverride
-    )
+    ): Result<String> {
+        // Create an ImportJob so the UI shows a progress bar
+        val importedAudio = importedAudioDao.getById(importedAudioId)
+        val job = ImportJob(
+            sourceUri = importedAudio?.sourceUri ?: importedAudioId,
+            fileName = playlistName ?: importedAudio?.sourceFileName ?: "Segmenting...",
+            status = ImportStatus.DETECTING_SEGMENTS,
+            progress = 0,
+            language = importedAudio?.language ?: "auto",
+            enableTranscription = enableTranscription
+        )
+        importJobDao.insert(job)
+
+        val result = audioImporter.segmentImportedAudio(
+            importedAudioId, playlistName, config, enableTranscription,
+            jobId = job.id, providerOverride = providerOverride
+        )
+
+        // Mark job completed or failed
+        val existing = importJobDao.getJobById(job.id)
+        if (existing != null) {
+            if (result.isSuccess) {
+                importJobDao.update(existing.copy(
+                    status = ImportStatus.COMPLETED,
+                    progress = 100,
+                    completedAt = System.currentTimeMillis()
+                ))
+            } else {
+                importJobDao.update(existing.copy(
+                    status = ImportStatus.FAILED,
+                    errorMessage = result.exceptionOrNull()?.message
+                ))
+            }
+        }
+        return result
+    }
 
     // Convenience method for re-segmentation
     suspend fun resegmentAudio(
