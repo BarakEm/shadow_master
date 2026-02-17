@@ -80,6 +80,7 @@ class UrlAudioImporter @Inject constructor(
                 UrlType.YOUTUBE -> importFromYouTube(url, playlistName, language)
                 UrlType.SPOTIFY_PODCAST -> importFromSpotify(url, playlistName, language)
                 UrlType.DIRECT_AUDIO -> importFromDirectUrl(url, playlistName, language)
+                UrlType.WEBPAGE -> importFromWebPage(url, playlistName, language)
                 UrlType.UNKNOWN -> handleUnknownUrl(url, playlistName, language)
             }
 
@@ -206,6 +207,60 @@ class UrlAudioImporter @Inject constructor(
     }
 
     /**
+     * Import audio discovered on a web page.
+     * First tries a HEAD request to check if the URL serves audio directly,
+     * then falls back to scanning the page HTML for embedded audio URLs.
+     */
+    private suspend fun importFromWebPage(
+        url: String,
+        playlistName: String?,
+        language: String
+    ): Result<String> = withContext(Dispatchers.IO) {
+        // HEAD probe: check if the URL actually serves audio directly
+        try {
+            val headRequest = Request.Builder()
+                .url(url)
+                .head()
+                .addHeader("User-Agent", "Mozilla/5.0 (Android; Mobile)")
+                .build()
+            val headResponse = httpClient.newCall(headRequest).execute()
+            val contentType = headResponse.header("Content-Type") ?: ""
+            headResponse.close()
+
+            if (contentType.startsWith("audio/")) {
+                Log.i(TAG, "HEAD probe found audio content-type: $contentType")
+                return@withContext importFromDirectUrl(url, playlistName, language)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "HEAD probe failed, continuing with page scan", e)
+        }
+
+        // Scan the web page for audio URLs
+        _importProgress.value = _importProgress.value?.copy(
+            status = UrlImportStatus.SCANNING_PAGE
+        )
+
+        val extractor = WebPageAudioExtractor(httpClient)
+        val extractionResult = extractor.extractAudioUrls(url)
+
+        if (extractionResult.audioUrls.isEmpty()) {
+            return@withContext Result.failure(
+                UnsupportedFormat(
+                    "No audio files found on this page. " +
+                    "Please use 'Capture Playing Audio' while the content plays, " +
+                    "or download the audio file and import it directly."
+                )
+            )
+        }
+
+        val audioUrl = extractionResult.audioUrls.first()
+        val name = playlistName ?: extractionResult.pageTitle
+        Log.i(TAG, "Found ${extractionResult.audioUrls.size} audio URL(s), importing: $audioUrl")
+
+        importFromDirectUrl(audioUrl, name, language)
+    }
+
+    /**
      * Handle unknown URL types.
      */
     private suspend fun handleUnknownUrl(
@@ -213,7 +268,6 @@ class UrlAudioImporter @Inject constructor(
         playlistName: String?,
         language: String
     ): Result<String> {
-        // For unknown URLs, guide users to alternatives
         return Result.failure(
             UnsupportedFormat(
                 "This URL type is not supported for direct import. " +
@@ -298,11 +352,13 @@ enum class UrlType {
     YOUTUBE,
     SPOTIFY_PODCAST,
     DIRECT_AUDIO,
+    WEBPAGE,
     UNKNOWN
 }
 
 enum class UrlImportStatus {
     ANALYZING,
+    SCANNING_PAGE,
     EXTRACTING_INFO,
     DOWNLOADING,
     PROCESSING,

@@ -40,7 +40,11 @@ object UrlTypeDetector {
             return UrlType.DIRECT_AUDIO
         }
 
-        // Unknown - might be supported by other tools
+        // Any HTTP(S) URL that isn't a known service — try scanning the page for audio
+        if (url.matches(URL_VALIDATION_REGEX)) {
+            return UrlType.WEBPAGE
+        }
+
         return UrlType.UNKNOWN
     }
 

@@ -679,6 +679,7 @@ fun LibraryScreen(
                     Text(
                         text = when (progress.status) {
                             com.shadowmaster.library.UrlImportStatus.ANALYZING -> "Analyzing URL..."
+                            com.shadowmaster.library.UrlImportStatus.SCANNING_PAGE -> "Scanning page for audio..."
                             com.shadowmaster.library.UrlImportStatus.EXTRACTING_INFO -> "Extracting info..."
                             com.shadowmaster.library.UrlImportStatus.DOWNLOADING -> "Downloading audio..."
                             com.shadowmaster.library.UrlImportStatus.PROCESSING -> "Processing audio..."
