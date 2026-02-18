@@ -611,6 +611,7 @@ class AudioImporter @Inject constructor(
                 codec = MediaCodec.createDecoderByType(mime)
                 codec.configure(inputFormat, null, null, 0)
                 codec.start()
+                Log.d(TAG, "Decoder started successfully for $mime")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to create decoder for $mime", e)
                 pfd?.close()
@@ -620,66 +621,111 @@ class AudioImporter @Inject constructor(
 
             val outputStream = FileOutputStream(tempFile)
             val bufferInfo = MediaCodec.BufferInfo()
-            var isEOS = false
+            var allInputSent = false
+            var noProgressCount = 0
+            val maxNoProgressIterations = 500
+            var totalBytesWritten = 0L
 
-            while (!isEOS) {
+            Log.d(TAG, "Starting decode loop...")
+            while (true) {
+                var madeProgress = false
+
                 // Feed input to decoder
-                val inputBufferIndex = codec.dequeueInputBuffer(10000)
-                if (inputBufferIndex >= 0) {
-                    val buffer = codec.getInputBuffer(inputBufferIndex)
-                    if (buffer != null) {
-                        val sampleSize = extractor.readSampleData(buffer, 0)
-                        if (sampleSize < 0) {
-                            codec.queueInputBuffer(
-                                inputBufferIndex, 0, 0, 0,
-                                MediaCodec.BUFFER_FLAG_END_OF_STREAM
-                            )
-                            isEOS = true
-                        } else {
-                            codec.queueInputBuffer(
-                                inputBufferIndex, 0, sampleSize,
-                                extractor.sampleTime, 0
-                            )
-                            extractor.advance()
+                if (!allInputSent) {
+                    val inputBufferIndex = codec.dequeueInputBuffer(1000)
+                    if (inputBufferIndex >= 0) {
+                        madeProgress = true
+                        val buffer = codec.getInputBuffer(inputBufferIndex)
+                        if (buffer != null) {
+                            val sampleSize = extractor.readSampleData(buffer, 0)
+                            if (sampleSize < 0) {
+                                codec.queueInputBuffer(
+                                    inputBufferIndex, 0, 0, 0,
+                                    MediaCodec.BUFFER_FLAG_END_OF_STREAM
+                                )
+                                allInputSent = true
+                            } else {
+                                codec.queueInputBuffer(
+                                    inputBufferIndex, 0, sampleSize,
+                                    extractor.sampleTime, 0
+                                )
+                                extractor.advance()
+                            }
                         }
                     }
                 }
 
                 // Get decoded output
-                val outputBufferIndex = codec.dequeueOutputBuffer(bufferInfo, 10000)
-                if (outputBufferIndex >= 0) {
-                    val outputBuffer = codec.getOutputBuffer(outputBufferIndex)
-                    if (outputBuffer != null && bufferInfo.size > 0) {
-                        val pcmData = ByteArray(bufferInfo.size)
-                        outputBuffer.get(pcmData)
+                val outputBufferIndex = codec.dequeueOutputBuffer(bufferInfo, 1000)
+                when {
+                    outputBufferIndex >= 0 -> {
+                        madeProgress = true
+                        val outputBuffer = codec.getOutputBuffer(outputBufferIndex)
+                        if (outputBuffer != null && bufferInfo.size > 0) {
+                            val pcmData = ByteArray(bufferInfo.size)
+                            outputBuffer.get(pcmData)
 
-                        // Convert to mono 16kHz if needed
-                        val monoData = if (channels > 1) {
-                            audioFileUtility.convertToMono(pcmData, channels)
-                        } else {
-                            pcmData
+                            // Convert to mono 16kHz if needed
+                            val monoData = if (channels > 1) {
+                                audioFileUtility.convertToMono(pcmData, channels)
+                            } else {
+                                pcmData
+                            }
+
+                            // Resample if needed
+                            val resampledData = if (sampleRate != TARGET_SAMPLE_RATE) {
+                                audioFileUtility.resample(monoData, sampleRate, TARGET_SAMPLE_RATE)
+                            } else {
+                                monoData
+                            }
+
+                            outputStream.write(resampledData)
+                            totalBytesWritten += resampledData.size
                         }
+                        codec.releaseOutputBuffer(outputBufferIndex, false)
 
-                        // Resample if needed
-                        val resampledData = if (sampleRate != TARGET_SAMPLE_RATE) {
-                            audioFileUtility.resample(monoData, sampleRate, TARGET_SAMPLE_RATE)
-                        } else {
-                            monoData
+                        if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
+                            Log.d(TAG, "EOS detected, ending decode loop")
+                            break
                         }
-
-                        outputStream.write(resampledData)
                     }
-                    codec.releaseOutputBuffer(outputBufferIndex, false)
-
-                    if (bufferInfo.flags and MediaCodec.BUFFER_FLAG_END_OF_STREAM != 0) {
-                        break
+                    outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED -> {
+                        madeProgress = true
+                        Log.d(TAG, "Output format changed: ${codec.outputFormat}")
                     }
+                    outputBufferIndex == MediaCodec.INFO_TRY_AGAIN_LATER -> {
+                        // This is expected when no buffer is available, not an error
+                    }
+                }
+
+                if (!madeProgress) {
+                    noProgressCount++
+                    if (noProgressCount >= maxNoProgressIterations) {
+                        outputStream.close()
+                        tempFile.delete()
+                        Log.e(TAG, "Decoder stalled: no progress after $maxNoProgressIterations iterations")
+                        return Pair(null, "Decoder stalled - file may be corrupted or format unsupported")
+                    }
+                    // Log every 100 iterations to help diagnose stalls
+                    if (noProgressCount % 100 == 0) {
+                        Log.d(TAG, "No progress for $noProgressCount iterations (input sent: $allInputSent, bytes written: $totalBytesWritten)")
+                    }
+                } else {
+                    noProgressCount = 0
                 }
             }
 
             outputStream.close()
 
-            Log.i(TAG, "Decoded ${tempFile.length()} bytes of PCM audio")
+            // Validate output
+            val pcmSize = tempFile.length()
+            if (pcmSize == 0L) {
+                tempFile.delete()
+                Log.e(TAG, "Decoder produced no output")
+                return Pair(null, "Decoding failed - no audio data produced")
+            }
+
+            Log.i(TAG, "Decoded $pcmSize bytes of PCM audio")
             return Pair(tempFile, null)
 
         } catch (e: AudioImportError) {
