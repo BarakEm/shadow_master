@@ -24,7 +24,8 @@ const state = {
         enableSTT: true,
         enableTTS: true,
         ttsVoice: '',
-        enableDiscovery: false
+        enableDiscovery: false,
+        loopModeEndless: true
     },
     subtitleLanguage: null,
     karaokeAnimationId: null,
@@ -949,8 +950,10 @@ function playCurrentSegment() {
     const segment = state.currentPlaylist.segments[state.currentSegmentIndex];
     if (!segment) return;
 
-    document.getElementById('practiceState').textContent =
-        `Playing (${state.currentRepeat + 1}/${state.settings.playbackRepeats})`;
+    const stateText = state.settings.loopModeEndless
+        ? 'Playing (🔁)'
+        : `Playing (${state.currentRepeat + 1}/${state.settings.playbackRepeats})`;
+    document.getElementById('practiceState').textContent = stateText;
 
     const audio = document.getElementById('practiceAudio');
     audio.play();
@@ -961,16 +964,65 @@ function handleAudioEnded() {
     stopKaraokeAnimation();
     if (!state.isPracticing || state.isPaused) return;
 
-    state.currentRepeat++;
-
-    if (state.currentRepeat < state.settings.playbackRepeats) {
-        setTimeout(() => playCurrentSegment(), 500);
+    if (state.settings.loopModeEndless) {
+        setTimeout(() => playCurrentSegment(), 300);
     } else {
-        if (!state.settings.busMode) {
-            startUserRecording();
+        state.currentRepeat++;
+        if (state.currentRepeat < state.settings.playbackRepeats) {
+            setTimeout(() => playCurrentSegment(), 500);
         } else {
-            moveToNextSegment();
+            state.currentRepeat = 0;
+            if (!state.settings.busMode) {
+                startUserRecording();
+            } else {
+                moveToNextSegment();
+            }
         }
+    }
+}
+
+function navigatePrev() {
+    if (!state.currentPlaylist) return;
+    const audio = document.getElementById('practiceAudio');
+    audio.pause();
+    audio.currentTime = 0;
+    stopKaraokeAnimation();
+    if (state.currentSegmentIndex > 0) {
+        state.currentSegmentIndex--;
+    }
+    state.currentRepeat = 0;
+    loadCurrentSegment();
+    if (state.isPracticing && !state.isPaused) {
+        setTimeout(() => playCurrentSegment(), 300);
+    }
+}
+
+function navigateNext() {
+    if (!state.currentPlaylist) return;
+    const audio = document.getElementById('practiceAudio');
+    audio.pause();
+    audio.currentTime = 0;
+    stopKaraokeAnimation();
+    if (state.currentSegmentIndex < state.currentPlaylist.segments.length - 1) {
+        state.currentSegmentIndex++;
+    }
+    state.currentRepeat = 0;
+    loadCurrentSegment();
+    if (state.isPracticing && !state.isPaused) {
+        setTimeout(() => playCurrentSegment(), 300);
+    }
+}
+
+function toggleLoopMode() {
+    state.settings.loopModeEndless = !state.settings.loopModeEndless;
+    updateLoopModeButton();
+    saveState();
+}
+
+function updateLoopModeButton() {
+    const btn = document.getElementById('loopModeBtn');
+    if (btn) {
+        btn.textContent = state.settings.loopModeEndless ? '🔁 Endless' : '🔢 Counted';
     }
 }
 
@@ -1159,6 +1211,7 @@ function updatePracticeUI() {
     const startButton = document.getElementById('startButton');
     startButton.textContent = '▶️ Start';
     startButton.style.display = 'block';
+    updateLoopModeButton();
 }
 
 // Karaoke Animation

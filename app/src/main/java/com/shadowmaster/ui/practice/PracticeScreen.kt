@@ -33,6 +33,8 @@ fun PracticeScreen(
     val currentIndex by viewModel.currentItemIndex.collectAsState()
     val progress by viewModel.progress.collectAsState()
     val importJobStatus by viewModel.importJobStatus.collectAsState()
+    val loopModeEndless by viewModel.loopModeEndless.collectAsState()
+    val currentSpeed by viewModel.currentSpeed.collectAsState()
 
     val currentItem = items.getOrNull(currentIndex)
 
@@ -170,7 +172,20 @@ fun PracticeScreen(
                 }
             )
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LoopControls(
+                loopModeEndless = loopModeEndless,
+                currentSpeed = currentSpeed,
+                itemCount = items.size,
+                currentIndex = currentIndex,
+                onToggleLoopMode = { viewModel.toggleLoopMode() },
+                onSpeedChange = { viewModel.setSpeed(it) },
+                onPrev = { viewModel.navigatePrev() },
+                onNext = { viewModel.navigateNext() }
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
@@ -389,6 +404,80 @@ private fun PracticeControls(
                         contentDescription = "Skip"
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoopControls(
+    loopModeEndless: Boolean,
+    currentSpeed: Float,
+    itemCount: Int,
+    currentIndex: Int,
+    onToggleLoopMode: () -> Unit,
+    onSpeedChange: (Float) -> Unit,
+    onPrev: () -> Unit,
+    onNext: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Loop mode toggle
+        OutlinedButton(onClick = onToggleLoopMode) {
+            Text(if (loopModeEndless) "🔁 Endless" else "🔢 Counted")
+        }
+
+        // Speed slider
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Speed: ${"%.1f".format(currentSpeed)}x",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Slider(
+                value = currentSpeed,
+                onValueChange = onSpeedChange,
+                valueRange = 0.5f..2.0f,
+                steps = 29,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        // Prev / Next navigation
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = onPrev,
+                enabled = currentIndex > 0
+            ) {
+                Icon(
+                    imageVector = Icons.Default.SkipPrevious,
+                    contentDescription = "Previous segment"
+                )
+            }
+            Text(
+                text = if (itemCount > 0) "${currentIndex + 1} / $itemCount" else "—",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            IconButton(
+                onClick = onNext,
+                enabled = currentIndex < itemCount - 1
+            ) {
+                Icon(
+                    imageVector = Icons.Default.SkipNext,
+                    contentDescription = "Next segment"
+                )
             }
         }
     }

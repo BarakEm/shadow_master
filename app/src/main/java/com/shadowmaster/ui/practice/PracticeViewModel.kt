@@ -75,6 +75,14 @@ class PracticeViewModel @Inject constructor(
     private var practiceJob: Job? = null
     private var isPaused = false
 
+    @Volatile private var _navigateRequest: Int? = null
+
+    private val _loopModeEndless = MutableStateFlow(true)
+    val loopModeEndless: StateFlow<Boolean> = _loopModeEndless.asStateFlow()
+
+    private val _currentSpeed = MutableStateFlow(settingsRepository.configBlocking.playbackSpeed)
+    val currentSpeed: StateFlow<Float> = _currentSpeed.asStateFlow()
+
     private val config = settingsRepository.config
         .stateIn(
             scope = viewModelScope,
@@ -142,6 +150,39 @@ class PracticeViewModel @Inject constructor(
         }
     }
 
+    fun toggleLoopMode() {
+        _loopModeEndless.value = !_loopModeEndless.value
+    }
+
+    fun setSpeed(speed: Float) {
+        _currentSpeed.value = speed
+        try {
+            audioTrack?.playbackParams = PlaybackParams().apply {
+                setSpeed(speed)
+                setPitch(1.0f)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not update playback speed on live track", e)
+        }
+    }
+
+    fun navigatePrev() {
+        val cur = _currentItemIndex.value
+        if (cur > 0) {
+            _navigateRequest = cur - 1
+            audioTrack = null
+        }
+    }
+
+    fun navigateNext() {
+        val items = _items.value
+        val cur = _currentItemIndex.value
+        if (cur < items.size - 1) {
+            _navigateRequest = cur + 1
+            audioTrack = null
+        }
+    }
+
     private suspend fun runPracticeLoop() {
         val itemsList = _items.value
         val cfg = config.value
@@ -149,43 +190,55 @@ class PracticeViewModel @Inject constructor(
         val busMode = cfg.busMode
         val silenceBetweenRepeats = cfg.silenceBetweenRepeatsMs.toLong()
 
-        for (index in itemsList.indices) {
-            if (!coroutineContext.isActive) break
-
+        var index = 0
+        while (index < itemsList.size && coroutineContext.isActive) {
+            _navigateRequest = null
             _currentItemIndex.value = index
             _progress.value = index.toFloat() / itemsList.size
 
             val item = itemsList[index]
 
             if (cfg.practiceMode == PracticeMode.BUILDUP && !busMode) {
-                // Backward buildup mode: gradually build from end to full phrase
                 runBuildupForItem(index, item, cfg)
             } else {
-                // Standard mode
                 runStandardForItem(index, item, cfg, repeats, busMode, silenceBetweenRepeats)
             }
 
             if (!coroutineContext.isActive) break
 
-            // Brief pause between items
-            delay(500)
+            // Handle navigation request (from navigatePrev/navigateNext)
+            val navReq = _navigateRequest
+            if (navReq != null) {
+                _navigateRequest = null
+                index = navReq.coerceIn(0, itemsList.size - 1)
+                continue
+            }
 
-            // Play transition beep for next item
+            // In endless loop mode, replay same segment without advancing
+            if (_loopModeEndless.value) {
+                delay(300)
+                continue
+            }
+
+            // Counted mode: brief pause then advance to next segment
+            delay(500)
             if (index < itemsList.size - 1 && cfg.audioFeedbackEnabled) {
                 playBeep(BeepGenerator.SEGMENT_END_BEEP_FREQ, cfg.beepDurationMs)
                 delay(300)
             }
+            index++
         }
 
-        // Session complete
-        if (config.value.audioFeedbackEnabled) {
-            withContext(Dispatchers.Main) {
-                audioFeedbackSystem.playGoodScore() // Celebration tone
+        // Session complete (only reached in counted mode after all segments)
+        if (coroutineContext.isActive && !_loopModeEndless.value) {
+            if (config.value.audioFeedbackEnabled) {
+                withContext(Dispatchers.Main) {
+                    audioFeedbackSystem.playGoodScore()
+                }
             }
+            _state.value = PracticeState.Finished
+            _progress.value = 1f
         }
-
-        _state.value = PracticeState.Finished
-        _progress.value = 1f
     }
 
     /**
@@ -200,9 +253,10 @@ class PracticeViewModel @Inject constructor(
         silenceBetweenRepeats: Long
     ) {
         for (repeat in 1..repeats) {
-            if (!coroutineContext.isActive) break
+            if (!coroutineContext.isActive || _navigateRequest != null) break
 
-            while (isPaused && coroutineContext.isActive) { delay(100) }
+            while (isPaused && coroutineContext.isActive && _navigateRequest == null) { delay(100) }
+            if (_navigateRequest != null) break
 
             _state.value = PracticeState.Playing(index, repeat)
 
@@ -213,7 +267,7 @@ class PracticeViewModel @Inject constructor(
 
             playAudioFile(item.audioFilePath)
 
-            if (!coroutineContext.isActive) break
+            if (!coroutineContext.isActive || _navigateRequest != null) break
 
             if (busMode) {
                 delay(silenceBetweenRepeats)
@@ -276,9 +330,10 @@ class PracticeViewModel @Inject constructor(
                        else ((totalMs + chunkMs - 1) / chunkMs).toInt().coerceAtMost(8)
 
         for (step in 1..numSteps) {
-            if (!coroutineContext.isActive) break
+            if (!coroutineContext.isActive || _navigateRequest != null) break
 
-            while (isPaused && coroutineContext.isActive) { delay(100) }
+            while (isPaused && coroutineContext.isActive && _navigateRequest == null) { delay(100) }
+            if (_navigateRequest != null) break
 
             // Calculate the portion to play: from (totalMs - step * chunkMs) to end
             val portionMs = if (step == numSteps) totalMs
@@ -298,7 +353,7 @@ class PracticeViewModel @Inject constructor(
             // Play the partial audio from alignedOffset to end
             playAudioData(audioData, alignedOffset, audioData.size - alignedOffset)
 
-            if (!coroutineContext.isActive) break
+            if (!coroutineContext.isActive || _navigateRequest != null) break
 
             // User's turn
             delay(300)
@@ -347,7 +402,7 @@ class PracticeViewModel @Inject constructor(
      */
     private suspend fun playAudioData(audioData: ByteArray, offset: Int, length: Int) {
         var localTrack: AudioTrack? = null
-        val speed = config.value.playbackSpeed
+        val speed = _currentSpeed.value
         try {
             val minBufferSize = AudioTrack.getMinBufferSize(
                 SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT
@@ -420,7 +475,7 @@ class PracticeViewModel @Inject constructor(
 
     private suspend fun playAudioFile(filePath: String) {
         var localTrack: AudioTrack? = null
-        val speed = config.value.playbackSpeed
+        val speed = _currentSpeed.value
         try {
             val file = File(filePath)
             if (!file.exists()) {
