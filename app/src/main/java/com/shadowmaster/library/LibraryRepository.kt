@@ -169,7 +169,10 @@ class LibraryRepository @Inject constructor(
         playlistName: String? = null,
         config: SegmentationConfig,
         enableTranscription: Boolean = false,
-        providerOverride: String? = null
+        providerOverride: String? = null,
+        playbackSpeed: Float = 0.8f,
+        playbackRepeats: Int = 1,
+        userRepeats: Int = 1
     ): Result<String> {
         // Create an ImportJob so the UI shows a progress bar
         val importedAudio = importedAudioDao.getById(importedAudioId)
@@ -185,7 +188,10 @@ class LibraryRepository @Inject constructor(
 
         val result = audioImporter.segmentImportedAudio(
             importedAudioId, playlistName, config, enableTranscription,
-            jobId = job.id, providerOverride = providerOverride
+            jobId = job.id, providerOverride = providerOverride,
+            playbackSpeed = playbackSpeed,
+            playbackRepeats = playbackRepeats,
+            userRepeats = userRepeats
         )
 
         // Mark job completed or failed

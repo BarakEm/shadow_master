@@ -63,36 +63,6 @@ fun SettingsScreen(
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Playback Speed
-            SliderSetting(
-                title = stringResource(R.string.playback_speed),
-                value = config.playbackSpeed,
-                valueRange = ShadowingConfig.MIN_PLAYBACK_SPEED..ShadowingConfig.MAX_PLAYBACK_SPEED,
-                steps = 15,
-                valueLabel = { "${String.format("%.1f", it)}x" },
-                onValueChange = { viewModel.updatePlaybackSpeed(it) }
-            )
-
-            // Playback Repeats
-            IntSliderSetting(
-                title = stringResource(R.string.playback_repeats),
-                value = config.playbackRepeats,
-                valueRange = ShadowingConfig.MIN_PLAYBACK_REPEATS..ShadowingConfig.MAX_PLAYBACK_REPEATS,
-                onValueChange = { viewModel.updatePlaybackRepeats(it) }
-            )
-
-            // User Repeats (hidden in bus mode)
-            if (!config.busMode) {
-                IntSliderSetting(
-                    title = stringResource(R.string.user_repeats),
-                    value = config.userRepeats,
-                    valueRange = ShadowingConfig.MIN_USER_REPEATS..ShadowingConfig.MAX_USER_REPEATS,
-                    onValueChange = { viewModel.updateUserRepeats(it) }
-                )
-            }
-
-            HorizontalDivider()
-
             // Bus Mode Toggle (most prominent - at the top of modes)
             SwitchSetting(
                 title = stringResource(R.string.bus_mode),

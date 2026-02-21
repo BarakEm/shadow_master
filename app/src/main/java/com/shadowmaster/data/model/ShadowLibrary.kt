@@ -71,7 +71,12 @@ data class ShadowPlaylist(
 
     // Source tracking
     val sourceType: SourceType = SourceType.IMPORTED,
-    val sourceUri: String? = null        // Original file/folder URI
+    val sourceUri: String? = null,       // Original file/folder URI
+
+    // Per-playlist playback settings
+    val playbackSpeed: Float = 0.8f,
+    val playbackRepeats: Int = 1,
+    val userRepeats: Int = 1
 )
 
 enum class SourceType {

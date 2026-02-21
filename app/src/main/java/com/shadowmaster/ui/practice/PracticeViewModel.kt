@@ -80,8 +80,11 @@ class PracticeViewModel @Inject constructor(
     private val _loopModeEndless = MutableStateFlow(true)
     val loopModeEndless: StateFlow<Boolean> = _loopModeEndless.asStateFlow()
 
-    private val _currentSpeed = MutableStateFlow(settingsRepository.configBlocking.playbackSpeed)
+    private val _currentSpeed = MutableStateFlow(0.8f)
     val currentSpeed: StateFlow<Float> = _currentSpeed.asStateFlow()
+
+    private var playlistPlaybackRepeats = 1
+    private var playlistUserRepeats = 1
 
     private val config = settingsRepository.config
         .stateIn(
@@ -117,6 +120,13 @@ class PracticeViewModel @Inject constructor(
 
     private fun loadPlaylist() {
         viewModelScope.launch {
+            // Load playlist settings first
+            libraryRepository.getPlaylist(playlistId)?.let { playlist ->
+                _currentSpeed.value = playlist.playbackSpeed
+                playlistPlaybackRepeats = playlist.playbackRepeats
+                playlistUserRepeats = playlist.userRepeats
+            }
+
             // Check import job status for this playlist first
             val job = libraryRepository.getImportJobForPlaylist(playlistId)
             _importJobStatus.value = when {
@@ -186,7 +196,7 @@ class PracticeViewModel @Inject constructor(
     private suspend fun runPracticeLoop() {
         val itemsList = _items.value
         val cfg = config.value
-        val repeats = cfg.playbackRepeats
+        val repeats = playlistPlaybackRepeats
         val busMode = cfg.busMode
         val silenceBetweenRepeats = cfg.silenceBetweenRepeatsMs.toLong()
 

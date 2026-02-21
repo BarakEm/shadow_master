@@ -291,7 +291,11 @@ class LibraryViewModel @Inject constructor(
 
     fun exportPlaylist(playlist: ShadowPlaylist, includeYourTurnSilence: Boolean = true, format: com.shadowmaster.library.ExportFormat = com.shadowmaster.library.ExportFormat.AAC) {
         viewModelScope.launch {
-            val config = settingsRepository.config.first()
+            val config = settingsRepository.config.first().copy(
+                playbackSpeed = playlist.playbackSpeed,
+                playbackRepeats = playlist.playbackRepeats,
+                userRepeats = playlist.userRepeats
+            )
             val result = libraryRepository.exportPlaylist(
                 playlistId = playlist.id,
                 playlistName = playlist.name,
@@ -346,6 +350,9 @@ class LibraryViewModel @Inject constructor(
         importedAudioId: String,
         playlistName: String,
         config: com.shadowmaster.data.model.SegmentationConfig,
+        playbackSpeed: Float = 0.8f,
+        playbackRepeats: Int = 1,
+        userRepeats: Int = 1,
         enableTranscription: Boolean = false,
         language: String? = null,
         providerOverride: String? = null
@@ -359,7 +366,10 @@ class LibraryViewModel @Inject constructor(
                 playlistName = playlistName,
                 config = config,
                 enableTranscription = enableTranscription,
-                providerOverride = providerOverride
+                providerOverride = providerOverride,
+                playbackSpeed = playbackSpeed,
+                playbackRepeats = playbackRepeats,
+                userRepeats = userRepeats
             )
             result.onSuccess { playlistId ->
                 _importSuccess.value = "Playlist created successfully!"

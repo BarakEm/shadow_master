@@ -190,7 +190,7 @@ interface SegmentationConfigDao {
         ImportedAudio::class,
         SegmentationConfig::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -300,6 +300,14 @@ abstract class ShadowDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE shadow_playlists ADD COLUMN playbackSpeed REAL NOT NULL DEFAULT 0.8")
+                database.execSQL("ALTER TABLE shadow_playlists ADD COLUMN playbackRepeats INTEGER NOT NULL DEFAULT 1")
+                database.execSQL("ALTER TABLE shadow_playlists ADD COLUMN userRepeats INTEGER NOT NULL DEFAULT 1")
+            }
+        }
+
         fun getDatabase(context: Context): ShadowDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -307,7 +315,7 @@ abstract class ShadowDatabase : RoomDatabase() {
                     ShadowDatabase::class.java,
                     "shadow_library_db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build()
                 INSTANCE = instance
                 instance

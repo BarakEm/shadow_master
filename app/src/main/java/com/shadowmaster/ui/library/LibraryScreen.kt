@@ -733,6 +733,9 @@ fun LibraryScreen(
         var playlistName by remember { mutableStateOf(audio.sourceFileName.substringBeforeLast(".")) }
         val presets = remember { com.shadowmaster.library.SegmentationPresets.getAllPresets() }
         var selectedPreset by remember { mutableStateOf<SegmentationConfig?>(presets.firstOrNull()) }
+        var playbackSpeed by remember { mutableFloatStateOf(0.8f) }
+        var playbackRepeats by remember { mutableIntStateOf(1) }
+        var userRepeats by remember { mutableIntStateOf(1) }
 
         AlertDialog(
             onDismissRequest = { showCreatePlaylistDialog = null },
@@ -785,6 +788,81 @@ fun LibraryScreen(
                             }
                         }
                     }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "Playback Settings",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Speed", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "${String.format("%.1f", playbackSpeed)}x",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Slider(
+                        value = playbackSpeed,
+                        onValueChange = { playbackSpeed = it },
+                        valueRange = 0.5f..2.0f,
+                        steps = 14,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Playback Repeats", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "$playbackRepeats",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Slider(
+                        value = playbackRepeats.toFloat(),
+                        onValueChange = { playbackRepeats = it.toInt() },
+                        valueRange = 1f..5f,
+                        steps = 3,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Your Repeats", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            "$userRepeats",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Slider(
+                        value = userRepeats.toFloat(),
+                        onValueChange = { userRepeats = it.toInt() },
+                        valueRange = 1f..3f,
+                        steps = 1,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             },
             confirmButton = {
@@ -794,9 +872,12 @@ fun LibraryScreen(
                         selectedPreset?.let { preset ->
                             if (name.isNotEmpty()) {
                                 viewModel.createPlaylistFromImportedAudio(
-                                    audio.id,
-                                    name,
-                                    preset
+                                    importedAudioId = audio.id,
+                                    playlistName = name,
+                                    config = preset,
+                                    playbackSpeed = playbackSpeed,
+                                    playbackRepeats = playbackRepeats,
+                                    userRepeats = userRepeats
                                 )
                                 showCreatePlaylistDialog = null
                             }

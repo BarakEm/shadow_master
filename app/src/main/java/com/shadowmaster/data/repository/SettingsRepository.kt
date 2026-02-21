@@ -28,9 +28,6 @@ class SettingsRepository @Inject constructor(
         val LANGUAGE = stringPreferencesKey("language")
         val SEGMENT_MODE = stringPreferencesKey("segment_mode")
         val SILENCE_THRESHOLD_MS = intPreferencesKey("silence_threshold_ms")
-        val PLAYBACK_SPEED = floatPreferencesKey("playback_speed")
-        val PLAYBACK_REPEATS = intPreferencesKey("playback_repeats")
-        val USER_REPEATS = intPreferencesKey("user_repeats")
         val ASSESSMENT_ENABLED = booleanPreferencesKey("assessment_enabled")
         val PAUSE_FOR_NAVIGATION = booleanPreferencesKey("pause_for_navigation")
         val BUS_MODE = booleanPreferencesKey("bus_mode")
@@ -88,9 +85,6 @@ class SettingsRepository @Inject constructor(
                 SegmentMode.SENTENCE
             },
             silenceThresholdMs = preferences[Keys.SILENCE_THRESHOLD_MS] ?: 700,
-            playbackSpeed = preferences[Keys.PLAYBACK_SPEED] ?: 0.8f,
-            playbackRepeats = preferences[Keys.PLAYBACK_REPEATS] ?: 1,
-            userRepeats = preferences[Keys.USER_REPEATS] ?: 1,
             assessmentEnabled = preferences[Keys.ASSESSMENT_ENABLED] ?: true,
             pauseForNavigation = preferences[Keys.PAUSE_FOR_NAVIGATION] ?: true,
             busMode = preferences[Keys.BUS_MODE] ?: false,
@@ -160,33 +154,6 @@ class SettingsRepository @Inject constructor(
         }
     }
 
-    suspend fun updatePlaybackSpeed(speed: Float) {
-        context.dataStore.edit { preferences ->
-            preferences[Keys.PLAYBACK_SPEED] = speed.coerceIn(
-                ShadowingConfig.MIN_PLAYBACK_SPEED,
-                ShadowingConfig.MAX_PLAYBACK_SPEED
-            )
-        }
-    }
-
-    suspend fun updatePlaybackRepeats(repeats: Int) {
-        context.dataStore.edit { preferences ->
-            preferences[Keys.PLAYBACK_REPEATS] = repeats.coerceIn(
-                ShadowingConfig.MIN_PLAYBACK_REPEATS,
-                ShadowingConfig.MAX_PLAYBACK_REPEATS
-            )
-        }
-    }
-
-    suspend fun updateUserRepeats(repeats: Int) {
-        context.dataStore.edit { preferences ->
-            preferences[Keys.USER_REPEATS] = repeats.coerceIn(
-                ShadowingConfig.MIN_USER_REPEATS,
-                ShadowingConfig.MAX_USER_REPEATS
-            )
-        }
-    }
-
     suspend fun updateAssessmentEnabled(enabled: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[Keys.ASSESSMENT_ENABLED] = enabled
@@ -240,9 +207,6 @@ class SettingsRepository @Inject constructor(
             preferences[Keys.LANGUAGE] = config.language.code
             preferences[Keys.SEGMENT_MODE] = config.segmentMode.name
             preferences[Keys.SILENCE_THRESHOLD_MS] = config.silenceThresholdMs
-            preferences[Keys.PLAYBACK_SPEED] = config.playbackSpeed
-            preferences[Keys.PLAYBACK_REPEATS] = config.playbackRepeats
-            preferences[Keys.USER_REPEATS] = config.userRepeats
             preferences[Keys.ASSESSMENT_ENABLED] = config.assessmentEnabled
             preferences[Keys.PAUSE_FOR_NAVIGATION] = config.pauseForNavigation
             preferences[Keys.BUS_MODE] = config.busMode

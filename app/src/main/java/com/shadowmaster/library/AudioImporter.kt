@@ -145,7 +145,10 @@ class AudioImporter @Inject constructor(
         config: SegmentationConfig,
         enableTranscription: Boolean = false,
         jobId: String? = null,
-        providerOverride: String? = null
+        providerOverride: String? = null,
+        playbackSpeed: Float = 0.8f,
+        playbackRepeats: Int = 1,
+        userRepeats: Int = 1
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             // Get imported audio
@@ -164,7 +167,10 @@ class AudioImporter @Inject constructor(
                 name = playlistName ?: "${importedAudio.sourceFileName} (${config.name})",
                 language = importedAudio.language,
                 sourceType = SourceType.IMPORTED,
-                sourceUri = importedAudio.sourceUri
+                sourceUri = importedAudio.sourceUri,
+                playbackSpeed = playbackSpeed,
+                playbackRepeats = playbackRepeats,
+                userRepeats = userRepeats
             )
             shadowPlaylistDao.insert(playlist)
 

@@ -45,24 +45,6 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun updatePlaybackSpeed(speed: Float) {
-        viewModelScope.launch {
-            settingsRepository.updatePlaybackSpeed(speed)
-        }
-    }
-
-    fun updatePlaybackRepeats(repeats: Int) {
-        viewModelScope.launch {
-            settingsRepository.updatePlaybackRepeats(repeats)
-        }
-    }
-
-    fun updateUserRepeats(repeats: Int) {
-        viewModelScope.launch {
-            settingsRepository.updateUserRepeats(repeats)
-        }
-    }
-
     fun updateAssessmentEnabled(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.updateAssessmentEnabled(enabled)
