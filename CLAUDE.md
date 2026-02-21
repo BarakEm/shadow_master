@@ -38,10 +38,36 @@ These rules apply to ALL code changes, whether by Claude, Copilot, Gemini, or hu
 
 ## Build & Test
 ```bash
-./gradlew assembleDebug    # Verify compilation
-./gradlew test             # Unit tests
-./gradlew lint             # Lint checks
+JAVA_HOME=/home/barak/jdk ./gradlew assembleDebug    # Verify compilation
+JAVA_HOME=/home/barak/jdk ./gradlew test             # Unit tests
+JAVA_HOME=/home/barak/jdk ./gradlew lint             # Lint checks
 ```
+
+## Wireless Install (WSL2 → Pixel over WiFi)
+
+ADB binaries:
+- WSL adb: `/home/barak/android-sdk/platform-tools/adb`
+- Windows adb: `/mnt/c/Users/barak/AppData/Local/Android/Sdk/platform-tools/adb.exe`
+
+WSL2 cannot reach the phone directly — use Windows adb.exe to connect, then
+Gradle's installDebug works via the shared adb server.
+
+**First time / re-pairing:**
+1. Phone: Settings → Developer Options → Wireless Debugging → enable
+2. Tap "Pair device with pairing code" → note IP:pairingPort and 6-digit code
+3. `/mnt/c/Users/barak/.../adb.exe pair <IP>:<pairingPort> <code>`
+4. Back on Wireless Debugging main screen → note IP:connectionPort
+5. `/mnt/c/Users/barak/.../adb.exe connect <IP>:<connectionPort>`
+6. `JAVA_HOME=/home/barak/jdk ./gradlew installDebug`
+
+**Subsequent installs (already paired, device known):**
+1. Phone: Wireless Debugging main screen → note current IP:connectionPort
+2. `/mnt/c/Users/barak/AppData/Local/Android/Sdk/platform-tools/adb.exe connect <IP>:<port>`
+3. `JAVA_HOME=/home/barak/jdk ./gradlew installDebug`
+
+Device: Pixel 7 Pro (barak's), usually at 10.0.0.6. Connection port changes each
+session; pairing port changes too but re-pairing is only needed after a full adb
+key reset.
 
 ## Key Patterns
 - State management: `ShadowingState` sealed class + `ShadowingStateMachine` + `ShadowingCoordinator`
