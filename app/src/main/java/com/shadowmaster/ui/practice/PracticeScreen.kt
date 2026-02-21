@@ -21,6 +21,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.shadowmaster.data.model.ShadowItem
 import com.shadowmaster.ui.practice.ImportJobStatus
 import com.shadowmaster.ui.theme.ShadowMasterTheme
+import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,6 +36,7 @@ fun PracticeScreen(
     val importJobStatus by viewModel.importJobStatus.collectAsState()
     val loopModeEndless by viewModel.loopModeEndless.collectAsState()
     val currentSpeed by viewModel.currentSpeed.collectAsState()
+    val playbackRepeats by viewModel.playbackRepeats.collectAsState()
 
     val currentItem = items.getOrNull(currentIndex)
 
@@ -177,12 +179,14 @@ fun PracticeScreen(
             LoopControls(
                 loopModeEndless = loopModeEndless,
                 currentSpeed = currentSpeed,
+                playbackRepeats = playbackRepeats,
                 itemCount = items.size,
                 currentIndex = currentIndex,
                 onToggleLoopMode = { viewModel.toggleLoopMode() },
                 onSpeedChange = { viewModel.setSpeed(it) },
-                onPrev = { viewModel.navigatePrev() },
-                onNext = { viewModel.navigateNext() }
+                onPlaybackRepeatsChange = { viewModel.setPlaybackRepeats(it) },
+                onSaveSettings = { viewModel.saveSettings() },
+                onSkipToItem = { viewModel.skipToItem(it) }
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -413,19 +417,28 @@ private fun PracticeControls(
 private fun LoopControls(
     loopModeEndless: Boolean,
     currentSpeed: Float,
+    playbackRepeats: Int,
     itemCount: Int,
     currentIndex: Int,
     onToggleLoopMode: () -> Unit,
     onSpeedChange: (Float) -> Unit,
-    onPrev: () -> Unit,
-    onNext: () -> Unit
+    onPlaybackRepeatsChange: (Int) -> Unit,
+    onSaveSettings: () -> Unit,
+    onSkipToItem: (Int) -> Unit
 ) {
+    // Local scrubber state to avoid fighting with live currentIndex during drag
+    var scrubbing by remember { mutableStateOf(false) }
+    var scrubberPos by remember { mutableFloatStateOf(currentIndex.toFloat()) }
+    LaunchedEffect(currentIndex) {
+        if (!scrubbing) scrubberPos = currentIndex.toFloat()
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Loop mode toggle
         OutlinedButton(onClick = onToggleLoopMode) {
@@ -433,52 +446,103 @@ private fun LoopControls(
         }
 
         // Speed slider
-        Column(
+        Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Speed: ${"%.1f".format(currentSpeed)}x",
+                text = "Speed",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Slider(
-                value = currentSpeed,
-                onValueChange = onSpeedChange,
-                valueRange = 0.5f..2.0f,
-                steps = 29,
-                modifier = Modifier.fillMaxWidth()
+            Text(
+                text = "${"%.1f".format(currentSpeed)}x",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary
             )
         }
+        Slider(
+            value = currentSpeed,
+            onValueChange = onSpeedChange,
+            onValueChangeFinished = onSaveSettings,
+            valueRange = 0.5f..2.0f,
+            steps = 29,
+            modifier = Modifier.fillMaxWidth()
+        )
 
-        // Prev / Next navigation
+        // Playback repeats
         Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(
-                onClick = onPrev,
-                enabled = currentIndex > 0
-            ) {
-                Icon(
-                    imageVector = Icons.Default.SkipPrevious,
-                    contentDescription = "Previous segment"
-                )
-            }
             Text(
-                text = if (itemCount > 0) "${currentIndex + 1} / $itemCount" else "—",
-                style = MaterialTheme.typography.bodyMedium,
+                text = "Repeats",
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            IconButton(
-                onClick = onNext,
-                enabled = currentIndex < itemCount - 1
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.SkipNext,
-                    contentDescription = "Next segment"
+                FilledTonalIconButton(
+                    onClick = {
+                        onPlaybackRepeatsChange(playbackRepeats - 1)
+                        onSaveSettings()
+                    },
+                    enabled = playbackRepeats > 1,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(Icons.Default.Remove, contentDescription = "Fewer repeats", modifier = Modifier.size(16.dp))
+                }
+                Text(
+                    text = "$playbackRepeats",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                FilledTonalIconButton(
+                    onClick = {
+                        onPlaybackRepeatsChange(playbackRepeats + 1)
+                        onSaveSettings()
+                    },
+                    enabled = playbackRepeats < 5,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "More repeats", modifier = Modifier.size(16.dp))
+                }
+            }
+        }
+
+        // Position scrubber
+        if (itemCount > 1) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Segment",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "${(scrubberPos.roundToInt() + 1)} / $itemCount",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
                 )
             }
+            Slider(
+                value = scrubberPos,
+                onValueChange = { scrubbing = true; scrubberPos = it },
+                onValueChangeFinished = {
+                    scrubbing = false
+                    onSkipToItem(scrubberPos.roundToInt())
+                },
+                valueRange = 0f..(itemCount - 1).toFloat(),
+                modifier = Modifier.fillMaxWidth()
+            )
         }
     }
 }

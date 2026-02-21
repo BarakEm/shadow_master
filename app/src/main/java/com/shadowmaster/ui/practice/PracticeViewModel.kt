@@ -83,8 +83,10 @@ class PracticeViewModel @Inject constructor(
     private val _currentSpeed = MutableStateFlow(0.8f)
     val currentSpeed: StateFlow<Float> = _currentSpeed.asStateFlow()
 
-    private var playlistPlaybackRepeats = 1
-    private var playlistUserRepeats = 1
+    private val _playbackRepeats = MutableStateFlow(1)
+    val playbackRepeats: StateFlow<Int> = _playbackRepeats.asStateFlow()
+
+    private val _userRepeats = MutableStateFlow(1)
 
     private val config = settingsRepository.config
         .stateIn(
@@ -123,8 +125,8 @@ class PracticeViewModel @Inject constructor(
             // Load playlist settings first
             libraryRepository.getPlaylist(playlistId)?.let { playlist ->
                 _currentSpeed.value = playlist.playbackSpeed
-                playlistPlaybackRepeats = playlist.playbackRepeats
-                playlistUserRepeats = playlist.userRepeats
+                _playbackRepeats.value = playlist.playbackRepeats
+                _userRepeats.value = playlist.userRepeats
             }
 
             // Check import job status for this playlist first
@@ -176,6 +178,21 @@ class PracticeViewModel @Inject constructor(
         }
     }
 
+    fun setPlaybackRepeats(repeats: Int) {
+        _playbackRepeats.value = repeats.coerceIn(1, 5)
+    }
+
+    fun saveSettings() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val playlist = libraryRepository.getPlaylist(playlistId) ?: return@launch
+            libraryRepository.updatePlaylist(playlist.copy(
+                playbackSpeed = _currentSpeed.value,
+                playbackRepeats = _playbackRepeats.value,
+                userRepeats = _userRepeats.value
+            ))
+        }
+    }
+
     fun navigatePrev() {
         val cur = _currentItemIndex.value
         if (cur > 0) {
@@ -196,7 +213,7 @@ class PracticeViewModel @Inject constructor(
     private suspend fun runPracticeLoop() {
         val itemsList = _items.value
         val cfg = config.value
-        val repeats = playlistPlaybackRepeats
+        val repeats = _playbackRepeats.value.coerceAtLeast(1)
         val busMode = cfg.busMode
         val silenceBetweenRepeats = cfg.silenceBetweenRepeatsMs.toLong()
 
