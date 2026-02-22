@@ -294,7 +294,14 @@ class LibraryViewModel @Inject constructor(
             val config = settingsRepository.config.first().copy(
                 playbackSpeed = playlist.playbackSpeed,
                 playbackRepeats = playlist.playbackRepeats,
-                userRepeats = playlist.userRepeats
+                userRepeats = playlist.userRepeats,
+                busMode = playlist.busMode,
+                practiceMode = playlist.practiceMode,
+                buildupChunkMs = playlist.buildupChunkMs,
+                audioFeedbackEnabled = playlist.audioFeedbackEnabled,
+                beepVolume = playlist.beepVolume,
+                beepToneType = playlist.beepToneType,
+                beepDurationMs = playlist.beepDurationMs
             )
             val result = libraryRepository.exportPlaylist(
                 playlistId = playlist.id,
@@ -353,6 +360,13 @@ class LibraryViewModel @Inject constructor(
         playbackSpeed: Float = 0.8f,
         playbackRepeats: Int = 1,
         userRepeats: Int = 1,
+        busMode: Boolean = false,
+        practiceMode: PracticeMode = PracticeMode.STANDARD,
+        buildupChunkMs: Int = 1500,
+        audioFeedbackEnabled: Boolean = true,
+        beepVolume: Int = 80,
+        beepToneType: BeepToneType = BeepToneType.SOFT,
+        beepDurationMs: Int = 150,
         enableTranscription: Boolean = false,
         language: String? = null,
         providerOverride: String? = null
@@ -369,7 +383,14 @@ class LibraryViewModel @Inject constructor(
                 providerOverride = providerOverride,
                 playbackSpeed = playbackSpeed,
                 playbackRepeats = playbackRepeats,
-                userRepeats = userRepeats
+                userRepeats = userRepeats,
+                busMode = busMode,
+                practiceMode = practiceMode,
+                buildupChunkMs = buildupChunkMs,
+                audioFeedbackEnabled = audioFeedbackEnabled,
+                beepVolume = beepVolume,
+                beepToneType = beepToneType,
+                beepDurationMs = beepDurationMs
             )
             result.onSuccess { playlistId ->
                 _importSuccess.value = "Playlist created successfully!"

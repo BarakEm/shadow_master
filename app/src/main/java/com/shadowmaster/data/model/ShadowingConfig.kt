@@ -7,7 +7,7 @@ data class ShadowingConfig(
     val playbackSpeed: Float = 0.8f,
     val playbackRepeats: Int = 1,
     val userRepeats: Int = 1,
-    val assessmentEnabled: Boolean = true,
+    val assessmentEnabled: Boolean = false,
     val pauseForNavigation: Boolean = true,
     val busMode: Boolean = false,  // Passive listening - no user recording required
     val audioFeedbackEnabled: Boolean = true,  // Beeps for state transitions

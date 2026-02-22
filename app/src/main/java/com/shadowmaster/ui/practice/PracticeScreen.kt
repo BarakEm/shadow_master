@@ -37,6 +37,7 @@ fun PracticeScreen(
     val loopModeEndless by viewModel.loopModeEndless.collectAsState()
     val currentSpeed by viewModel.currentSpeed.collectAsState()
     val playbackRepeats by viewModel.playbackRepeats.collectAsState()
+    val busMode by viewModel.busMode.collectAsState()
 
     val currentItem = items.getOrNull(currentIndex)
 
@@ -180,13 +181,15 @@ fun PracticeScreen(
                 loopModeEndless = loopModeEndless,
                 currentSpeed = currentSpeed,
                 playbackRepeats = playbackRepeats,
+                busMode = busMode,
                 itemCount = items.size,
                 currentIndex = currentIndex,
                 onToggleLoopMode = { viewModel.toggleLoopMode() },
                 onSpeedChange = { viewModel.setSpeed(it) },
                 onPlaybackRepeatsChange = { viewModel.setPlaybackRepeats(it) },
                 onSaveSettings = { viewModel.saveSettings() },
-                onSkipToItem = { viewModel.skipToItem(it) }
+                onSkipToItem = { viewModel.skipToItem(it) },
+                onToggleBusMode = { viewModel.toggleBusMode() }
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -418,13 +421,15 @@ private fun LoopControls(
     loopModeEndless: Boolean,
     currentSpeed: Float,
     playbackRepeats: Int,
+    busMode: Boolean,
     itemCount: Int,
     currentIndex: Int,
     onToggleLoopMode: () -> Unit,
     onSpeedChange: (Float) -> Unit,
     onPlaybackRepeatsChange: (Int) -> Unit,
     onSaveSettings: () -> Unit,
-    onSkipToItem: (Int) -> Unit
+    onSkipToItem: (Int) -> Unit,
+    onToggleBusMode: () -> Unit
 ) {
     // Local scrubber state to avoid fighting with live currentIndex during drag
     var scrubbing by remember { mutableStateOf(false) }
@@ -440,9 +445,16 @@ private fun LoopControls(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Loop mode toggle
-        OutlinedButton(onClick = onToggleLoopMode) {
-            Text(if (loopModeEndless) "🔁 Endless" else "🔢 Counted")
+        // Loop mode and bus mode toggles
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedButton(onClick = onToggleLoopMode) {
+                Text(if (loopModeEndless) "🔁 Endless" else "🔢 Counted")
+            }
+            OutlinedButton(onClick = onToggleBusMode) {
+                Text(if (busMode) "🚌 Bus" else "🎤 Active")
+            }
         }
 
         // Speed slider

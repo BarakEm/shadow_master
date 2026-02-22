@@ -736,6 +736,13 @@ fun LibraryScreen(
         var playbackSpeed by remember { mutableFloatStateOf(0.8f) }
         var playbackRepeats by remember { mutableIntStateOf(1) }
         var userRepeats by remember { mutableIntStateOf(1) }
+        var busMode by remember { mutableStateOf(false) }
+        var practiceMode by remember { mutableStateOf(com.shadowmaster.data.model.PracticeMode.STANDARD) }
+        var buildupChunkMs by remember { mutableIntStateOf(1500) }
+        var audioFeedbackEnabled by remember { mutableStateOf(true) }
+        var beepVolume by remember { mutableIntStateOf(80) }
+        var beepToneType by remember { mutableStateOf(com.shadowmaster.data.model.BeepToneType.SOFT) }
+        var beepDurationMs by remember { mutableIntStateOf(150) }
 
         AlertDialog(
             onDismissRequest = { showCreatePlaylistDialog = null },
@@ -863,6 +870,170 @@ fun LibraryScreen(
                         steps = 1,
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "Practice Mode",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // Bus mode toggle
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { busMode = !busMode }
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Bus Mode", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "Listen-only, no recording required",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(checked = busMode, onCheckedChange = { busMode = it })
+                    }
+
+                    if (!busMode) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        com.shadowmaster.data.model.PracticeMode.entries.forEach { mode ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { practiceMode = mode }
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = practiceMode == mode,
+                                    onClick = { practiceMode = mode }
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = when (mode) {
+                                            com.shadowmaster.data.model.PracticeMode.STANDARD -> "Standard"
+                                            com.shadowmaster.data.model.PracticeMode.BUILDUP -> "Gradual Buildup"
+                                        },
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                    Text(
+                                        text = when (mode) {
+                                            com.shadowmaster.data.model.PracticeMode.STANDARD -> "Play full segment, then repeat"
+                                            com.shadowmaster.data.model.PracticeMode.BUILDUP -> "Build from end of phrase to full sentence"
+                                        },
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+
+                        if (practiceMode == com.shadowmaster.data.model.PracticeMode.BUILDUP) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Chunk Size", style = MaterialTheme.typography.bodyMedium)
+                                Text(
+                                    "${buildupChunkMs}ms",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                            Slider(
+                                value = buildupChunkMs.toFloat(),
+                                onValueChange = { buildupChunkMs = it.toInt() },
+                                valueRange = 200f..3000f,
+                                steps = 27,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "Audio Feedback",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { audioFeedbackEnabled = !audioFeedbackEnabled }
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Beep Sounds", style = MaterialTheme.typography.bodyMedium)
+                        Switch(checked = audioFeedbackEnabled, onCheckedChange = { audioFeedbackEnabled = it })
+                    }
+
+                    if (audioFeedbackEnabled) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Volume", style = MaterialTheme.typography.bodySmall)
+                            Text("$beepVolume%", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        }
+                        Slider(
+                            value = beepVolume.toFloat(),
+                            onValueChange = { beepVolume = it.toInt() },
+                            valueRange = 0f..100f,
+                            steps = 10,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Duration", style = MaterialTheme.typography.bodySmall)
+                            Text("${beepDurationMs}ms", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                        }
+                        Slider(
+                            value = beepDurationMs.toFloat(),
+                            onValueChange = { beepDurationMs = it.toInt() },
+                            valueRange = 50f..500f,
+                            steps = 9,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text("Tone", style = MaterialTheme.typography.bodySmall)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        com.shadowmaster.data.model.BeepToneType.entries.forEach { tone ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { beepToneType = tone }
+                                    .padding(vertical = 2.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = beepToneType == tone,
+                                    onClick = { beepToneType = tone }
+                                )
+                                Text(tone.displayName, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {
@@ -877,7 +1048,14 @@ fun LibraryScreen(
                                     config = preset,
                                     playbackSpeed = playbackSpeed,
                                     playbackRepeats = playbackRepeats,
-                                    userRepeats = userRepeats
+                                    userRepeats = userRepeats,
+                                    busMode = busMode,
+                                    practiceMode = practiceMode,
+                                    buildupChunkMs = buildupChunkMs,
+                                    audioFeedbackEnabled = audioFeedbackEnabled,
+                                    beepVolume = beepVolume,
+                                    beepToneType = beepToneType,
+                                    beepDurationMs = beepDurationMs
                                 )
                                 showCreatePlaylistDialog = null
                             }

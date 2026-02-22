@@ -190,7 +190,7 @@ interface SegmentationConfigDao {
         ImportedAudio::class,
         SegmentationConfig::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -308,6 +308,18 @@ abstract class ShadowDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(database: SupportSQLiteDatabase) {
+                database.execSQL("ALTER TABLE shadow_playlists ADD COLUMN busMode INTEGER NOT NULL DEFAULT 0")
+                database.execSQL("ALTER TABLE shadow_playlists ADD COLUMN practiceMode TEXT NOT NULL DEFAULT 'STANDARD'")
+                database.execSQL("ALTER TABLE shadow_playlists ADD COLUMN buildupChunkMs INTEGER NOT NULL DEFAULT 1500")
+                database.execSQL("ALTER TABLE shadow_playlists ADD COLUMN audioFeedbackEnabled INTEGER NOT NULL DEFAULT 1")
+                database.execSQL("ALTER TABLE shadow_playlists ADD COLUMN beepVolume INTEGER NOT NULL DEFAULT 80")
+                database.execSQL("ALTER TABLE shadow_playlists ADD COLUMN beepToneType TEXT NOT NULL DEFAULT 'SOFT'")
+                database.execSQL("ALTER TABLE shadow_playlists ADD COLUMN beepDurationMs INTEGER NOT NULL DEFAULT 150")
+            }
+        }
+
         fun getDatabase(context: Context): ShadowDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -315,7 +327,7 @@ abstract class ShadowDatabase : RoomDatabase() {
                     ShadowDatabase::class.java,
                     "shadow_library_db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                     .build()
                 INSTANCE = instance
                 instance

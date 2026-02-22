@@ -88,6 +88,15 @@ class PracticeViewModel @Inject constructor(
 
     private val _userRepeats = MutableStateFlow(1)
 
+    // Per-playlist practice settings (loaded from playlist, overrides global config)
+    private val _busMode = MutableStateFlow(false)
+    val busMode: StateFlow<Boolean> = _busMode.asStateFlow()
+
+    @Volatile private var _practiceMode = com.shadowmaster.data.model.PracticeMode.STANDARD
+    @Volatile private var _buildupChunkMs = 1500
+    @Volatile private var _audioFeedbackEnabled = true
+    @Volatile private var _beepDurationMs = 150
+
     private val config = settingsRepository.config
         .stateIn(
             scope = viewModelScope,
@@ -127,6 +136,11 @@ class PracticeViewModel @Inject constructor(
                 _currentSpeed.value = playlist.playbackSpeed
                 _playbackRepeats.value = playlist.playbackRepeats
                 _userRepeats.value = playlist.userRepeats
+                _busMode.value = playlist.busMode
+                _practiceMode = playlist.practiceMode
+                _buildupChunkMs = playlist.buildupChunkMs
+                _audioFeedbackEnabled = playlist.audioFeedbackEnabled
+                _beepDurationMs = playlist.beepDurationMs
             }
 
             // Check import job status for this playlist first
@@ -182,13 +196,19 @@ class PracticeViewModel @Inject constructor(
         _playbackRepeats.value = repeats.coerceIn(1, 5)
     }
 
+    fun toggleBusMode() {
+        _busMode.value = !_busMode.value
+        saveSettings()
+    }
+
     fun saveSettings() {
         viewModelScope.launch(Dispatchers.IO) {
             val playlist = libraryRepository.getPlaylist(playlistId) ?: return@launch
             libraryRepository.updatePlaylist(playlist.copy(
                 playbackSpeed = _currentSpeed.value,
                 playbackRepeats = _playbackRepeats.value,
-                userRepeats = _userRepeats.value
+                userRepeats = _userRepeats.value,
+                busMode = _busMode.value
             ))
         }
     }
@@ -214,7 +234,10 @@ class PracticeViewModel @Inject constructor(
         val itemsList = _items.value
         val cfg = config.value
         val repeats = _playbackRepeats.value.coerceAtLeast(1)
-        val busMode = cfg.busMode
+        val busMode = _busMode.value
+        val practiceMode = _practiceMode
+        val audioFeedbackEnabled = _audioFeedbackEnabled
+        val beepDurationMs = _beepDurationMs
         val silenceBetweenRepeats = cfg.silenceBetweenRepeatsMs.toLong()
 
         var index = 0
@@ -225,10 +248,10 @@ class PracticeViewModel @Inject constructor(
 
             val item = itemsList[index]
 
-            if (cfg.practiceMode == PracticeMode.BUILDUP && !busMode) {
-                runBuildupForItem(index, item, cfg)
+            if (practiceMode == PracticeMode.BUILDUP && !busMode) {
+                runBuildupForItem(index, item, audioFeedbackEnabled, beepDurationMs)
             } else {
-                runStandardForItem(index, item, cfg, repeats, busMode, silenceBetweenRepeats)
+                runStandardForItem(index, item, cfg, repeats, busMode, silenceBetweenRepeats, audioFeedbackEnabled, beepDurationMs)
             }
 
             if (!coroutineContext.isActive) break
@@ -249,8 +272,8 @@ class PracticeViewModel @Inject constructor(
 
             // Counted mode: brief pause then advance to next segment
             delay(500)
-            if (index < itemsList.size - 1 && cfg.audioFeedbackEnabled) {
-                playBeep(BeepGenerator.SEGMENT_END_BEEP_FREQ, cfg.beepDurationMs)
+            if (index < itemsList.size - 1 && audioFeedbackEnabled) {
+                playBeep(BeepGenerator.SEGMENT_END_BEEP_FREQ, beepDurationMs)
                 delay(300)
             }
             index++
@@ -258,7 +281,7 @@ class PracticeViewModel @Inject constructor(
 
         // Session complete (only reached in counted mode after all segments)
         if (coroutineContext.isActive && !_loopModeEndless.value) {
-            if (config.value.audioFeedbackEnabled) {
+            if (_audioFeedbackEnabled) {
                 withContext(Dispatchers.Main) {
                     audioFeedbackSystem.playGoodScore()
                 }
@@ -277,7 +300,9 @@ class PracticeViewModel @Inject constructor(
         cfg: com.shadowmaster.data.model.ShadowingConfig,
         repeats: Int,
         busMode: Boolean,
-        silenceBetweenRepeats: Long
+        silenceBetweenRepeats: Long,
+        audioFeedbackEnabled: Boolean,
+        beepDurationMs: Int
     ) {
         for (repeat in 1..repeats) {
             if (!coroutineContext.isActive || _navigateRequest != null) break
@@ -287,8 +312,8 @@ class PracticeViewModel @Inject constructor(
 
             _state.value = PracticeState.Playing(index, repeat)
 
-            if (cfg.audioFeedbackEnabled) {
-                playBeep(BeepGenerator.PLAYBACK_BEEP_FREQ, cfg.beepDurationMs)
+            if (audioFeedbackEnabled) {
+                playBeep(BeepGenerator.PLAYBACK_BEEP_FREQ, beepDurationMs)
                 delay(BeepGenerator.PRE_BEEP_PAUSE_MS)
             }
 
@@ -298,8 +323,8 @@ class PracticeViewModel @Inject constructor(
 
             if (busMode) {
                 delay(silenceBetweenRepeats)
-                if (repeat == repeats && cfg.audioFeedbackEnabled) {
-                    playBeep(BeepGenerator.SEGMENT_END_BEEP_FREQ, cfg.beepDurationMs)
+                if (repeat == repeats && audioFeedbackEnabled) {
+                    playBeep(BeepGenerator.SEGMENT_END_BEEP_FREQ, beepDurationMs)
                 }
                 continue
             }
@@ -307,8 +332,8 @@ class PracticeViewModel @Inject constructor(
             delay(300)
             _state.value = PracticeState.UserRecording(index, repeat)
 
-            if (cfg.audioFeedbackEnabled) {
-                playDoubleBeep(BeepGenerator.YOUR_TURN_BEEP_FREQ, cfg.beepDurationMs)
+            if (audioFeedbackEnabled) {
+                playDoubleBeep(BeepGenerator.YOUR_TURN_BEEP_FREQ, beepDurationMs)
                 delay(BeepGenerator.PRE_BEEP_PAUSE_MS)
             }
 
@@ -339,7 +364,8 @@ class PracticeViewModel @Inject constructor(
     private suspend fun runBuildupForItem(
         index: Int,
         item: ShadowItem,
-        cfg: com.shadowmaster.data.model.ShadowingConfig
+        audioFeedbackEnabled: Boolean,
+        beepDurationMs: Int
     ) {
         val file = File(item.audioFilePath)
         if (!file.exists()) return
@@ -347,7 +373,7 @@ class PracticeViewModel @Inject constructor(
         val audioData = file.readBytes()
         if (audioData.isEmpty()) return
 
-        val chunkMs = cfg.buildupChunkMs.toLong()
+        val chunkMs = _buildupChunkMs.toLong()
         val totalMs = item.durationMs
         val bytesPerMs = (SAMPLE_RATE * 2) / 1000 // 16-bit mono
 
@@ -372,8 +398,8 @@ class PracticeViewModel @Inject constructor(
 
             _state.value = PracticeState.Playing(index, step)
 
-            if (cfg.audioFeedbackEnabled) {
-                playBeep(BeepGenerator.PLAYBACK_BEEP_FREQ, cfg.beepDurationMs)
+            if (audioFeedbackEnabled) {
+                playBeep(BeepGenerator.PLAYBACK_BEEP_FREQ, beepDurationMs)
                 delay(BeepGenerator.PRE_BEEP_PAUSE_MS)
             }
 
@@ -386,8 +412,8 @@ class PracticeViewModel @Inject constructor(
             delay(300)
             _state.value = PracticeState.UserRecording(index, step)
 
-            if (cfg.audioFeedbackEnabled) {
-                playDoubleBeep(BeepGenerator.YOUR_TURN_BEEP_FREQ, cfg.beepDurationMs)
+            if (audioFeedbackEnabled) {
+                playDoubleBeep(BeepGenerator.YOUR_TURN_BEEP_FREQ, beepDurationMs)
                 delay(BeepGenerator.PRE_BEEP_PAUSE_MS)
             }
 

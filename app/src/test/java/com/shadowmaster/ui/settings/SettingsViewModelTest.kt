@@ -1,7 +1,6 @@
 package com.shadowmaster.ui.settings
 
 import app.cash.turbine.test
-import com.shadowmaster.data.model.PracticeMode
 import com.shadowmaster.data.model.SegmentMode
 import com.shadowmaster.data.model.ShadowingConfig
 import com.shadowmaster.data.model.SupportedLanguage
@@ -170,26 +169,6 @@ class SettingsViewModelTest {
     // ==================== Feature Toggle Tests ====================
 
     @Test
-    fun `updateAssessmentEnabled calls repository with true`() = runTest {
-        // When
-        viewModel.updateAssessmentEnabled(true)
-        advanceUntilIdle()
-
-        // Then
-        coVerify { settingsRepository.updateAssessmentEnabled(true) }
-    }
-
-    @Test
-    fun `updateAssessmentEnabled calls repository with false`() = runTest {
-        // When
-        viewModel.updateAssessmentEnabled(false)
-        advanceUntilIdle()
-
-        // Then
-        coVerify { settingsRepository.updateAssessmentEnabled(false) }
-    }
-
-    @Test
     fun `updatePauseForNavigation calls repository with true`() = runTest {
         // When
         viewModel.updatePauseForNavigation(true)
@@ -207,96 +186,6 @@ class SettingsViewModelTest {
 
         // Then
         coVerify { settingsRepository.updatePauseForNavigation(false) }
-    }
-
-    @Test
-    fun `updateBusMode calls repository with true`() = runTest {
-        // When
-        viewModel.updateBusMode(true)
-        advanceUntilIdle()
-
-        // Then
-        coVerify { settingsRepository.updateBusMode(true) }
-    }
-
-    @Test
-    fun `updateBusMode calls repository with false`() = runTest {
-        // When
-        viewModel.updateBusMode(false)
-        advanceUntilIdle()
-
-        // Then
-        coVerify { settingsRepository.updateBusMode(false) }
-    }
-
-    @Test
-    fun `updateAudioFeedbackEnabled calls repository with true`() = runTest {
-        // When
-        viewModel.updateAudioFeedbackEnabled(true)
-        advanceUntilIdle()
-
-        // Then
-        coVerify { settingsRepository.updateAudioFeedbackEnabled(true) }
-    }
-
-    @Test
-    fun `updateAudioFeedbackEnabled calls repository with false`() = runTest {
-        // When
-        viewModel.updateAudioFeedbackEnabled(false)
-        advanceUntilIdle()
-
-        // Then
-        coVerify { settingsRepository.updateAudioFeedbackEnabled(false) }
-    }
-
-    // ==================== Practice Mode Tests ====================
-
-    @Test
-    fun `updatePracticeMode calls repository with STANDARD mode`() = runTest {
-        // When
-        viewModel.updatePracticeMode(PracticeMode.STANDARD)
-        advanceUntilIdle()
-
-        // Then
-        coVerify { settingsRepository.updatePracticeMode(PracticeMode.STANDARD) }
-    }
-
-    @Test
-    fun `updatePracticeMode calls repository with BUILDUP mode`() = runTest {
-        // When
-        viewModel.updatePracticeMode(PracticeMode.BUILDUP)
-        advanceUntilIdle()
-
-        // Then
-        coVerify { settingsRepository.updatePracticeMode(PracticeMode.BUILDUP) }
-    }
-
-    // ==================== Buildup Settings Tests ====================
-
-    @Test
-    fun `updateBuildupChunkMs calls repository`() = runTest {
-        // Given
-        val chunkMs = 1500
-
-        // When
-        viewModel.updateBuildupChunkMs(chunkMs)
-        advanceUntilIdle()
-
-        // Then
-        coVerify { settingsRepository.updateBuildupChunkMs(chunkMs) }
-    }
-
-    @Test
-    fun `updateBuildupChunkMs handles various chunk sizes`() = runTest {
-        // Test various chunk sizes
-        listOf(500, 1000, 1500, 2000, 3000).forEach { chunkMs ->
-            // When
-            viewModel.updateBuildupChunkMs(chunkMs)
-            advanceUntilIdle()
-
-            // Then
-            coVerify { settingsRepository.updateBuildupChunkMs(chunkMs) }
-        }
     }
 
     // ==================== Transcription Settings Tests ====================

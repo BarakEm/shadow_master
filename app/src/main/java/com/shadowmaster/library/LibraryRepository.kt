@@ -172,7 +172,14 @@ class LibraryRepository @Inject constructor(
         providerOverride: String? = null,
         playbackSpeed: Float = 0.8f,
         playbackRepeats: Int = 1,
-        userRepeats: Int = 1
+        userRepeats: Int = 1,
+        busMode: Boolean = false,
+        practiceMode: PracticeMode = PracticeMode.STANDARD,
+        buildupChunkMs: Int = 1500,
+        audioFeedbackEnabled: Boolean = true,
+        beepVolume: Int = 80,
+        beepToneType: BeepToneType = BeepToneType.SOFT,
+        beepDurationMs: Int = 150
     ): Result<String> {
         // Create an ImportJob so the UI shows a progress bar
         val importedAudio = importedAudioDao.getById(importedAudioId)
@@ -191,7 +198,14 @@ class LibraryRepository @Inject constructor(
             jobId = job.id, providerOverride = providerOverride,
             playbackSpeed = playbackSpeed,
             playbackRepeats = playbackRepeats,
-            userRepeats = userRepeats
+            userRepeats = userRepeats,
+            busMode = busMode,
+            practiceMode = practiceMode,
+            buildupChunkMs = buildupChunkMs,
+            audioFeedbackEnabled = audioFeedbackEnabled,
+            beepVolume = beepVolume,
+            beepToneType = beepToneType,
+            beepDurationMs = beepDurationMs
         )
 
         // Mark job completed or failed

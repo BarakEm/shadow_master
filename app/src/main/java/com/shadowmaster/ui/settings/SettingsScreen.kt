@@ -21,8 +21,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
 import com.shadowmaster.R
-import com.shadowmaster.data.model.BeepToneType
-import com.shadowmaster.data.model.PracticeMode
 import com.shadowmaster.data.model.SegmentMode
 import com.shadowmaster.data.model.ShadowingConfig
 import com.shadowmaster.data.model.SupportedLanguage
@@ -63,83 +61,6 @@ fun SettingsScreen(
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Bus Mode Toggle (most prominent - at the top of modes)
-            SwitchSetting(
-                title = stringResource(R.string.bus_mode),
-                subtitle = stringResource(R.string.bus_mode_desc),
-                checked = config.busMode,
-                onCheckedChange = { viewModel.updateBusMode(it) }
-            )
-
-            // Practice Mode (hidden in bus mode)
-            if (!config.busMode) {
-                PracticeModeSelector(
-                    selectedMode = config.practiceMode,
-                    onModeSelected = { viewModel.updatePracticeMode(it) }
-                )
-
-                // Buildup chunk size (only visible in buildup mode)
-                if (config.practiceMode == PracticeMode.BUILDUP) {
-                    IntSliderSetting(
-                        title = "Buildup Chunk Size",
-                        value = config.buildupChunkMs,
-                        valueRange = 500..3000,
-                        steps = 9,
-                        valueLabel = { "${it}ms" },
-                        onValueChange = { viewModel.updateBuildupChunkMs(it) }
-                    )
-                }
-            }
-
-            // Assessment Toggle (disabled if bus mode is on)
-            if (!config.busMode) {
-                SwitchSetting(
-                    title = stringResource(R.string.assessment_enabled),
-                    subtitle = "Evaluate pronunciation after recording",
-                    checked = config.assessmentEnabled,
-                    onCheckedChange = { viewModel.updateAssessmentEnabled(it) }
-                )
-            }
-
-            HorizontalDivider()
-
-            // Audio Feedback Toggle
-            SwitchSetting(
-                title = stringResource(R.string.audio_feedback),
-                subtitle = stringResource(R.string.audio_feedback_desc),
-                checked = config.audioFeedbackEnabled,
-                onCheckedChange = { viewModel.updateAudioFeedbackEnabled(it) }
-            )
-
-            // Beep Customization (only visible when audio feedback is enabled)
-            if (config.audioFeedbackEnabled) {
-                // Beep Volume
-                IntSliderSetting(
-                    title = "Beep Volume",
-                    value = config.beepVolume,
-                    valueRange = ShadowingConfig.MIN_BEEP_VOLUME..ShadowingConfig.MAX_BEEP_VOLUME,
-                    steps = 10,
-                    valueLabel = { "$it%" },
-                    onValueChange = { viewModel.updateBeepVolume(it) }
-                )
-
-                // Beep Tone Type
-                BeepToneTypeSelector(
-                    selectedToneType = config.beepToneType,
-                    onToneTypeSelected = { viewModel.updateBeepToneType(it) }
-                )
-
-                // Beep Duration
-                IntSliderSetting(
-                    title = "Beep Duration",
-                    value = config.beepDurationMs,
-                    valueRange = ShadowingConfig.MIN_BEEP_DURATION_MS..ShadowingConfig.MAX_BEEP_DURATION_MS,
-                    steps = 9,
-                    valueLabel = { "${it}ms" },
-                    onValueChange = { viewModel.updateBeepDurationMs(it) }
-                )
-            }
-
             // Navigation Pause Toggle
             SwitchSetting(
                 title = stringResource(R.string.pause_for_navigation),
@@ -326,95 +247,6 @@ private fun SegmentModeSelector(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            }
-        }
-    }
-}
-
-@Composable
-private fun PracticeModeSelector(
-    selectedMode: PracticeMode,
-    onModeSelected: (PracticeMode) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "Practice Mode",
-            style = MaterialTheme.typography.titleMedium
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        PracticeMode.entries.forEach { mode ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onModeSelected(mode) }
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = mode == selectedMode,
-                    onClick = { onModeSelected(mode) }
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                    Text(
-                        text = when (mode) {
-                            PracticeMode.STANDARD -> "Standard"
-                            PracticeMode.BUILDUP -> "Gradual Buildup"
-                        },
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                    Text(
-                        text = when (mode) {
-                            PracticeMode.STANDARD -> "Play full segment, then repeat"
-                            PracticeMode.BUILDUP -> "Build from end of phrase to full sentence"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun BeepToneTypeSelector(
-    selectedToneType: BeepToneType,
-    onToneTypeSelected: (BeepToneType) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-    ) {
-        Text(
-            text = "Beep Tone",
-            style = MaterialTheme.typography.titleMedium
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        BeepToneType.entries.forEach { toneType ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onToneTypeSelected(toneType) }
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = toneType == selectedToneType,
-                    onClick = { onToneTypeSelected(toneType) }
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = toneType.displayName,
-                    style = MaterialTheme.typography.bodyLarge
-                )
             }
         }
     }
@@ -1213,19 +1045,6 @@ fun SegmentModeSelectorPreview() {
         Surface {
             SegmentModeSelector(
                 selectedMode = SegmentMode.SENTENCE,
-                onModeSelected = {}
-            )
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-fun PracticeModeSelectorPreview() {
-    ShadowMasterTheme {
-        Surface {
-            PracticeModeSelector(
-                selectedMode = PracticeMode.STANDARD,
                 onModeSelected = {}
             )
         }

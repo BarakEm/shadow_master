@@ -2,8 +2,6 @@ package com.shadowmaster.ui.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.shadowmaster.data.model.BeepToneType
-import com.shadowmaster.data.model.PracticeMode
 import com.shadowmaster.data.model.SegmentMode
 import com.shadowmaster.data.model.ShadowingConfig
 import com.shadowmaster.data.model.SupportedLanguage
@@ -45,57 +43,9 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun updateAssessmentEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            settingsRepository.updateAssessmentEnabled(enabled)
-        }
-    }
-
     fun updatePauseForNavigation(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.updatePauseForNavigation(enabled)
-        }
-    }
-
-    fun updateBusMode(enabled: Boolean) {
-        viewModelScope.launch {
-            settingsRepository.updateBusMode(enabled)
-        }
-    }
-
-    fun updateAudioFeedbackEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            settingsRepository.updateAudioFeedbackEnabled(enabled)
-        }
-    }
-
-    fun updateBeepVolume(volume: Int) {
-        viewModelScope.launch {
-            settingsRepository.updateBeepVolume(volume)
-        }
-    }
-
-    fun updateBeepToneType(toneType: BeepToneType) {
-        viewModelScope.launch {
-            settingsRepository.updateBeepToneType(toneType)
-        }
-    }
-
-    fun updateBeepDurationMs(durationMs: Int) {
-        viewModelScope.launch {
-            settingsRepository.updateBeepDurationMs(durationMs)
-        }
-    }
-
-    fun updatePracticeMode(mode: PracticeMode) {
-        viewModelScope.launch {
-            settingsRepository.updatePracticeMode(mode)
-        }
-    }
-
-    fun updateBuildupChunkMs(ms: Int) {
-        viewModelScope.launch {
-            settingsRepository.updateBuildupChunkMs(ms)
         }
     }
 

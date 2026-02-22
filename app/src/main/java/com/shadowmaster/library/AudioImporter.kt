@@ -148,7 +148,14 @@ class AudioImporter @Inject constructor(
         providerOverride: String? = null,
         playbackSpeed: Float = 0.8f,
         playbackRepeats: Int = 1,
-        userRepeats: Int = 1
+        userRepeats: Int = 1,
+        busMode: Boolean = false,
+        practiceMode: PracticeMode = PracticeMode.STANDARD,
+        buildupChunkMs: Int = 1500,
+        audioFeedbackEnabled: Boolean = true,
+        beepVolume: Int = 80,
+        beepToneType: BeepToneType = BeepToneType.SOFT,
+        beepDurationMs: Int = 150
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             // Get imported audio
@@ -170,7 +177,14 @@ class AudioImporter @Inject constructor(
                 sourceUri = importedAudio.sourceUri,
                 playbackSpeed = playbackSpeed,
                 playbackRepeats = playbackRepeats,
-                userRepeats = userRepeats
+                userRepeats = userRepeats,
+                busMode = busMode,
+                practiceMode = practiceMode,
+                buildupChunkMs = buildupChunkMs,
+                audioFeedbackEnabled = audioFeedbackEnabled,
+                beepVolume = beepVolume,
+                beepToneType = beepToneType,
+                beepDurationMs = beepDurationMs
             )
             shadowPlaylistDao.insert(playlist)
 

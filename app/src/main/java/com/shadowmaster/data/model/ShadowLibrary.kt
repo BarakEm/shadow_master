@@ -76,7 +76,16 @@ data class ShadowPlaylist(
     // Per-playlist playback settings
     val playbackSpeed: Float = 0.8f,
     val playbackRepeats: Int = 1,
-    val userRepeats: Int = 1
+    val userRepeats: Int = 1,
+
+    // Per-playlist practice settings
+    val busMode: Boolean = false,
+    val practiceMode: PracticeMode = PracticeMode.STANDARD,
+    val buildupChunkMs: Int = 1500,
+    val audioFeedbackEnabled: Boolean = true,
+    val beepVolume: Int = 80,
+    val beepToneType: BeepToneType = BeepToneType.SOFT,
+    val beepDurationMs: Int = 150
 )
 
 enum class SourceType {
@@ -211,4 +220,16 @@ class Converters {
 
     @TypeConverter
     fun toSegmentMode(value: String): SegmentMode = SegmentMode.valueOf(value)
+
+    @TypeConverter
+    fun fromPracticeMode(value: PracticeMode): String = value.name
+
+    @TypeConverter
+    fun toPracticeMode(value: String): PracticeMode = PracticeMode.valueOf(value)
+
+    @TypeConverter
+    fun fromBeepToneType(value: BeepToneType): String = value.name
+
+    @TypeConverter
+    fun toBeepToneType(value: String): BeepToneType = BeepToneType.valueOf(value)
 }
